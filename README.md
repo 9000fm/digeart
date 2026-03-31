@@ -51,10 +51,6 @@ npm run dev
 
 This is a personal project in active development. If you have ideas or want to contribute, open an issue or reach out.
 
-## License
-
-MIT
-
 ---
 
 a [superself](https://superself.online) project — v1.1-beta
