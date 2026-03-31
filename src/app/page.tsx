@@ -56,8 +56,8 @@ export default function Home() {
   const isAuthenticated = !!session;
   const [activeView, setActiveView] = useState<ViewType>("home");
   const [activeGenre, setActiveGenre] = useState(0);
-  const [activeTagFilter, setActiveTagFilter] = useState<"all" | "hot" | "rare" | "new">("all");
-  const [activeGenreLabel, setActiveGenreLabel] = useState<string | null>(null);
+  const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
+  const [activeGenreLabels, setActiveGenreLabels] = useState<string[]>([]);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [nowPlayingCard, setNowPlayingCard] = useState<CardData | null>(null);
@@ -212,8 +212,8 @@ export default function Home() {
         const current = p.getCurrentTime();
         const duration = p.getDuration();
         const state = p.getPlayerState();
-        // Only update progress state when playing (state 1) — avoids unnecessary re-renders when paused
-        if (state === 1) {
+        // Update progress when playing (1) or buffering (3) with valid data
+        if (state === 1 || (state === 3 && duration > 0 && current > 0)) {
           setAudioProgress(current);
           if (duration > 0) setAudioDuration(duration);
         }
@@ -282,6 +282,14 @@ export default function Home() {
           // iOS Safari: must start muted for autoplay policy
           event.target.mute();
           event.target.playVideo();
+          // Retry playback if player hasn't started after 600ms (mobile autoplay policy)
+          setTimeout(() => {
+            try {
+              if (event.target.getPlayerState() !== 1) {
+                event.target.playVideo();
+              }
+            } catch { /* player may not be ready */ }
+          }, 600);
           setTimeout(() => {
             event.target.setVolume(volumeRef.current);
             if (!isMutedRef.current) event.target.unMute();
@@ -870,10 +878,10 @@ export default function Home() {
         onViewChange={handleViewChange}
         activeGenre={activeGenre}
         onGenreChange={setActiveGenre}
-        activeTagFilter={activeTagFilter}
-        onTagFilterChange={setActiveTagFilter}
-        activeGenreLabel={activeGenreLabel}
-        onGenreLabelChange={setActiveGenreLabel}
+        activeTagFilters={activeTagFilters}
+        onTagFiltersChange={setActiveTagFilters}
+        activeGenreLabels={activeGenreLabels}
+        onGenreLabelsChange={setActiveGenreLabels}
         showAbout={showAbout}
         onToggleAbout={() => setShowAbout((v) => !v)}
         onRunTutorial={() => { setShowAbout(false); setShowOnboarding(true); }}
@@ -889,8 +897,8 @@ export default function Home() {
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
           activeGenre={activeGenre}
-          activeTagFilter={activeTagFilter}
-          activeGenreLabel={activeGenreLabel}
+          activeTagFilters={activeTagFilters}
+          activeGenreLabels={activeGenreLabels}
           onCardsLoaded={registerHomeCards}
           isAuthenticated={isAuthenticated}
         />
@@ -905,8 +913,8 @@ export default function Home() {
           onPlay={handlePlay}
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
-          activeTagFilter={activeTagFilter}
-          activeGenreLabel={activeGenreLabel}
+          activeTagFilters={activeTagFilters}
+          activeGenreLabels={activeGenreLabels}
           onCardsLoaded={registerSamplesCards}
           isAuthenticated={isAuthenticated}
         />
@@ -921,8 +929,8 @@ export default function Home() {
           onPlay={handlePlay}
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
-          activeTagFilter={activeTagFilter}
-          activeGenreLabel={activeGenreLabel}
+          activeTagFilters={activeTagFilters}
+          activeGenreLabels={activeGenreLabels}
           onCardsLoaded={registerMixesCards}
           isAuthenticated={isAuthenticated}
         />
@@ -938,7 +946,7 @@ export default function Home() {
           isPlaying={isPlaying}
           onPlay={handlePlay}
           onToggleLike={toggleLike}
-          activeTagFilter={activeTagFilter}
+          activeTagFilters={activeTagFilters}
           isAuthenticated={isAuthenticated}
           onCardsLoaded={registerSavedCards}
         />

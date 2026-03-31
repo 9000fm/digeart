@@ -19,8 +19,8 @@ const displayFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "digeart — music discovery",
-  description: "Music discovery for diggers & curators.",
+  title: "digeart — music discovery for diggers",
+  description: "Deep cuts from 150+ curated channels. All underground. All human-selected.",
 };
 
 export const viewport: Viewport = {

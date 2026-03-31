@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 import MusicCard from "./MusicCard";
 import type { CardData } from "@/lib/types";
-import type { TagFilter } from "./Sidebar";
-
 interface SavedGridProps {
   cards: CardData[];
   loading: boolean;
@@ -14,7 +12,7 @@ interface SavedGridProps {
   isPlaying: boolean;
   onPlay: (id: string) => void;
   onToggleLike: (id: string) => void;
-  activeTagFilter?: TagFilter;
+  activeTagFilters?: string[];
   isAuthenticated?: boolean;
   onCardsLoaded?: (cards: CardData[]) => void;
 }
@@ -28,7 +26,7 @@ export default function SavedGrid({
   isPlaying,
   onPlay,
   onToggleLike,
-  activeTagFilter = "all",
+  activeTagFilters = [],
   isAuthenticated = true,
   onCardsLoaded,
 }: SavedGridProps) {
@@ -85,7 +83,7 @@ export default function SavedGrid({
           saved={likedIds.has(card.id)}
           isGracePeriod={softDeletedIds?.has(card.id)}
           isPlaying={playingId === card.id && isPlaying}
-          activeTagFilter={activeTagFilter}
+          activeTagFilters={activeTagFilters}
           viewContext="saved"
           onPlay={() => onPlay(card.id)}
           onSave={() => onToggleLike(card.id)}

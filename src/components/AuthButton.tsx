@@ -186,6 +186,12 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, mo
           <p className="font-mono text-[10px] text-[var(--text-muted)] text-center mt-2.5">
             Save tracks & sync across devices
           </p>
+          <div className="mt-2.5 pt-2 border-t border-[var(--border)]/30">
+            <span className="font-mono text-[9px] text-[var(--text-muted)]/70 flex items-center justify-center gap-1">
+              <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>
+              a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--text-muted)] transition-colors">superself</a> project
+            </span>
+          </div>
         </div>
       )}
     </div>

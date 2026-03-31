@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import MusicCard from "./MusicCard";
-import type { TagFilter } from "./Sidebar";
 import type { CardData } from "@/lib/types";
 
 interface MixesGridProps {
@@ -13,8 +12,8 @@ interface MixesGridProps {
   onPlay: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
-  activeTagFilter?: TagFilter;
-  activeGenreLabel?: string | null;
+  activeTagFilters?: string[];
+  activeGenreLabels?: string[];
   onCardsLoaded?: (cards: CardData[]) => void;
   isAuthenticated?: boolean;
 }
@@ -27,8 +26,8 @@ export default function MixesGrid({
   onPlay,
   onToggleSave,
   onToggleLike,
-  activeTagFilter = "all",
-  activeGenreLabel = null,
+  activeTagFilters = [],
+  activeGenreLabels = [],
   onCardsLoaded,
   isAuthenticated = true,
 }: MixesGridProps) {
@@ -39,8 +38,11 @@ export default function MixesGrid({
   const pageRef = useRef(0);
   const hasMore = useRef(true);
 
+  const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
+  const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
+
   const fetchMixes = useCallback(
-    async (tag: TagFilter, genreLabel: string | null, append = false) => {
+    async (tagParam: string, genreParam: string, append = false) => {
       if (append && !hasMore.current) return;
       if (append) setLoadingMore(true);
       else { setLoading(true); hasMore.current = true; }
@@ -48,8 +50,8 @@ export default function MixesGrid({
       try {
         const limit = 20;
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/mixes?limit=${limit}&offset=${offset}&tag=${tag}`;
-        if (genreLabel) url += `&genre=${encodeURIComponent(genreLabel)}`;
+        let url = `/api/mixes?limit=${limit}&offset=${offset}&tag=${tagParam}`;
+        if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const res = await fetch(url);
         const data = await res.json();
         const newCards: CardData[] = data.cards || [];
@@ -78,19 +80,18 @@ export default function MixesGrid({
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Refetch on ANY tag or genre label change
-  const prevTagRef = useRef(activeTagFilter);
-  const prevGenreLabelRef = useRef(activeGenreLabel);
+  const prevTagRef = useRef(tagKey);
+  const prevGenreLabelRef = useRef(genreKey);
   useEffect(() => {
-    if (prevTagRef.current !== activeTagFilter || prevGenreLabelRef.current !== activeGenreLabel) {
-      prevTagRef.current = activeTagFilter;
-      prevGenreLabelRef.current = activeGenreLabel;
-      fetchMixes(activeTagFilter, activeGenreLabel);
+    if (prevTagRef.current !== tagKey || prevGenreLabelRef.current !== genreKey) {
+      prevTagRef.current = tagKey;
+      prevGenreLabelRef.current = genreKey;
+      fetchMixes(tagKey, genreKey);
     }
-  }, [activeTagFilter, activeGenreLabel, fetchMixes]);
+  }, [tagKey, genreKey, fetchMixes]);
 
   useEffect(() => {
-    fetchMixes(activeTagFilter, activeGenreLabel);
+    fetchMixes(tagKey, genreKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function MixesGrid({
           !loadingMore &&
           cards.length > 0
         ) {
-          fetchMixes(activeTagFilter, activeGenreLabel, true);
+          fetchMixes(tagKey, genreKey, true);
         }
       },
       { rootMargin: "400px" }
@@ -113,7 +114,7 @@ export default function MixesGrid({
     return () => {
       if (el) observer.unobserve(el);
     };
-  }, [activeTagFilter, activeGenreLabel, loading, loadingMore, cards.length, fetchMixes]);
+  }, [tagKey, genreKey, loading, loadingMore, cards.length, fetchMixes]);
 
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
@@ -165,7 +166,7 @@ export default function MixesGrid({
             card={card}
             saved={likedIds.has(card.id)}
             isPlaying={playingId === card.id && isPlaying}
-            activeTagFilter={activeTagFilter}
+            activeTagFilters={activeTagFilters}
             viewContext="mixes"
             onPlay={() => onPlay(card.id)}
             onSave={() => onToggleLike(card.id)}

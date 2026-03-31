@@ -85,6 +85,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
 
   // Skip "Info" and "Settings" steps on mobile — targets only exist in desktop sidebar
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+  const isDark = typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark";
   const steps = isMobile ? MOBILE_STEPS : STEPS;
 
   // Is this the player step? (index 1 in full steps)
@@ -308,26 +309,26 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
           <div style={{ opacity: spotlightVisible ? 1 : 0, transition: "opacity 160ms ease-out" }}>
             {/* Top */}
             <div
-              className="fixed left-0 right-0 top-0 bg-black/60"
-              style={{ height: Math.max(0, sTop), pointerEvents: "auto" }}
+              className="fixed left-0 right-0 top-0"
+              style={{ height: Math.max(0, sTop), pointerEvents: "auto", background: isDark ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.6)" }}
               onClick={handleBackdropClick}
             />
             {/* Bottom */}
             <div
-              className="fixed left-0 right-0 bottom-0 bg-black/60"
-              style={{ top: sBottom, pointerEvents: "auto" }}
+              className="fixed left-0 right-0 bottom-0"
+              style={{ top: sBottom, pointerEvents: "auto", background: isDark ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.6)" }}
               onClick={handleBackdropClick}
             />
             {/* Left */}
             <div
-              className="fixed left-0 bg-black/60"
-              style={{ top: sTop, height: sBottom - sTop, width: Math.max(0, sLeft), pointerEvents: "auto" }}
+              className="fixed left-0"
+              style={{ top: sTop, height: sBottom - sTop, width: Math.max(0, sLeft), pointerEvents: "auto", background: isDark ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.6)" }}
               onClick={handleBackdropClick}
             />
             {/* Right */}
             <div
-              className="fixed right-0 bg-black/60"
-              style={{ top: sTop, height: sBottom - sTop, left: sRight, pointerEvents: "auto" }}
+              className="fixed right-0"
+              style={{ top: sTop, height: sBottom - sTop, left: sRight, pointerEvents: "auto", background: isDark ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.6)" }}
               onClick={handleBackdropClick}
             />
             {/* Rounded border overlay for player step */}
@@ -336,7 +337,9 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
               style={{
                 left: sLeft, top: sTop,
                 width: sRight - sLeft, height: sBottom - sTop,
-                boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.15)",
+                boxShadow: isDark
+                  ? "inset 0 0 0 2px rgba(255,255,255,0.2), 0 0 24px 4px rgba(255,255,255,0.05)"
+                  : "inset 0 0 0 2px rgba(255,255,255,0.15)",
                 borderRadius: 12,
               }}
             />
@@ -355,11 +358,13 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
                   width: sRight - sLeft,
                   height: sBottom - sTop,
                   borderRadius: r,
-                  boxShadow: "0 0 0 9999px rgba(0,0,0,0.6)",
+                  boxShadow: isDark
+                    ? "0 0 0 9999px rgba(0,0,0,0.85), 0 0 0 2px rgba(255,255,255,0.1), 0 0 24px 4px rgba(255,255,255,0.05)"
+                    : "0 0 0 9999px rgba(0,0,0,0.6)",
                 }}
               />
             ) : (
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0" style={{ background: isDark ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.6)" }} />
             )}
           </div>
         </div>
@@ -377,7 +382,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
         className="w-[300px] max-w-[calc(100vw-32px)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-gradient-to-b from-[var(--bg-alt)] to-[var(--bg)] backdrop-blur-xl border border-[var(--border)]/50 rounded-xl shadow-2xl px-5 py-4">
+        <div className={`bg-gradient-to-b from-[var(--bg-alt)] to-[var(--bg)] backdrop-blur-xl border rounded-xl shadow-2xl px-5 py-4 ${isDark ? "border-white/10" : "border-[var(--border)]/50"}`}>
           {/* Header */}
           <div className="flex items-center justify-between mb-2">
             <span className="font-mono text-[10px] text-[var(--text-muted)] tracking-wider">

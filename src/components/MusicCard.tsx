@@ -7,14 +7,12 @@ import Image from "next/image";
 import Tooltip from "./Tooltip";
 import type { CardData } from "@/lib/types";
 
-type TagFilter = "all" | "hot" | "rare" | "new";
-
 interface MusicCardProps {
   card: CardData;
   saved: boolean;
   isGracePeriod?: boolean;
   isPlaying: boolean;
-  activeTagFilter?: TagFilter;
+  activeTagFilters?: string[];
   viewContext?: string;
   onPlay: () => void;
   onSave: () => void;
@@ -50,7 +48,7 @@ export default memo(function MusicCard({
   saved,
   isGracePeriod = false,
   isPlaying,
-  activeTagFilter = "all",
+  activeTagFilters = [],
   onPlay,
   onSave,
   viewContext = "default",
@@ -168,15 +166,19 @@ export default memo(function MusicCard({
         const isNew = card.publishedAt ? (Date.now() - new Date(card.publishedAt).getTime()) / 86400000 <= 30 : false;
         const tags: { label: string; color: string }[] = [];
 
-        // When a specific filter is active, trust the API — show badge on every card
-        if (activeTagFilter === "hot") {
-          tags.push({ label: "Hot", color: "bg-red-500" });
-        } else if (activeTagFilter === "rare") {
-          tags.push({ label: "Rare", color: "bg-pink-500" });
-        } else if (activeTagFilter === "new") {
-          tags.push({ label: "New", color: "bg-emerald-500" });
+        // When specific filters are active, trust the API — show matching badges
+        if (activeTagFilters.length > 0) {
+          if (activeTagFilters.includes("hot")) tags.push({ label: "Hot", color: "bg-red-500" });
+          if (activeTagFilters.includes("rare")) tags.push({ label: "Rare", color: "bg-pink-500" });
+          if (activeTagFilters.includes("new")) tags.push({ label: "New", color: "bg-emerald-500" });
+          // If no specific tags matched above but filters are set, still compute from data
+          if (tags.length === 0) {
+            if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
+            if (card.viewCount != null && card.viewCount < 5_000 && !isNew) tags.push({ label: "Rare", color: "bg-pink-500" });
+            if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
+          }
         } else {
-          // "all" — compute from card data
+          // No filter — compute from card data
           if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
           if (card.viewCount != null && card.viewCount < 5_000 && !isNew) tags.push({ label: "Rare", color: "bg-pink-500" });
           if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
@@ -246,7 +248,7 @@ export default memo(function MusicCard({
         )}
 
         {/* Like button */}
-        <Tooltip label="Log in to save" position="top" show={nudge || tipLocked} hoverable={false}>
+        <Tooltip label={isAuthenticated ? (saved ? "Saved!" : "Save") : "Log in to save"} position="top">
           <motion.button
             ref={heartBtnRef}
             onClick={handleHeartClick}

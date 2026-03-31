@@ -171,26 +171,27 @@ export function parseDuration(iso: string): number {
 /* ── Tag filtering utility ───────────────────────────────────────────── */
 
 /**
- * Filter + sort a card pool by tag BEFORE offset/limit slicing.
- * Returns the filtered array (full length — caller slices).
+ * Filter + sort a card pool by tag(s) BEFORE offset/limit slicing.
+ * Accepts a single tag or an array of tags.
+ * When multiple tags are provided, returns cards matching ANY tag (union).
  */
-export function applyTagFilter(pool: CardData[], tag: Tag): CardData[] {
-  switch (tag) {
-    case "hot":
-      return pool.filter((c) => c.viewCount != null && c.viewCount >= 50_000);
-    case "rare":
-      return pool.filter((c) => c.viewCount != null && c.viewCount < 5_000);
-    case "new": {
-      const thirtyDaysMs = 30 * 86_400_000;
-      const now = Date.now();
-      return pool.filter(
-        (c) => c.publishedAt && now - new Date(c.publishedAt).getTime() <= thirtyDaysMs
-      );
+export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
+  const tags: Tag[] = Array.isArray(tag) ? tag : [tag];
+  // No filter needed
+  if (tags.length === 0 || (tags.length === 1 && tags[0] === "all")) return pool;
+
+  const thirtyDaysMs = 30 * 86_400_000;
+  const now = Date.now();
+
+  return pool.filter((c) => {
+    for (const t of tags) {
+      if (t === "all") return true;
+      if (t === "hot" && c.viewCount != null && c.viewCount >= 50_000) return true;
+      if (t === "rare" && c.viewCount != null && c.viewCount < 5_000) return true;
+      if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= thirtyDaysMs) return true;
     }
-    case "all":
-    default:
-      return pool;
-  }
+    return false;
+  });
 }
 
 /* ── YouTube helpers ─────────────────────────────────────────────────── */
@@ -415,9 +416,11 @@ function filterChannelsByGenre(
   genre?: string
 ): { name: string; id: string; labels?: string[] }[] {
   if (!genre) return channels;
-  const lower = genre.toLowerCase();
+  // Support comma-separated genres (match ANY)
+  const genres = genre.split(",").map((g) => g.trim().toLowerCase()).filter(Boolean);
+  if (genres.length === 0) return channels;
   return channels.filter(
-    (c) => c.labels?.some((l) => l.toLowerCase() === lower)
+    (c) => c.labels?.some((l) => genres.includes(l.toLowerCase()))
   );
 }
 
@@ -528,7 +531,7 @@ async function getDiscoverPool(genre?: string): Promise<CardData[]> {
 export async function discoverFromYouTube(
   limit = 30,
   offset = 0,
-  tag: Tag = "all",
+  tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
   const approved = await getApprovedChannels();
@@ -549,7 +552,7 @@ export async function discoverFromYouTube(
 export async function discoverMixes(
   limit = 20,
   offset = 0,
-  tag: Tag = "all",
+  tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
   const allApproved = await getApprovedChannels();
@@ -621,7 +624,7 @@ const STRICT_SAMPLE_LABELS = [
 export async function discoverSamples(
   limit = 30,
   offset = 0,
-  tag: Tag = "all",
+  tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
   const allApproved = await getApprovedChannels();

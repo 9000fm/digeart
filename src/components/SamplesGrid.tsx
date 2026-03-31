@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import MusicCard from "./MusicCard";
-import type { TagFilter } from "./Sidebar";
 import type { CardData } from "@/lib/types";
 
 interface SamplesGridProps {
@@ -13,8 +12,8 @@ interface SamplesGridProps {
   onPlay: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
-  activeTagFilter?: TagFilter;
-  activeGenreLabel?: string | null;
+  activeTagFilters?: string[];
+  activeGenreLabels?: string[];
   onCardsLoaded?: (cards: CardData[]) => void;
   isAuthenticated?: boolean;
 }
@@ -27,8 +26,8 @@ export default function SamplesGrid({
   onPlay,
   onToggleSave,
   onToggleLike,
-  activeTagFilter = "all",
-  activeGenreLabel = null,
+  activeTagFilters = [],
+  activeGenreLabels = [],
   onCardsLoaded,
   isAuthenticated = true,
 }: SamplesGridProps) {
@@ -39,8 +38,11 @@ export default function SamplesGrid({
   const pageRef = useRef(0);
   const hasMore = useRef(true);
 
+  const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
+  const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
+
   const fetchSamples = useCallback(
-    async (tag: TagFilter, genreLabel: string | null, append = false) => {
+    async (tagParam: string, genreParam: string, append = false) => {
       if (append && !hasMore.current) return;
       if (append) setLoadingMore(true);
       else { setLoading(true); hasMore.current = true; }
@@ -48,8 +50,8 @@ export default function SamplesGrid({
       try {
         const limit = 30;
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/samples?limit=${limit}&offset=${offset}&tag=${tag}`;
-        if (genreLabel) url += `&genre=${encodeURIComponent(genreLabel)}`;
+        let url = `/api/samples?limit=${limit}&offset=${offset}&tag=${tagParam}`;
+        if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const res = await fetch(url);
         const data = await res.json();
         const newCards: CardData[] = data.cards || [];
@@ -78,19 +80,18 @@ export default function SamplesGrid({
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Refetch on ANY tag or genre label change
-  const prevTagRef = useRef(activeTagFilter);
-  const prevGenreLabelRef = useRef(activeGenreLabel);
+  const prevTagRef = useRef(tagKey);
+  const prevGenreLabelRef = useRef(genreKey);
   useEffect(() => {
-    if (prevTagRef.current !== activeTagFilter || prevGenreLabelRef.current !== activeGenreLabel) {
-      prevTagRef.current = activeTagFilter;
-      prevGenreLabelRef.current = activeGenreLabel;
-      fetchSamples(activeTagFilter, activeGenreLabel);
+    if (prevTagRef.current !== tagKey || prevGenreLabelRef.current !== genreKey) {
+      prevTagRef.current = tagKey;
+      prevGenreLabelRef.current = genreKey;
+      fetchSamples(tagKey, genreKey);
     }
-  }, [activeTagFilter, activeGenreLabel, fetchSamples]);
+  }, [tagKey, genreKey, fetchSamples]);
 
   useEffect(() => {
-    fetchSamples(activeTagFilter, activeGenreLabel);
+    fetchSamples(tagKey, genreKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function SamplesGrid({
           !loadingMore &&
           cards.length > 0
         ) {
-          fetchSamples(activeTagFilter, activeGenreLabel, true);
+          fetchSamples(tagKey, genreKey, true);
         }
       },
       { rootMargin: "400px" }
@@ -113,7 +114,7 @@ export default function SamplesGrid({
     return () => {
       if (el) observer.unobserve(el);
     };
-  }, [activeTagFilter, activeGenreLabel, loading, loadingMore, cards.length, fetchSamples]);
+  }, [tagKey, genreKey, loading, loadingMore, cards.length, fetchSamples]);
 
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
@@ -162,7 +163,7 @@ export default function SamplesGrid({
             card={card}
             saved={likedIds.has(card.id)}
             isPlaying={playingId === card.id && isPlaying}
-            activeTagFilter={activeTagFilter}
+            activeTagFilters={activeTagFilters}
             viewContext="samples"
             onPlay={() => onPlay(card.id)}
             onSave={() => onToggleLike(card.id)}

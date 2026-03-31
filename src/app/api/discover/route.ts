@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
     50
   );
   const offset = Number(req.nextUrl.searchParams.get("offset") || 0);
-  const rawTag = req.nextUrl.searchParams.get("tag");
-  const tag: Tag = isValidTag(rawTag) ? rawTag : "all";
+  const rawTag = req.nextUrl.searchParams.get("tag") || "";
+  const tags: Tag[] = rawTag.split(",").map((t) => t.trim()).filter(isValidTag);
+  const tag: Tag | Tag[] = tags.length <= 1 ? (tags[0] || "all") : tags;
   const genre = req.nextUrl.searchParams.get("genre") || undefined;
 
   try {

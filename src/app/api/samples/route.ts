@@ -7,8 +7,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const limit = parseInt(searchParams.get("limit") || "30", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
-    const rawTag = searchParams.get("tag");
-    const tag: Tag = isValidTag(rawTag) ? rawTag : "all";
+    const rawTag = searchParams.get("tag") || "";
+    const tags: Tag[] = rawTag.split(",").map((t) => t.trim()).filter(isValidTag);
+    const tag: Tag | Tag[] = tags.length <= 1 ? (tags[0] || "all") : tags;
     const genre = searchParams.get("genre") || undefined;
 
     const { cards, totalFiltered } = await discoverSamples(limit, offset, tag, genre);

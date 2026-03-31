@@ -340,7 +340,7 @@ export default function NowPlayingBanner({
   const [likeBurst, setLikeBurst] = useState(false);
   const likeBtnRef = useRef<HTMLButtonElement>(null);
   const likeButton = (size: "sm" | "md" = "md") => onToggleLike ? (
-    <Tooltip label="Log in to save" show={likeNudge || tipLocked} hoverable={false}>
+    <Tooltip label={isAuthenticated ? (isLiked ? "Saved!" : "Save") : "Log in to save"} position="top">
       <motion.button
         ref={likeBtnRef}
         onClick={(e) => {
@@ -893,23 +893,25 @@ export default function NowPlayingBanner({
         {/* LEFT: Album art + Track info */}
         <div className="shrink-0 flex items-center gap-2.5" style={{ width: "clamp(340px, 28vw, 450px)" }}>
           {thumbUrl && (
-            <div
-              key={card.id}
-              className={`shrink-0 w-[60px] h-[60px] rounded-md overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art cursor-pointer transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (card.youtubeUrl) window.open(card.youtubeUrl, "_blank", "noopener,noreferrer");
-              }}
-            >
-              <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
-              {card.source === "youtube" && card.youtubeUrl && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/art:opacity-100 transition-opacity duration-200">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21.582 6.186a2.506 2.506 0 00-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418c-.86.23-1.538.908-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814c.23.86.908 1.538 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 001.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z" />
-                  </svg>
-                </div>
-              )}
-            </div>
+            <Tooltip label="Watch on YouTube" position="top" align="start">
+              <div
+                key={card.id}
+                className={`shrink-0 w-[60px] h-[60px] rounded-md overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art cursor-pointer transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (card.youtubeUrl) window.open(card.youtubeUrl, "_blank", "noopener,noreferrer");
+                }}
+              >
+                <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                {card.source === "youtube" && card.youtubeUrl && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/art:opacity-100 transition-opacity duration-200">
+                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M21.582 6.186a2.506 2.506 0 00-1.768-1.768C18.254 4 12 4 12 4s-6.254 0-7.814.418c-.86.23-1.538.908-1.768 1.768C2 7.746 2 12 2 12s0 4.254.418 5.814c.23.86.908 1.538 1.768 1.768C5.746 20 12 20 12 20s6.254 0 7.814-.418a2.506 2.506 0 001.768-1.768C22 16.254 22 12 22 12s0-4.254-.418-5.814zM10 15.464V8.536L16 12l-6 3.464z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </Tooltip>
           )}
           <div className="min-w-0">
             {isUnavailable ? (

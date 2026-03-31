@@ -50,10 +50,9 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                     transform: "translateY(-100%)",
                   }
                 : {
-                    top: "auto",
-                    bottom: 120,
+                    top: "50%",
                     left: "50%",
-                    transform: "translateX(-50%)",
+                    transform: "translate(-50%, -50%)",
                   }
             }
           >

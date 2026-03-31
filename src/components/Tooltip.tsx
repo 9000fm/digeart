@@ -2,7 +2,7 @@
 
 import { useRef, useLayoutEffect, useState, useCallback, type ReactNode } from "react";
 
-export default function Tooltip({ label, children, position = "top", className, show, hoverable = true, delay = 400 }: { label: string; children: ReactNode; position?: "top" | "bottom" | "left" | "right"; className?: string; show?: boolean; hoverable?: boolean; delay?: number }) {
+export default function Tooltip({ label, children, position = "top", align = "center", className, show, hoverable = true, delay = 400 }: { label: string; children: ReactNode; position?: "top" | "bottom" | "left" | "right"; align?: "start" | "center" | "end"; className?: string; show?: boolean; hoverable?: boolean; delay?: number }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const [shiftX, setShiftX] = useState(0);
@@ -42,14 +42,21 @@ export default function Tooltip({ label, children, position = "top", className, 
     setHovered(false);
   }, []);
 
-  const positionBase = {
-    top: "bottom-full left-1/2 mb-2",
-    bottom: "top-full left-1/2 mt-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
-  };
+  const positionBase = isHorizontal
+    ? {
+        top: `bottom-full mb-2 ${align === "start" ? "left-0" : align === "end" ? "right-0" : "left-1/2"}`,
+        bottom: `top-full mt-2 ${align === "start" ? "left-0" : align === "end" ? "right-0" : "left-1/2"}`,
+        left: "", // unused
+        right: "", // unused
+      }
+    : {
+        top: "",
+        bottom: "",
+        left: "right-full top-1/2 -translate-y-1/2 mr-2",
+        right: "left-full top-1/2 -translate-y-1/2 ml-2",
+      };
 
-  const translateStyle = isHorizontal
+  const translateStyle = isHorizontal && align === "center"
     ? { transform: `translateX(calc(-50% + ${shiftX}px))` }
     : undefined;
 

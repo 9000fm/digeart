@@ -136,10 +136,10 @@ interface SidebarProps {
   onViewChange: (view: ViewType) => void;
   activeGenre: number;
   onGenreChange: (index: number) => void;
-  activeTagFilter: TagFilter;
-  onTagFilterChange: (tag: TagFilter) => void;
-  activeGenreLabel: string | null;
-  onGenreLabelChange: (label: string | null) => void;
+  activeTagFilters: string[];
+  onTagFiltersChange: (tags: string[]) => void;
+  activeGenreLabels: string[];
+  onGenreLabelsChange: (labels: string[]) => void;
   showAbout?: boolean;
   onToggleAbout?: () => void;
   onRunTutorial?: () => void;
@@ -175,10 +175,10 @@ export default function Sidebar({
   onViewChange,
   activeGenre,
   onGenreChange,
-  activeTagFilter,
-  onTagFilterChange,
-  activeGenreLabel,
-  onGenreLabelChange,
+  activeTagFilters,
+  onTagFiltersChange,
+  activeGenreLabels,
+  onGenreLabelsChange,
   showAbout: showAboutProp,
   onToggleAbout,
   onRunTutorial,
@@ -332,7 +332,7 @@ export default function Sidebar({
         <div className="shrink-0 min-w-[var(--sidebar-width)] flex justify-start pl-[5px]">
           <span
             className="font-[family-name:var(--font-display)] text-5xl text-[var(--text)] select-none mr-1.5 cursor-pointer"
-            onClick={() => { onViewChange("home"); onTagFilterChange("all"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            onClick={() => { onViewChange("home"); onTagFiltersChange([]); window.scrollTo({ top: 0, behavior: "smooth" }); }}
           >
             digeart
           </span>
@@ -351,20 +351,44 @@ export default function Sidebar({
             >
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
             </svg>
-            {activeGenreLabel && (
-              <span className="absolute left-12 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1 px-2 py-0.5 bg-[var(--border)] rounded-md font-mono text-[11px] text-[var(--text)] uppercase">
-                {activeGenreLabel}
-                <button
-                  onClick={() => { onGenreLabelChange(null); setSearchQuery(""); }}
-                  className="w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                >
-                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </span>
-            )}
+            {/* Genre pills (left) + input + tag pills (right) layered inside */}
+            <div className="flex items-center absolute left-12 top-1/2 -translate-y-1/2 z-10 gap-1">
+              {activeGenreLabels.map((label) => (
+                <span key={label} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--border)] rounded-md font-mono text-[11px] text-[var(--text)] uppercase shrink-0">
+                  {label}
+                  <button
+                    onClick={() => { onGenreLabelsChange(activeGenreLabels.filter((l) => l !== label)); setSearchQuery(""); }}
+                    className="w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                  >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
+            </div>
+            {/* Tag pills (right, before filter icon) */}
+            <div className="flex items-center absolute right-10 top-1/2 -translate-y-1/2 z-10 gap-1">
+              {activeTagFilters.map((tag) => {
+                const opt = TAG_OPTIONS.find((o) => o.value === tag);
+                return opt ? (
+                  <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--border)] rounded-md font-mono text-[11px] text-[var(--text)] uppercase shrink-0">
+                    {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor}`} />}
+                    {opt.label}
+                    <button
+                      onClick={() => onTagFiltersChange(activeTagFilters.filter((t) => t !== tag))}
+                      className="w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </span>
+                ) : null;
+              })}
+            </div>
             <input
               ref={searchInputRef}
               type="text"
@@ -375,23 +399,26 @@ export default function Sidebar({
               onKeyDown={(e) => {
                 if (e.key === "Escape") { setSearchQuery(""); searchInputRef.current?.blur(); }
                 if (e.key === "Enter" && genreMatches.length > 0) {
-                  onGenreLabelChange(genreMatches[0]);
+                  if (!activeGenreLabels.includes(genreMatches[0])) {
+                    onGenreLabelsChange([...activeGenreLabels, genreMatches[0]]);
+                  }
                   setSearchQuery("");
                   searchInputRef.current?.blur();
                 }
               }}
-              placeholder={activeGenreLabel || searchFocused ? "" : placeholder}
-              className={`w-full ${activeGenreLabel ? "pl-[calc(theme(spacing.12)+var(--genre-pill-w,0px))]" : "pl-12"} pr-10 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-secondary)] focus:outline-none transition-colors`}
+              placeholder={activeGenreLabels.length > 0 || searchFocused ? "" : placeholder}
+              style={activeGenreLabels.length > 0 ? { paddingLeft: `${48 + activeGenreLabels.length * 80}px` } : undefined}
+              className={`w-full ${activeGenreLabels.length > 0 ? "" : "pl-12"} pr-10 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-secondary)] focus:outline-none transition-colors`}
             />
-            {/* Genre search dropdown */}
-            {searchFocused && searchQuery.trim() && genreMatches.length > 0 && (
+            {/* Genre search dropdown — hide already-selected genres */}
+            {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length > 0 && (
               <div ref={searchDropdownRef} className="absolute left-0 right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
-                {genreMatches.map((label) => (
+                {genreMatches.filter((l) => !activeGenreLabels.includes(l)).map((label) => (
                   <button
                     key={label}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      onGenreLabelChange(label);
+                      onGenreLabelsChange([...activeGenreLabels, label]);
                       setSearchQuery("");
                       searchInputRef.current?.blur();
                     }}
@@ -402,28 +429,16 @@ export default function Sidebar({
                 ))}
               </div>
             )}
-            {searchFocused && searchQuery.trim() && genreMatches.length === 0 && (
+            {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length === 0 && (
               <div className="absolute left-0 right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-3 px-3">
                 <p className="font-mono text-xs text-[var(--text-muted)] uppercase text-center">No matching genres</p>
               </div>
             )}
-            {activeTagFilter !== "all" && (
-              <button
-                onClick={() => onTagFilterChange("all")}
-                className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-150"
-                title="Clear filter"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            )}
             <button
               onClick={() => setShowTagDropdown((v) => !v)}
-              className={`absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center transition-all duration-200 ${activeTagFilter !== "all" ? "text-[var(--text)] bg-[var(--border)]/70 rounded-md px-1 py-0.5" : "text-[var(--text-secondary)] hover:text-[var(--text)]"}`}
+              className={`absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center transition-all duration-200 ${activeTagFilters.length > 0 ? "text-[var(--text)] bg-[var(--border)]/70 rounded-md px-1 py-0.5" : "text-[var(--text-secondary)] hover:text-[var(--text)]"}`}
             >
-              <svg className={`w-5 h-5 ${showTagDropdown ? "filter-icon-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activeTagFilter !== "all" ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
+              <svg className={`w-5 h-5 ${showTagDropdown ? "filter-icon-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activeTagFilters.length > 0 ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="21" x2="4" y2="14" />
                 <line x1="4" y1="10" x2="4" y2="3" />
                 <line x1="12" y1="21" x2="12" y2="12" />
@@ -437,20 +452,37 @@ export default function Sidebar({
             </button>
             {showTagDropdown && (
               <div className="absolute right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
-                {TAG_OPTIONS.map((opt) => (
+                {TAG_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => {
+                  const isActive = activeTagFilters.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        if (isActive) {
+                          onTagFiltersChange(activeTagFilters.filter((t) => t !== opt.value));
+                        } else {
+                          onTagFiltersChange([...activeTagFilters, opt.value]);
+                        }
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase transition-colors duration-150 ${
+                        isActive
+                          ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
+                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
+                      }`}
+                    >
+                      {opt.dotColor && <span className={`w-2 h-2 rounded-full ${opt.dotColor} shrink-0`} />}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+                {activeTagFilters.length > 0 && (
                   <button
-                    key={opt.value}
-                    onClick={() => { onTagFilterChange(opt.value); setShowTagDropdown(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase transition-colors duration-150 ${
-                      activeTagFilter === opt.value
-                        ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
-                        : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
-                    }`}
+                    onClick={() => { onTagFiltersChange([]); setShowTagDropdown(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-t border-[var(--border)]/50 mt-1 pt-2"
                   >
-                    {opt.dotColor && <span className={`w-2 h-2 rounded-full ${opt.dotColor} shrink-0`} />}
-                    {opt.label}
+                    Clear all
                   </button>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -535,13 +567,19 @@ export default function Sidebar({
                 } : undefined}
               >
                 <p className="font-mono text-base text-[var(--text)] font-bold">digeart</p>
-                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Music discovery for diggers.</p>
+                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Deep cuts from 150+ curated channels. All underground. All human-selected.</p>
 
                 {/* Tag legend */}
-                <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50 flex items-center gap-3">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">Hot</span></span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">Rare</span></span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">New</span></span>
+                <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
+                  <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Tags</p>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Hot</span></span>
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Trending picks</span>
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Deep cuts, low plays</span>
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
+                  </div>
                 </div>
 
                 {/* Keyboard shortcuts */}
@@ -559,7 +597,7 @@ export default function Sidebar({
                       ["?", "Toggle this panel"],
                     ].map(([key, desc]) => (
                       <Fragment key={key}>
-                        <kbd className="font-mono text-[10px] text-[var(--text)] bg-[var(--border)]/40 px-1 py-px rounded text-center min-w-[22px]">{key}</kbd>
+                        <kbd className="font-mono text-[8px] text-[var(--text)] font-bold bg-[var(--border)]/40 px-1 py-px rounded text-center min-w-[22px]">{key}</kbd>
                         <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
                       </Fragment>
                     ))}
@@ -567,17 +605,17 @@ export default function Sidebar({
                 </div>
 
                 {/* Navigation guide */}
-                <div className="mt-3 pt-2.5 border-t border-[var(--border)]/50">
+                <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
                   <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Tabs</p>
-                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                     {[
-                      ["For You", "Electronic tracks (max 15 min)"],
-                      ["Samples", "World, funk, jazz, ambient & rare finds"],
-                      ["Mixes", "DJ sets & live sets (40 min+)"],
-                      ["Saved", "Your liked tracks"],
-                    ].map(([tab, desc]) => (
+                      ["For You", "1", "Electronic cuts from the underground"],
+                      ["Samples", "2", "World, funk, jazz, ambient & rare finds"],
+                      ["Mixes", "3", "DJ sets & live sets"],
+                      ["Saved", "4", "Your liked tracks"],
+                    ].map(([tab, key, desc]) => (
                       <Fragment key={tab}>
-                        <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
+                        <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab} <kbd className="font-mono text-[9px] text-[var(--text-muted)] font-bold">({key})</kbd></span>
                         <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
                       </Fragment>
                     ))}
@@ -585,8 +623,8 @@ export default function Sidebar({
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]/50">
-                  <span className="font-mono text-[9px] text-[var(--text-muted)]/40">a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--text-muted)] transition-colors">superself</a> project</span>
-                  <span className="font-mono text-[9px] text-[var(--text-muted)]/40">v0.1.0</span>
+                  <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1"><svg className="w-4 h-4 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--text-muted)] transition-colors">superself</a> project</span>
+                  <span className="font-mono text-[11px] text-[var(--text-muted)]">v1.1-beta</span>
                 </div>
               </motion.div>
             )}
@@ -617,7 +655,7 @@ export default function Sidebar({
       >
         <span
           className="shrink-0 font-[family-name:var(--font-display)] text-4xl text-[var(--text)] select-none mr-1 cursor-pointer"
-          onClick={() => { onViewChange("home"); onTagFilterChange("all"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          onClick={() => { onViewChange("home"); onTagFiltersChange([]); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         >
           digeart
         </span>
@@ -633,20 +671,44 @@ export default function Sidebar({
           >
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
-          {activeGenreLabel && (
-            <span className="absolute left-8 top-1/2 -translate-y-1/2 z-10 flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase">
-              {activeGenreLabel}
-              <button
-                onClick={() => { onGenreLabelChange(null); setSearchQuery(""); }}
-                className="w-3 h-3 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-              >
-                <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </span>
-          )}
+          {/* Mobile genre pills */}
+          <div className="flex items-center absolute left-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
+            {activeGenreLabels.map((label) => (
+              <span key={label} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase shrink-0">
+                {label}
+                <button
+                  onClick={() => { onGenreLabelsChange(activeGenreLabels.filter((l) => l !== label)); setSearchQuery(""); }}
+                  className="w-3 h-3 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                >
+                  <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+          </div>
+          {/* Mobile tag pills */}
+          <div className="flex items-center absolute right-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
+            {activeTagFilters.map((tag) => {
+              const opt = TAG_OPTIONS.find((o) => o.value === tag);
+              return opt ? (
+                <span key={tag} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase shrink-0">
+                  {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor}`} />}
+                  {opt.label}
+                  <button
+                    onClick={() => onTagFiltersChange(activeTagFilters.filter((t) => t !== tag))}
+                    className="w-3 h-3 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                  >
+                    <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </span>
+              ) : null;
+            })}
+          </div>
           <input
             ref={mobileSearchInputRef}
             type="text"
@@ -657,23 +719,26 @@ export default function Sidebar({
             onKeyDown={(e) => {
               if (e.key === "Escape") { setSearchQuery(""); mobileSearchInputRef.current?.blur(); }
               if (e.key === "Enter" && genreMatches.length > 0) {
-                onGenreLabelChange(genreMatches[0]);
+                if (!activeGenreLabels.includes(genreMatches[0])) {
+                  onGenreLabelsChange([...activeGenreLabels, genreMatches[0]]);
+                }
                 setSearchQuery("");
                 mobileSearchInputRef.current?.blur();
               }
             }}
-            placeholder={activeGenreLabel || searchFocused ? "" : placeholder}
-            className="w-full pl-8 pr-8 py-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-xs text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-secondary)] focus:outline-none transition-colors"
+            placeholder={activeGenreLabels.length > 0 || searchFocused ? "" : placeholder}
+            style={activeGenreLabels.length > 0 ? { paddingLeft: `${32 + activeGenreLabels.length * 70}px` } : undefined}
+            className={`w-full ${activeGenreLabels.length > 0 ? "" : "pl-8"} pr-8 py-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-xs text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-secondary)] focus:outline-none transition-colors`}
           />
           {/* Mobile genre search dropdown */}
-          {searchFocused && searchQuery.trim() && genreMatches.length > 0 && (
+          {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length > 0 && (
             <div ref={mobileSearchDropdownRef} className="absolute left-0 right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
-              {genreMatches.map((label) => (
+              {genreMatches.filter((l) => !activeGenreLabels.includes(l)).map((label) => (
                 <button
                   key={label}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    onGenreLabelChange(label);
+                    onGenreLabelsChange([...activeGenreLabels, label]);
                     setSearchQuery("");
                     mobileSearchInputRef.current?.blur();
                   }}
@@ -684,28 +749,16 @@ export default function Sidebar({
               ))}
             </div>
           )}
-          {searchFocused && searchQuery.trim() && genreMatches.length === 0 && (
+          {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length === 0 && (
             <div className="absolute left-0 right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-2 px-3">
               <p className="font-mono text-[10px] text-[var(--text-muted)] uppercase text-center">No matching genres</p>
             </div>
           )}
-          {activeTagFilter !== "all" && (
-            <button
-              onClick={() => onTagFilterChange("all")}
-              className="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors duration-150"
-              title="Clear filter"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
           <button
             onClick={() => setShowTagDropdown((v) => !v)}
-            className={`absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center transition-all duration-200 ${activeTagFilter !== "all" ? "text-[var(--text)] bg-[var(--border)]/70 rounded-md px-0.5 py-0.5" : "text-[var(--text-secondary)] hover:text-[var(--text)]"}`}
+            className={`absolute right-2.5 top-1/2 -translate-y-1/2 flex flex-col items-center justify-center transition-all duration-200 ${activeTagFilters.length > 0 ? "text-[var(--text)] bg-[var(--border)]/70 rounded-md px-0.5 py-0.5" : "text-[var(--text-secondary)] hover:text-[var(--text)]"}`}
           >
-            <svg className={`w-4 h-4 ${showTagDropdown ? "filter-icon-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activeTagFilter !== "all" ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
+            <svg className={`w-4 h-4 ${showTagDropdown ? "filter-icon-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activeTagFilters.length > 0 ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="21" x2="4" y2="14" />
               <line x1="4" y1="10" x2="4" y2="3" />
               <line x1="12" y1="21" x2="12" y2="12" />
@@ -719,20 +772,37 @@ export default function Sidebar({
           </button>
           {showTagDropdown && (
             <div className="absolute right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 min-w-[110px]">
-              {TAG_OPTIONS.map((opt) => (
+              {TAG_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => {
+                const isActive = activeTagFilters.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      if (isActive) {
+                        onTagFiltersChange(activeTagFilters.filter((t) => t !== opt.value));
+                      } else {
+                        onTagFiltersChange([...activeTagFilters, opt.value]);
+                      }
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 ${
+                      isActive
+                        ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
+                        : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
+                    }`}
+                  >
+                    {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor} shrink-0`} />}
+                    {opt.label}
+                  </button>
+                );
+              })}
+              {activeTagFilters.length > 0 && (
                 <button
-                  key={opt.value}
-                  onClick={() => { onTagFilterChange(opt.value); setShowTagDropdown(false); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 ${
-                    activeTagFilter === opt.value
-                      ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
-                  }`}
+                  onClick={() => { onTagFiltersChange([]); setShowTagDropdown(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-t border-[var(--border)]/50 mt-1 pt-2"
                 >
-                  {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor} shrink-0`} />}
-                  {opt.label}
+                  Clear all
                 </button>
-              ))}
+              )}
             </div>
           )}
         </div>
@@ -790,13 +860,19 @@ export default function Sidebar({
               <div className="w-10 h-1 rounded-full bg-[var(--border)] mx-auto mb-3" />
 
               <p className="font-mono text-base text-[var(--text)] font-bold">digeart</p>
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Music discovery for diggers.</p>
+              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Deep cuts from 150+ curated channels. All underground. All human-selected.</p>
 
               {/* Tag legend */}
-              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50 flex items-center gap-3">
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">Hot</span></span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">Rare</span></span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)]">New</span></span>
+              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
+                <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Tags</p>
+                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Hot</span></span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Trending picks</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Deep cuts, low plays</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
+                </div>
               </div>
 
               {/* Keyboard shortcuts */}
@@ -814,7 +890,7 @@ export default function Sidebar({
                     ["?", "Toggle this panel"],
                   ].map(([key, desc]) => (
                     <Fragment key={key}>
-                      <kbd className="font-mono text-[10px] text-[var(--text)] bg-[var(--border)]/40 px-1 py-px rounded text-center min-w-[22px]">{key}</kbd>
+                      <kbd className="font-mono text-[8px] text-[var(--text)] font-bold bg-[var(--border)]/40 px-1 py-px rounded text-center min-w-[22px]">{key}</kbd>
                       <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
                     </Fragment>
                   ))}
@@ -822,17 +898,17 @@ export default function Sidebar({
               </div>
 
               {/* Navigation guide */}
-              <div className="mt-3 pt-2.5 border-t border-[var(--border)]/50">
+              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
                 <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Tabs</p>
-                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   {[
-                    ["For You", "Electronic tracks (max 15 min)"],
-                    ["Samples", "World, funk, jazz, ambient & rare finds"],
-                    ["Mixes", "DJ sets & live sets (40 min+)"],
-                    ["Saved", "Your liked tracks"],
-                  ].map(([tab, desc]) => (
+                    ["For You", "1", "Electronic cuts from the underground"],
+                    ["Samples", "2", "World, funk, jazz, ambient & rare finds"],
+                    ["Mixes", "3", "DJ sets & live sets"],
+                    ["Saved", "4", "Your liked tracks"],
+                  ].map(([tab, key, desc]) => (
                     <Fragment key={tab}>
-                      <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
+                      <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab} <kbd className="font-mono text-[9px] text-[var(--text-muted)] font-bold">({key})</kbd></span>
                       <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
                     </Fragment>
                   ))}
@@ -840,8 +916,8 @@ export default function Sidebar({
               </div>
 
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]/50">
-                <span className="font-mono text-[9px] text-[var(--text-muted)]/40">a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--text-muted)] transition-colors">superself</a> project</span>
-                <span className="font-mono text-[9px] text-[var(--text-muted)]/40">v0.1.0</span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1"><svg className="w-4 h-4 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--text-muted)] transition-colors">superself</a> project</span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)]">v1.1-beta</span>
               </div>
             </motion.div>
           </motion.div>

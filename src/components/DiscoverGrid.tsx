@@ -5,8 +5,6 @@ import MusicCard from "./MusicCard";
 import { GENRE_PRESETS } from "./Sidebar";
 import type { CardData } from "@/lib/types";
 
-import type { TagFilter } from "./Sidebar";
-
 interface DiscoverGridProps {
   showSavedOnly?: boolean;
   savedIds: Set<string>;
@@ -17,8 +15,8 @@ interface DiscoverGridProps {
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeGenre: number;
-  activeTagFilter?: TagFilter;
-  activeGenreLabel?: string | null;
+  activeTagFilters?: string[];
+  activeGenreLabels?: string[];
   onCardsLoaded?: (cards: CardData[]) => void;
   isAuthenticated?: boolean;
 }
@@ -33,8 +31,8 @@ export default function DiscoverGrid({
   onToggleSave,
   onToggleLike,
   activeGenre,
-  activeTagFilter = "all",
-  activeGenreLabel = null,
+  activeTagFilters = [],
+  activeGenreLabels = [],
   onCardsLoaded,
   isAuthenticated = true,
 }: DiscoverGridProps) {
@@ -45,8 +43,12 @@ export default function DiscoverGrid({
   const pageRef = useRef(0);
   const hasMore = useRef(true);
 
+  // Serialize arrays to stable strings for dependency tracking
+  const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
+  const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
+
   const fetchCards = useCallback(
-    async (genreIndex: number, tag: TagFilter, genreLabel: string | null, append = false) => {
+    async (genreIndex: number, tagParam: string, genreParam: string, append = false) => {
       if (append && !hasMore.current) return;
       if (append) setLoadingMore(true);
       else { setLoading(true); hasMore.current = true; }
@@ -55,8 +57,8 @@ export default function DiscoverGrid({
         const limit = 30;
         const genres = GENRE_PRESETS[genreIndex].genres.join(",");
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/discover?genres=${genres}&limit=${limit}&offset=${offset}&tag=${tag}`;
-        if (genreLabel) url += `&genre=${encodeURIComponent(genreLabel)}`;
+        let url = `/api/discover?genres=${genres}&limit=${limit}&offset=${offset}&tag=${tagParam}`;
+        if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const res = await fetch(url);
         const data = await res.json();
         const newCards: CardData[] = data.cards || [];
@@ -85,19 +87,19 @@ export default function DiscoverGrid({
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Refetch on ANY tag change (not just top toggle)
-  const prevTagRef = useRef(activeTagFilter);
-  const prevGenreLabelRef = useRef(activeGenreLabel);
+  // Refetch on ANY tag/genre change
+  const prevTagRef = useRef(tagKey);
+  const prevGenreLabelRef = useRef(genreKey);
   useEffect(() => {
-    if (prevTagRef.current !== activeTagFilter || prevGenreLabelRef.current !== activeGenreLabel) {
-      prevTagRef.current = activeTagFilter;
-      prevGenreLabelRef.current = activeGenreLabel;
-      fetchCards(activeGenre, activeTagFilter, activeGenreLabel);
+    if (prevTagRef.current !== tagKey || prevGenreLabelRef.current !== genreKey) {
+      prevTagRef.current = tagKey;
+      prevGenreLabelRef.current = genreKey;
+      fetchCards(activeGenre, tagKey, genreKey);
     }
-  }, [activeTagFilter, activeGenreLabel, activeGenre, fetchCards]);
+  }, [tagKey, genreKey, activeGenre, fetchCards]);
 
   useEffect(() => {
-    fetchCards(activeGenre, activeTagFilter, activeGenreLabel);
+    fetchCards(activeGenre, tagKey, genreKey);
   }, [activeGenre, fetchCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -109,7 +111,7 @@ export default function DiscoverGrid({
           !loadingMore &&
           cards.length > 0
         ) {
-          fetchCards(activeGenre, activeTagFilter, activeGenreLabel, true);
+          fetchCards(activeGenre, tagKey, genreKey, true);
         }
       },
       { rootMargin: "400px" }
@@ -120,7 +122,7 @@ export default function DiscoverGrid({
     return () => {
       if (el) observer.unobserve(el);
     };
-  }, [activeGenre, activeTagFilter, activeGenreLabel, loading, loadingMore, cards.length, fetchCards]);
+  }, [activeGenre, tagKey, genreKey, loading, loadingMore, cards.length, fetchCards]);
 
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
@@ -166,7 +168,7 @@ export default function DiscoverGrid({
                   card={card}
                   saved={likedIds.has(card.id)}
                   isPlaying={playingId === card.id && isPlaying}
-                  activeTagFilter={activeTagFilter}
+                  activeTagFilters={activeTagFilters}
                   viewContext="home"
                   onPlay={() => onPlay(card.id)}
                   onSave={() => onToggleLike(card.id)}
