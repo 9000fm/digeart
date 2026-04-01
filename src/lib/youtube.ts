@@ -1,4 +1,3 @@
-import musicChannels from "@/data/music-channels.json";
 import { cacheGet, cacheSet } from "./cache";
 import { supabase } from "./supabase";
 import type { CardData } from "./types";
@@ -46,7 +45,7 @@ function seededShuffle<T>(arr: T[]): T[] {
 
 /* ── Approved channels from Supabase (cached) ───────────────────────── */
 
-type ApprovedChannel = { name: string; id: string; labels?: string[] };
+type ApprovedChannel = { name: string; id: string; labels?: string[]; starred?: boolean };
 
 async function getApprovedChannels(): Promise<ApprovedChannel[]> {
   const cacheKey = "supabase-approved-channels-v1";
@@ -55,13 +54,14 @@ async function getApprovedChannels(): Promise<ApprovedChannel[]> {
 
   const { data } = await supabase
     .from("curator_channels")
-    .select("channel_id, name, labels")
+    .select("channel_id, name, labels, starred")
     .eq("status", "approved");
 
   const channels: ApprovedChannel[] = (data || []).map((c) => ({
     id: c.channel_id,
     name: c.name,
     labels: c.labels || [],
+    starred: c.starred === true,
   }));
 
   // Fall back to static JSON if Supabase returns empty (first-time setup)
@@ -74,6 +74,36 @@ async function getApprovedChannels(): Promise<ApprovedChannel[]> {
 
   cacheSet(cacheKey, channels);
   return channels;
+}
+
+/* ── Persistent pool cache (Supabase) ────────────────────────────────── */
+
+const POOL_MAX_AGE = 6 * 60 * 60 * 1000; // 6 hours
+
+async function getPoolFromSupabase(key: string): Promise<CardData[] | null> {
+  try {
+    const { data } = await supabase
+      .from("pool_cache")
+      .select("data, updated_at")
+      .eq("key", key)
+      .single();
+    if (!data) return null;
+    const age = Date.now() - new Date(data.updated_at).getTime();
+    if (age > POOL_MAX_AGE) return null;
+    return data.data as CardData[];
+  } catch {
+    return null;
+  }
+}
+
+async function savePoolToSupabase(key: string, pool: CardData[]): Promise<void> {
+  try {
+    await supabase
+      .from("pool_cache")
+      .upsert({ key, data: pool, updated_at: new Date().toISOString() });
+  } catch {
+    // Non-critical — in-memory cache still works
+  }
 }
 
 /* ── Shared types & constants ────────────────────────────────────────── */
@@ -233,12 +263,6 @@ async function fetchVideoDetails(
   }
 
   return details;
-}
-
-export async function sampleChannels(n: number): Promise<{ name: string; id: string; labels?: string[] }[]> {
-  const approved = await getApprovedChannels();
-  const pool = approved.length > 0 ? approved : musicChannels;
-  return seededShuffle(pool).slice(0, n);
 }
 
 function uploadsPlaylistId(channelId: string): string {
@@ -426,13 +450,6 @@ function filterChannelsByGenre(
 
 /* ── Discover (homepage) ─────────────────────────────────────────────── */
 
-/** Pick random N items from array using seeded PRNG */
-function seededPickN<T>(arr: T[], n: number): T[] {
-  if (arr.length <= n) return [...arr];
-  const shuffled = seededShuffle(arr);
-  return shuffled.slice(0, n);
-}
-
 /** Common video filter for homepage */
 function isValidHomepageVideo(v: YouTubeVideo): boolean {
   if (v.title === "Private video" || v.title === "Deleted video") return false;
@@ -446,53 +463,22 @@ function isValidHomepageVideo(v: YouTubeVideo): boolean {
   return true;
 }
 
-/**
- * 3-tier track picking per channel:
- * - Big channels (100+ uploads): 3 from top 20 by views + 5 from last 20 + 5 random from catalog
- * - Small channels: 5 from last 20 + 5 random from catalog
- */
-async function getChannelTieredUploads(channelId: string): Promise<YouTubeVideo[]> {
-  // Fetch 50 recent uploads (covers Tier 2 + some Tier 3)
-  const recent = await getChannelUploads(channelId, 50, true, false, 1);
-  const isBigChannel = recent.length >= 50; // If we got 50, channel likely has 100+
-
-  // Tier 2 — Fresh: random 5 from last 20
-  const last20 = recent.slice(0, 20);
-  const tier2 = seededPickN(last20, 5);
-
-  // Tier 1 — Hits: random 3 from top 20 by views (big channels only)
-  let tier1: YouTubeVideo[] = [];
-  if (isBigChannel) {
-    const byViews = [...recent].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
-    const top20 = byViews.slice(0, 20);
-    // Exclude any already picked in tier2
-    const tier2Ids = new Set(tier2.map((v) => v.id));
-    const available = top20.filter((v) => !tier2Ids.has(v.id));
-    tier1 = seededPickN(available, 3);
-  }
-
-  // Tier 3 — Deep cuts: random 5 from deeper in catalog
-  // Fetch page 2 for older content (if channel has enough)
-  let deepPool: YouTubeVideo[];
-  if (isBigChannel) {
-    const deeper = await getChannelUploads(channelId, 50, true, false, 2);
-    // Use uploads from page 2 (index 50+) as deep cuts pool
-    deepPool = deeper.length > 50 ? deeper.slice(50) : deeper.slice(20);
-  } else {
-    deepPool = recent.slice(20); // Whatever is beyond the first 20
-  }
-  const pickedIds = new Set([...tier1, ...tier2].map((v) => v.id));
-  const tier3Available = deepPool.filter((v) => !pickedIds.has(v.id));
-  const tier3 = seededPickN(tier3Available, 5);
-
-  return [...tier1, ...tier2, ...tier3];
-}
-
 async function getDiscoverPool(genre?: string): Promise<CardData[]> {
-  const cacheKey = genre ? `yt-discover-pool-v6-g-${genre.toLowerCase()}` : "yt-discover-pool-v6";
-  const cached = cacheGet<CardData[]>(cacheKey);
-  if (cached && cached.length > 0) return cached;
+  const poolKey = genre ? `discover-${genre.toLowerCase()}` : "discover";
+  const memoryCacheKey = `pool-${poolKey}`;
 
+  // Layer 1: in-memory cache (instant)
+  const memCached = cacheGet<CardData[]>(memoryCacheKey);
+  if (memCached && memCached.length > 0) return memCached;
+
+  // Layer 2: Supabase persistent cache (survives cold starts)
+  const sbCached = await getPoolFromSupabase(poolKey);
+  if (sbCached && sbCached.length > 0) {
+    cacheSet(memoryCacheKey, sbCached, POOL_MAX_AGE);
+    return sbCached;
+  }
+
+  // Layer 3: rebuild from YouTube
   const allApproved = await getApprovedChannels();
 
   let homepageChannels = allApproved.filter((c) => {
@@ -503,28 +489,46 @@ async function getDiscoverPool(genre?: string): Promise<CardData[]> {
 
   homepageChannels = filterChannelsByGenre(homepageChannels, genre);
 
-  const allVideos: YouTubeVideo[] = [];
+  const starredCards: CardData[] = [];
+  const regularCards: CardData[] = [];
 
   const BATCH_SIZE = 10;
   for (let i = 0; i < homepageChannels.length; i += BATCH_SIZE) {
     const batch = homepageChannels.slice(i, i + BATCH_SIZE);
     const results = await Promise.allSettled(
-      batch.map((ch) => getChannelTieredUploads(ch.id))
+      batch.map((ch) => getChannelUploads(ch.id, 30, true))
     );
-    for (const result of results) {
+    for (let j = 0; j < batch.length; j++) {
+      const result = results[j];
       if (result.status === "fulfilled") {
-        allVideos.push(...result.value);
+        const cards = result.value
+          .filter(isValidHomepageVideo)
+          .map(videoToCard);
+        if (batch[j].starred) {
+          starredCards.push(...cards);
+        } else {
+          regularCards.push(...cards);
+        }
       }
     }
   }
 
-  const pool = seededShuffle(
-    allVideos
-      .filter(isValidHomepageVideo)
-      .map(videoToCard)
-  );
+  // Compose pool: ~35% starred, ~65% regular
+  const totalAvailable = starredCards.length + regularCards.length;
+  const starredTarget = Math.min(starredCards.length, Math.round(totalAvailable * 0.35));
+  const regularTarget = totalAvailable - starredTarget;
 
-  cacheSet(cacheKey, pool);
+  const pool = seededShuffle([
+    ...seededShuffle(starredCards).slice(0, starredTarget),
+    ...seededShuffle(regularCards).slice(0, regularTarget),
+  ]);
+
+  // Only cache non-empty pools (don't persist API failures)
+  if (pool.length > 0) {
+    cacheSet(memoryCacheKey, pool, POOL_MAX_AGE);
+    await savePoolToSupabase(poolKey, pool);
+  }
+
   return pool;
 }
 
@@ -534,9 +538,6 @@ export async function discoverFromYouTube(
   tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
-  const approved = await getApprovedChannels();
-  if (approved.length === 0) return { cards: [], totalFiltered: 0 };
-
   const pool = await getDiscoverPool(genre);
   if (pool.length === 0) return { cards: [], totalFiltered: 0 };
 
@@ -555,13 +556,23 @@ export async function discoverMixes(
   tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
-  const allApproved = await getApprovedChannels();
-  if (allApproved.length === 0) return { cards: [], totalFiltered: 0 };
+  const poolKey = genre ? `mixes-${genre.toLowerCase()}` : "mixes";
+  const memoryCacheKey = `pool-${poolKey}`;
 
-  const cacheKey = genre ? `yt-mixes-pool-v4-g-${genre.toLowerCase()}` : "yt-mixes-pool-v4";
-  let pool = cacheGet<CardData[]>(cacheKey);
+  let pool = cacheGet<CardData[]>(memoryCacheKey);
 
   if (!pool || pool.length === 0) {
+    // Check Supabase persistent cache
+    const sbCached = await getPoolFromSupabase(poolKey);
+    if (sbCached && sbCached.length > 0) {
+      pool = sbCached;
+      cacheSet(memoryCacheKey, pool, POOL_MAX_AGE);
+    }
+  }
+
+  if (!pool || pool.length === 0) {
+    const allApproved = await getApprovedChannels();
+    if (allApproved.length === 0) return { cards: [], totalFiltered: 0 };
 
     let mixChannels = allApproved.filter(
       (c) => c.labels?.some((l) =>
@@ -574,7 +585,6 @@ export async function discoverMixes(
     if (mixChannels.length === 0) return { cards: [], totalFiltered: 0 };
 
     const allVideos: YouTubeVideo[] = [];
-    // 2 pages of 50 per channel → up to 100 videos each
     const results = await Promise.allSettled(
       mixChannels.map((ch) => getChannelUploads(ch.id, 50, true, false, 2))
     );
@@ -592,11 +602,7 @@ export async function discoverMixes(
           if (!v.duration || v.duration < 2400) return false;
           const lower = v.title.toLowerCase();
           if (lower.includes("#shorts") || lower.includes("#short")) return false;
-          // Trust labeled mix channels — only require >40min duration.
-          // For safety, still exclude obvious non-mix content.
           if (!titleContainsAny(v.title, MIX_TITLE_KEYWORDS)) {
-            // If no keyword match, still allow from labeled channels (trust the label)
-            // but skip if it looks like a tutorial or non-music
             if (isNonMusic(v.title)) return false;
           }
           return true;
@@ -604,7 +610,10 @@ export async function discoverMixes(
         .map(videoToCard)
     );
 
-    cacheSet(cacheKey, pool);
+    if (pool.length > 0) {
+      cacheSet(memoryCacheKey, pool, POOL_MAX_AGE);
+      await savePoolToSupabase(poolKey, pool);
+    }
   }
 
   const filtered = applyTagFilter(pool, tag);
@@ -627,13 +636,22 @@ export async function discoverSamples(
   tag: Tag | Tag[] = "all",
   genre?: string
 ): Promise<PoolResult> {
-  const allApproved = await getApprovedChannels();
-  if (allApproved.length === 0) return { cards: [], totalFiltered: 0 };
+  const poolKey = genre ? `samples-${genre.toLowerCase()}` : "samples";
+  const memoryCacheKey = `pool-${poolKey}`;
 
-  const cacheKey = genre ? `yt-samples-pool-v4-g-${genre.toLowerCase()}` : "yt-samples-pool-v4";
-  let pool = cacheGet<CardData[]>(cacheKey);
+  let pool = cacheGet<CardData[]>(memoryCacheKey);
 
   if (!pool || pool.length === 0) {
+    const sbCached = await getPoolFromSupabase(poolKey);
+    if (sbCached && sbCached.length > 0) {
+      pool = sbCached;
+      cacheSet(memoryCacheKey, pool, POOL_MAX_AGE);
+    }
+  }
+
+  if (!pool || pool.length === 0) {
+    const allApproved = await getApprovedChannels();
+    if (allApproved.length === 0) return { cards: [], totalFiltered: 0 };
 
     let sampleChannelPool = allApproved.filter(
       (c) => c.labels?.some((l) =>
@@ -648,7 +666,6 @@ export async function discoverSamples(
     sampleChannelPool = filterChannelsByGenre(sampleChannelPool, genre);
     otherChannels = filterChannelsByGenre(otherChannels, genre);
 
-    // More channels, more uploads per channel
     const shuffledSample = seededShuffle(sampleChannelPool).slice(0, 20);
     const shuffledOther = seededShuffle(otherChannels).slice(0, 10);
 
@@ -692,7 +709,10 @@ export async function discoverSamples(
         .map(({ video }) => videoToCard(video))
     );
 
-    cacheSet(cacheKey, pool);
+    if (pool.length > 0) {
+      cacheSet(memoryCacheKey, pool, POOL_MAX_AGE);
+      await savePoolToSupabase(poolKey, pool);
+    }
   }
 
   const filtered = applyTagFilter(pool, tag);
