@@ -115,7 +115,7 @@ export default memo(function MusicCard({
   }, [isAuthenticated, onSave, saved]);
 
   return (
-    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 25 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${isGracePeriod ? "opacity-75" : ""}`}
+    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${isGracePeriod ? "opacity-75" : ""}`}
       onMouseLeave={() => {
         if (showInfo) {
           infoTimerRef.current = setTimeout(() => setShowInfo(false), 400);
@@ -280,8 +280,8 @@ export default memo(function MusicCard({
             ref={infoRef}
             initial={{ opacity: 0, y: 6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="absolute bottom-12 right-2 z-30 w-[200px] bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl p-3 text-left"
             onClick={(e) => e.stopPropagation()}
           >

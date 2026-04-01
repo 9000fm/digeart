@@ -651,7 +651,7 @@ export default function Home() {
 
   // Locate card — with 3s poll (30 × 100ms) + failure feedback
   const handleLocateCard = useCallback(() => {
-    if (!nowPlayingCard) return;
+    if (!nowPlayingCard || showOnboarding) return;
     document.dispatchEvent(new Event("locate-triggered"));
 
     const tryScroll = () => {
@@ -716,7 +716,7 @@ export default function Home() {
     } else {
       pulseLocateBtn();
     }
-  }, [nowPlayingCard, activeView]);
+  }, [nowPlayingCard, activeView, showOnboarding]);
 
   // Seek — uses YT.Player.seekTo() directly
   const handleSeek = useCallback((seconds: number) => {

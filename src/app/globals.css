@@ -550,9 +550,12 @@ body {
   padding-bottom: var(--player-height);
 }
 /* At lg breakpoint the sidebar + player switch to desktop layout */
-@media (min-width: 1024px) {
+@media (min-width: 1152px) {
   .layout-shift {
     padding-top: calc(var(--banner-height) + var(--header-height));
+  }
+  .dot-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   }
 }
 

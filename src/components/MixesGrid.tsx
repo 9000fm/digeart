@@ -37,6 +37,7 @@ export default function MixesGrid({
   const observerRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef(0);
   const hasMore = useRef(true);
+  const rotateRef = useRef(Math.floor(Math.random() * 100000));
 
   const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
   const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
@@ -50,7 +51,7 @@ export default function MixesGrid({
       try {
         const limit = 20;
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/mixes?limit=${limit}&offset=${offset}&tag=${tagParam}`;
+        let url = `/api/mixes?limit=${limit}&offset=${offset}&tag=${tagParam}&rotate=${rotateRef.current}`;
         if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const res = await fetch(url);
         const data = await res.json();
@@ -130,7 +131,7 @@ export default function MixesGrid({
 
   if (loading) {
     return (
-      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
         {Array.from({ length: 10 }).map((_, i) => (
           <div
             key={i}
@@ -159,7 +160,7 @@ export default function MixesGrid({
 
   return (
     <>
-      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
         {cards.map((card) => (
           <MusicCard
             key={card.id}

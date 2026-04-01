@@ -44,7 +44,7 @@ export default function SavedGrid({
 
   if (loading) {
     return (
-      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+      <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="aspect-square skeleton-shimmer rounded-md" />
         ))}
@@ -75,7 +75,7 @@ export default function SavedGrid({
   }
 
   return (
-    <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+    <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
       {cards.map((card) => (
         <MusicCard
           key={card.id}

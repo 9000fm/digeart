@@ -44,11 +44,16 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             className="fixed z-[80] w-[240px]"
             style={
               anchorRect
-                ? {
-                    top: anchorRect.top - 8,
-                    left: anchorRect.right + 12,
-                    transform: "translateY(-100%)",
-                  }
+                ? anchorRect.left > window.innerWidth / 2
+                  ? {
+                      top: anchorRect.bottom + 8,
+                      right: Math.max(16, window.innerWidth - anchorRect.right),
+                    }
+                  : {
+                      top: anchorRect.top - 8,
+                      left: anchorRect.right + 12,
+                      transform: "translateY(-100%)",
+                    }
                 : {
                     top: "50%",
                     left: "50%",
@@ -60,7 +65,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">

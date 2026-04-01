@@ -881,12 +881,12 @@ export default function NowPlayingBanner({
         ...(isMobile ? { height: isMinimized ? 44 : expandedHeightRef.current } : {}),
       }}
       exit={{ y: "100%", opacity: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={`player-banner fixed left-0 right-0 min-[1152px]:left-[var(--sidebar-width)] bg-[var(--bg-alt)]/85 backdrop-blur-2xl backdrop-saturate-150 border-t border-[var(--border)]/50 overflow-visible`}
       style={{ bottom: 0, ...(!isMobile ? { height: "var(--player-height)" } : {}) }}
     >
       {/* Corner tab close — desktop only */}
-      <div className="hidden min-[1152px]:block">{closeButton}</div>
+      {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
       <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3" style={{ gridTemplateColumns: "auto 1fr auto" }}>
@@ -1189,8 +1189,8 @@ export default function NowPlayingBanner({
             ref={infoRef}
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="z-50 w-[220px] bg-black/85 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl p-3 text-left fixed"
             style={infoAnchor ? { left: Math.max(8, infoAnchor.left - 110), bottom: typeof window !== 'undefined' ? window.innerHeight - infoAnchor.top + 8 : 80 } : { bottom: 80, left: 8 }}
             onClick={(e) => e.stopPropagation()}

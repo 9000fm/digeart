@@ -12,9 +12,10 @@ export async function GET(req: NextRequest) {
   const tags: Tag[] = rawTag.split(",").map((t) => t.trim()).filter(isValidTag);
   const tag: Tag | Tag[] = tags.length <= 1 ? (tags[0] || "all") : tags;
   const genre = req.nextUrl.searchParams.get("genre") || undefined;
+  const rotate = parseInt(req.nextUrl.searchParams.get("rotate") || "0", 10) || undefined;
 
   try {
-    const { cards, totalFiltered } = await discoverFromYouTube(limit, offset, tag, genre);
+    const { cards, totalFiltered } = await discoverFromYouTube(limit, offset, tag, genre, rotate);
     return NextResponse.json({
       cards,
       hasMore: offset + cards.length < totalFiltered,

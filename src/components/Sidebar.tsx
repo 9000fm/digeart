@@ -807,7 +807,7 @@ export default function Sidebar({
           )}
         </div>
         <div data-auth-button className="shrink-0">
-          <AuthButton mobile onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { setSettingsAnchor(null); setSettingsOpen(true); }} onOpenInfo={() => setShowAbout((v) => !v)} />
+          <AuthButton mobile onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-button]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); }} onOpenInfo={() => setShowAbout((v) => !v)} />
         </div>
       </header>
 

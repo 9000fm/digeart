@@ -42,6 +42,7 @@ export default function DiscoverGrid({
   const observerRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef(0);
   const hasMore = useRef(true);
+  const rotateRef = useRef(Math.floor(Math.random() * 100000));
 
   // Serialize arrays to stable strings for dependency tracking
   const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
@@ -57,7 +58,7 @@ export default function DiscoverGrid({
         const limit = 30;
         const genres = GENRE_PRESETS[genreIndex].genres.join(",");
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/discover?genres=${genres}&limit=${limit}&offset=${offset}&tag=${tagParam}`;
+        let url = `/api/discover?genres=${genres}&limit=${limit}&offset=${offset}&tag=${tagParam}&rotate=${rotateRef.current}`;
         if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const res = await fetch(url);
         const data = await res.json();
@@ -143,7 +144,7 @@ export default function DiscoverGrid({
   return (
     <>
       {loading ? (
-        <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+        <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
@@ -161,7 +162,7 @@ export default function DiscoverGrid({
               <p className="font-mono text-sm text-[var(--text-muted)] uppercase">No saved tracks yet</p>
             </div>
           ) : (
-            <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+            <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
               {displayCards.map((card) => (
                 <MusicCard
                   key={card.id}

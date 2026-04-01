@@ -84,23 +84,24 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Skip "Info" and "Settings" steps on mobile — targets only exist in desktop sidebar
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 1152;
   const isDark = typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark";
   const steps = isMobile ? MOBILE_STEPS : STEPS;
 
   // Is this the player step? (index 1 in full steps)
   const isPlayerStep = steps[step]?.target === ".player-banner";
 
-  // Auto-play a random track if nothing is playing when tutorial starts
+  // Auto-play a random track when reaching the player step (step 2)
   useEffect(() => {
-    if (!show || !onPlayRandom) return;
+    if (!show || !ready || !onPlayRandom) return;
+    if (steps[step]?.target !== ".player-banner") return;
     const t = setTimeout(() => {
       if (!document.querySelector(".player-banner")) {
         onPlayRandom();
       }
     }, 200);
     return () => clearTimeout(t);
-  }, [show, onPlayRandom]);
+  }, [show, ready, step, steps, onPlayRandom]);
 
   const updateSpotlight = useCallback(() => {
     const selector = steps[step]?.target;
@@ -157,14 +158,34 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
     return () => { clearTimeout(timer); window.removeEventListener("resize", updateSpotlight); };
   }, [show, ready, updateSpotlight]);
 
-  // After step changes, wait for spotlight to reposition then fade card in
+  // Watch player element for size changes (minimize/expand on mobile)
   useEffect(() => {
-    if (!show || !ready) return;
+    if (!show || !ready || !isPlayerStep) return;
+    const el = document.querySelector(".player-banner");
+    if (!el) return;
+    const observer = new ResizeObserver(() => updateSpotlight());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [show, ready, isPlayerStep, updateSpotlight]);
+
+  // Player step: wait for animation to settle before showing spotlight (single entrance, no blink)
+  useEffect(() => {
+    if (!show || !ready || !isPlayerStep) return;
+    const t = setTimeout(() => {
+      updateSpotlight();
+      setTimeout(() => setSpotlightVisible(true), 60);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [show, ready, isPlayerStep, updateSpotlight]);
+
+  // After step changes, wait for spotlight to reposition then fade card in (skip player step)
+  useEffect(() => {
+    if (!show || !ready || isPlayerStep) return;
     const t = setTimeout(() => {
       setSpotlightVisible(true);
     }, 120);
     return () => clearTimeout(t);
-  }, [show, ready, step]);
+  }, [show, ready, step, isPlayerStep]);
 
   // On tutorial start: scroll to top, then lock body scroll, then mark ready
   useEffect(() => {
@@ -176,14 +197,32 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
     setShowConfirm(false);
     window.scrollTo({ top: 0, behavior: "instant" });
     const t = setTimeout(() => {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      document.documentElement.style.paddingRight = `${scrollbarWidth}px`;
       setReady(true);
     }, 100);
     return () => {
       clearTimeout(t);
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.paddingRight = "";
     };
   }, [show]);
+
+  // Block all scroll on Step 1 (touch + wheel)
+  useEffect(() => {
+    if (!show || !ready || step !== 0) return;
+    const preventTouch = (e: TouchEvent) => e.preventDefault();
+    const preventWheel = (e: WheelEvent) => e.preventDefault();
+    document.addEventListener("touchmove", preventTouch, { passive: false });
+    document.addEventListener("wheel", preventWheel, { passive: false });
+    return () => {
+      document.removeEventListener("touchmove", preventTouch);
+      document.removeEventListener("wheel", preventWheel);
+    };
+  }, [show, ready, step]);
 
   // Only fade spotlight hole + card between steps — dark backdrop stays
   const goTo = useCallback((next: number) => {

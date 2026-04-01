@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
     const tags: Tag[] = rawTag.split(",").map((t) => t.trim()).filter(isValidTag);
     const tag: Tag | Tag[] = tags.length <= 1 ? (tags[0] || "all") : tags;
     const genre = searchParams.get("genre") || undefined;
+    const rotate = parseInt(searchParams.get("rotate") || "0", 10) || undefined;
 
-    const { cards, totalFiltered } = await discoverSamples(limit, offset, tag, genre);
+    const { cards, totalFiltered } = await discoverSamples(limit, offset, tag, genre, rotate);
     return NextResponse.json({
       cards,
       hasMore: offset + cards.length < totalFiltered,

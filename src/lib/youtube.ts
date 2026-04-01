@@ -536,15 +536,21 @@ export async function discoverFromYouTube(
   limit = 30,
   offset = 0,
   tag: Tag | Tag[] = "all",
-  genre?: string
+  genre?: string,
+  rotate?: number
 ): Promise<PoolResult> {
   const pool = await getDiscoverPool(genre);
   if (pool.length === 0) return { cards: [], totalFiltered: 0 };
 
   const filtered = applyTagFilter(pool, tag);
+  let feed = filtered;
+  if (rotate && feed.length > 1) {
+    const r = ((rotate % feed.length) + feed.length) % feed.length;
+    feed = [...feed.slice(r), ...feed.slice(0, r)];
+  }
   return {
-    cards: filtered.slice(offset, offset + limit),
-    totalFiltered: filtered.length,
+    cards: feed.slice(offset, offset + limit),
+    totalFiltered: feed.length,
   };
 }
 
@@ -554,7 +560,8 @@ export async function discoverMixes(
   limit = 20,
   offset = 0,
   tag: Tag | Tag[] = "all",
-  genre?: string
+  genre?: string,
+  rotate?: number
 ): Promise<PoolResult> {
   const poolKey = genre ? `mixes-${genre.toLowerCase()}` : "mixes";
   const memoryCacheKey = `pool-${poolKey}`;
@@ -617,9 +624,14 @@ export async function discoverMixes(
   }
 
   const filtered = applyTagFilter(pool, tag);
+  let feed = filtered;
+  if (rotate && feed.length > 1) {
+    const r = ((rotate % feed.length) + feed.length) % feed.length;
+    feed = [...feed.slice(r), ...feed.slice(0, r)];
+  }
   return {
-    cards: filtered.slice(offset, offset + limit),
-    totalFiltered: filtered.length,
+    cards: feed.slice(offset, offset + limit),
+    totalFiltered: feed.length,
   };
 }
 
@@ -634,7 +646,8 @@ export async function discoverSamples(
   limit = 30,
   offset = 0,
   tag: Tag | Tag[] = "all",
-  genre?: string
+  genre?: string,
+  rotate?: number
 ): Promise<PoolResult> {
   const poolKey = genre ? `samples-${genre.toLowerCase()}` : "samples";
   const memoryCacheKey = `pool-${poolKey}`;
@@ -653,60 +666,42 @@ export async function discoverSamples(
     const allApproved = await getApprovedChannels();
     if (allApproved.length === 0) return { cards: [], totalFiltered: 0 };
 
-    let sampleChannelPool = allApproved.filter(
+    let sampleChannels = allApproved.filter(
       (c) => c.labels?.some((l) =>
         STRICT_SAMPLE_LABELS.some((sl) => l.toLowerCase() === sl.toLowerCase())
       )
     );
 
-    let otherChannels = allApproved.filter(
-      (c) => !sampleChannelPool.some((sc) => sc.id === c.id)
+    sampleChannels = filterChannelsByGenre(sampleChannels, genre);
+
+    const shuffled = seededShuffle(sampleChannels);
+
+    const allVideos: YouTubeVideo[] = [];
+
+    const results = await Promise.allSettled(
+      shuffled.map((ch) => getChannelUploads(ch.id, 30, true))
     );
-
-    sampleChannelPool = filterChannelsByGenre(sampleChannelPool, genre);
-    otherChannels = filterChannelsByGenre(otherChannels, genre);
-
-    const shuffledSample = seededShuffle(sampleChannelPool).slice(0, 20);
-    const shuffledOther = seededShuffle(otherChannels).slice(0, 10);
-
-    const allVideos: { video: YouTubeVideo; fromSampleChannel: boolean }[] = [];
-
-    const sampleResults = await Promise.allSettled(
-      shuffledSample.map((ch) => getChannelUploads(ch.id, 20, true))
-    );
-    for (const result of sampleResults) {
+    for (const result of results) {
       if (result.status === "fulfilled") {
         for (const v of result.value) {
-          allVideos.push({ video: v, fromSampleChannel: true });
-        }
-      }
-    }
-
-    const otherResults = await Promise.allSettled(
-      shuffledOther.map((ch) => getChannelUploads(ch.id, 15, true))
-    );
-    for (const result of otherResults) {
-      if (result.status === "fulfilled") {
-        for (const v of result.value) {
-          allVideos.push({ video: v, fromSampleChannel: false });
+          allVideos.push(v);
         }
       }
     }
 
     pool = seededShuffle(
       allVideos
-        .filter(({ video: v, fromSampleChannel }) => {
+        .filter((v) => {
           if (v.title === "Private video" || v.title === "Deleted video") return false;
-          if (!v.duration || v.duration > 900 || v.duration < 30) return false;
+          if (!v.duration || v.duration > 2700 || v.duration < 30) return false;
           const lower = v.title.toLowerCase();
           if (lower.includes("#shorts") || lower.includes("#short")) return false;
           if (lower.includes("shorts") && lower.length < 80) return false;
           if (v.height > v.width) return false;
           if (isNonMusic(v.title)) return false;
-          if (!fromSampleChannel && !titleContainsAny(v.title, SAMPLE_TITLE_KEYWORDS)) return false;
           return true;
         })
-        .map(({ video }) => videoToCard(video))
+        .map((video) => videoToCard(video))
     );
 
     if (pool.length > 0) {
@@ -716,8 +711,13 @@ export async function discoverSamples(
   }
 
   const filtered = applyTagFilter(pool, tag);
+  let feed = filtered;
+  if (rotate && feed.length > 1) {
+    const r = ((rotate % feed.length) + feed.length) % feed.length;
+    feed = [...feed.slice(r), ...feed.slice(0, r)];
+  }
   return {
-    cards: filtered.slice(offset, offset + limit),
-    totalFiltered: filtered.length,
+    cards: feed.slice(offset, offset + limit),
+    totalFiltered: feed.length,
   };
 }
