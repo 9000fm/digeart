@@ -19,4 +19,5 @@ export interface CardData {
   viewCount: number | null;
   publishedAt: string | null;
   description: string | null;
+  starred?: boolean;
 }

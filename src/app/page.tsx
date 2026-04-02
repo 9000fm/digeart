@@ -20,6 +20,7 @@ import NowPlayingBanner from "@/components/NowPlayingBanner";
 import Sidebar from "@/components/Sidebar";
 import UndoToast from "@/components/UndoToast";
 import OnboardingOverlay from "@/components/OnboardingOverlay";
+import QueuePanel from "@/components/QueuePanel";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import type { ViewType } from "@/components/Sidebar";
 import type { CardData } from "@/lib/types";
@@ -65,7 +66,7 @@ export default function Home() {
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
-  const [historyLength, setHistoryLength] = useState(0);
+  const [canGoPrev, setCanGoPrev] = useState(false);
   const [volume, setVolume] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("digeart-volume");
@@ -82,7 +83,9 @@ export default function Home() {
   const [savedCards, setSavedCards] = useState<CardData[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [softDeletedIds, setSoftDeletedIds] = useState<Set<string>>(new Set());
+  const [recentlyRemoved, setRecentlyRemoved] = useState<(CardData & { deletedAt: string })[]>([]);
   const [showAbout, setShowAbout] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mountedTabs, setMountedTabs] = useState<Set<ViewType>>(new Set(["home"]));
@@ -90,6 +93,7 @@ export default function Home() {
 
   // Undo unlike state
   const [undoToastVisible, setUndoToastVisible] = useState(false);
+  const [undoTrackName, setUndoTrackName] = useState("");
   const pendingUnlike = useRef<{ id: string; card: CardData; timer: ReturnType<typeof setTimeout> } | null>(null);
 
   const skippingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,32 +103,75 @@ export default function Home() {
   const playOriginView = useRef<ViewType | null>(null);
   const activeViewRef = useRef(activeView);
   activeViewRef.current = activeView;
-  const playHistory = useRef<CardData[]>([]);
-  const playForwardStack = useRef<CardData[]>([]);
+  const shuffleQueue = useRef<string[]>([]);
+  const queueIndex = useRef(-1);
+  const queueView = useRef<ViewType | null>(null);
   // YT IFrame API refs
   const ytPlayerRef = useRef<YTPlayer | null>(null);
   const ytContainerRef = useRef<HTMLDivElement | null>(null);
-  const ytApiReady = useRef(false);
   const ytPendingVideoId = useRef<string | null>(null);
   const ytProgressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ytPlayerReady = useRef(false);
   const hasAdvancedRef = useRef(false);
 
-  // ── Load YouTube IFrame API script ──
+  // ── Load YouTube IFrame API script + pre-create player ──
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.YT && window.YT.Player) {
-      ytApiReady.current = true;
-      return;
-    }
-    // Set callback before loading script
-    window.onYouTubeIframeAPIReady = () => {
-      ytApiReady.current = true;
-      // If there's a pending video, play it now
-      if (ytPendingVideoId.current) {
-        createYTPlayer(ytPendingVideoId.current);
-        ytPendingVideoId.current = null;
+
+    const initPlayer = () => {
+      // Pre-create player (no video, no autoplay) so first user play
+      // goes through loadVideoById — works within mobile gesture context
+      if (!ytPlayerRef.current && ytContainerRef.current) {
+        const div = document.createElement("div");
+        div.id = "yt-player-target";
+        ytContainerRef.current.innerHTML = "";
+        ytContainerRef.current.appendChild(div);
+
+        ytPlayerRef.current = new window.YT.Player("yt-player-target", {
+          height: "1",
+          width: "1",
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (event: YTPlayerEvent) => {
+              ytPlayerReady.current = true;
+              event.target.setVolume(volumeRef.current);
+              if (isMutedRef.current) event.target.mute();
+              // If user clicked a track before player was ready, play it now
+              if (ytPendingVideoId.current) {
+                event.target.loadVideoById(ytPendingVideoId.current);
+                ytPendingVideoId.current = null;
+                startYTProgressPoller();
+              }
+            },
+            onStateChange: (event: YTPlayerEvent) => {
+              handleYTStateChange.current?.(event);
+            },
+            onError: () => {
+              setSkippingUnavailable(true);
+              if (skippingTimerRef.current) clearTimeout(skippingTimerRef.current);
+              skippingTimerRef.current = setTimeout(() => {
+                setSkippingUnavailable(false);
+                handleNextTrackRef.current?.();
+              }, 1500);
+            },
+          },
+        });
       }
     };
+
+    if (window.YT && window.YT.Player) {
+      initPlayer();
+      return;
+    }
+    window.onYouTubeIframeAPIReady = initPlayer;
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
@@ -146,7 +193,7 @@ export default function Home() {
       .from("likes")
       .select("video_id, card_data, deleted_at")
       .eq("user_email", email)
-      .or("deleted_at.is.null,deleted_at.gte." + new Date(Date.now() - 30 * 86400000).toISOString())
+      .or("deleted_at.is.null,deleted_at.gte." + new Date(Date.now() - 7 * 86400000).toISOString())
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) {
@@ -155,19 +202,20 @@ export default function Home() {
           return;
         }
         const ids = new Set<string>();
-        const softDeleted = new Set<string>();
-        const cards: CardData[] = [];
+        const activeCards: CardData[] = [];
+        const removed: (CardData & { deletedAt: string })[] = [];
         for (const row of data || []) {
-          cards.push(row.card_data as CardData);
           if (row.deleted_at === null) {
             ids.add(row.video_id);
+            activeCards.push(row.card_data as CardData);
           } else {
-            softDeleted.add(row.video_id);
+            removed.push({ ...(row.card_data as CardData), deletedAt: row.deleted_at });
           }
         }
         setLikedIds(ids);
-        setSoftDeletedIds(softDeleted);
-        setSavedCards(cards);
+        setSoftDeletedIds(new Set());
+        setSavedCards(activeCards);
+        setRecentlyRemoved(removed);
         setSavedLoading(false);
       });
   }, [session?.user?.email]);
@@ -206,7 +254,6 @@ export default function Home() {
   // ── YT progress poller (also handles background-tab end detection) ──
   const startYTProgressPoller = useCallback(() => {
     if (ytProgressInterval.current) clearInterval(ytProgressInterval.current);
-    hasAdvancedRef.current = false;
     ytProgressInterval.current = setInterval(() => {
       const p = ytPlayerRef.current;
       if (!p) return;
@@ -250,69 +297,22 @@ export default function Home() {
   const handleYTStateChange = useRef<((event: YTPlayerEvent) => void) | null>(null);
 
   const createYTPlayer = useCallback((videoId: string) => {
-    if (!ytApiReady.current || !ytContainerRef.current) return;
-
-    // Reuse existing player — keeps the iframe + postMessage channel alive
-    if (ytPlayerRef.current) {
-      hasAdvancedRef.current = false;
-      ytPlayerRef.current.loadVideoById(videoId);
-      startYTProgressPoller();
+    if (!ytPlayerReady.current) {
+      // Player not ready yet — queue for when onReady fires
+      ytPendingVideoId.current = videoId;
       return;
     }
-
-    // First time: create the player and iframe
-    const div = document.createElement("div");
-    div.id = "yt-player-target";
-    ytContainerRef.current.innerHTML = "";
-    ytContainerRef.current.appendChild(div);
-
-    ytPlayerRef.current = new window.YT.Player("yt-player-target", {
-      height: "1",
-      width: "1",
-      videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        disablekb: 1,
-        fs: 0,
-        modestbranding: 1,
-        rel: 0,
-        playsinline: 1,
-      },
-      events: {
-        onReady: (event: YTPlayerEvent) => {
-          // iOS Safari: must start muted for autoplay policy
-          event.target.mute();
-          event.target.playVideo();
-          // Retry playback if player hasn't started after 600ms (mobile autoplay policy)
-          setTimeout(() => {
-            try {
-              if (event.target.getPlayerState() !== 1) {
-                event.target.playVideo();
-              }
-            } catch { /* player may not be ready */ }
-          }, 600);
-          setTimeout(() => {
-            event.target.setVolume(volumeRef.current);
-            if (!isMutedRef.current) event.target.unMute();
-          }, 300);
-          startYTProgressPoller();
-        },
-        onStateChange: (event: YTPlayerEvent) => {
-          handleYTStateChange.current?.(event);
-        },
-        onError: () => {
-          // Show unavailable feedback, then auto-advance
-          setSkippingUnavailable(true);
-          if (skippingTimerRef.current) clearTimeout(skippingTimerRef.current);
-          skippingTimerRef.current = setTimeout(() => {
-            setSkippingUnavailable(false);
-            handleNextTrackRef.current?.();
-          }, 1500);
-        },
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    ytPlayerRef.current!.loadVideoById(videoId);
+    startYTProgressPoller();
+    // Safari fallback: if playback hasn't started after 1s, retry playVideo()
+    setTimeout(() => {
+      try {
+        const p = ytPlayerRef.current;
+        if (p && p.getPlayerState() !== 1) {
+          p.playVideo();
+        }
+      } catch { /* ignore */ }
+    }, 1000);
   }, [startYTProgressPoller]);
 
   // Keep handleYTStateChange in sync
@@ -324,7 +324,8 @@ export default function Home() {
         stopYTProgressPoller();
         handleNextTrackRef.current?.();
       } else if (event.data === 1) {
-        // PLAYING
+        // PLAYING — new video confirmed; safe to re-arm end detection
+        hasAdvancedRef.current = false;
         setIsPlaying(true);
         startYTProgressPoller();
         // Get real duration
@@ -340,12 +341,24 @@ export default function Home() {
   }, [stopYTProgressPoller, startYTProgressPoller]);
 
   const registerCards = useCallback((cards: CardData[], view: ViewType) => {
+    const newIds: string[] = [];
     for (const c of cards) {
+      const isNew = !cardRegistry.current.has(c.id);
       cardRegistry.current.set(c.id, c);
       // Don't let the saved view overwrite a card's real origin
       if (view !== "saved" || !cardViewMap.current.has(c.id)) {
         cardViewMap.current.set(c.id, view);
       }
+      // Track genuinely new cards for queue injection
+      if (isNew && view === queueView.current) {
+        newIds.push(c.id);
+      }
+    }
+    // Silently append new cards (shuffled) to the END of the queue
+    // This keeps the visible "Up next" list stable — new cards appear after existing ones
+    if (newIds.length > 0 && shuffleQueue.current.length > 0) {
+      fisherYatesShuffle(newIds);
+      shuffleQueue.current.push(...newIds);
     }
   }, []);
 
@@ -367,36 +380,52 @@ export default function Home() {
   );
 
 
-  // Internal play handler
-  const handlePlayInternal = useCallback((card: CardData, skipHistory = false) => {
-    if (!skipHistory) {
-      setNowPlayingCard((prev) => {
-        if (prev) {
-          playHistory.current.push(prev);
-          setHistoryLength(playHistory.current.length);
-        }
-        return prev;
-      });
-      // Clear forward stack on manual track selection
-      playForwardStack.current = [];
+  // ── Shuffle queue helpers ──
+
+  // Fisher-Yates shuffle (in-place)
+  const fisherYatesShuffle = (arr: string[]) => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
     }
+    return arr;
+  };
+
+  // Build a queue of card IDs for a given view
+  const buildQueue = useCallback((startingCardId: string, shuffle: boolean) => {
+    const view = cardViewMap.current.get(startingCardId) || activeViewRef.current;
+    const ids = Array.from(cardRegistry.current.entries())
+      .filter(([id]) => cardViewMap.current.get(id) === view)
+      .map(([id]) => id);
+
+    if (shuffle) {
+      fisherYatesShuffle(ids);
+    }
+
+    // Move starting card to front
+    const startIdx = ids.indexOf(startingCardId);
+    if (startIdx > 0) {
+      ids.splice(startIdx, 1);
+      ids.unshift(startingCardId);
+    }
+
+    shuffleQueue.current = ids;
+    queueIndex.current = 0;
+    queueView.current = view;
+    setCanGoPrev(false);
+  }, []);
+
+  // Internal play handler (simplified — no history/forward stack)
+  const handlePlayInternal = useCallback((card: CardData) => {
     setPlayingId(card.id);
     setIsPlaying(true);
     setAudioProgress(0);
     setAudioDuration(card.duration || 0);
     setNowPlayingCard(card);
-
-    // Update origin view so locate points to the card's actual view
-    if (skipHistory) {
-      playOriginView.current = cardViewMap.current.get(card.id) || null;
-    }
+    setCanGoPrev(queueIndex.current > 0);
 
     if (card.source === "youtube" && card.videoId) {
-      if (ytApiReady.current) {
-        createYTPlayer(card.videoId);
-      } else {
-        ytPendingVideoId.current = card.videoId;
-      }
+      createYTPlayer(card.videoId);
     } else {
       // No playable source — show unavailable feedback then auto-advance
       stopYTProgressPoller();
@@ -412,77 +441,64 @@ export default function Home() {
     }
   }, [createYTPlayer, stopYTProgressPoller]);
 
-  // Play random track — scoped to the current active view
+  // Play a random track from a view (for onboarding / first play without queue)
   const playRandomTrack = useCallback(() => {
-    const currentView = nowPlayingCardRef.current?.id
-      ? (cardViewMap.current.get(nowPlayingCardRef.current.id) || activeViewRef.current)
-      : activeViewRef.current;
-    const entries = Array.from(cardRegistry.current.entries());
-    const candidates = entries.filter(
-      ([id]) => id !== nowPlayingCardRef.current?.id && cardViewMap.current.get(id) === currentView
-    );
-    if (candidates.length === 0) return;
-    const [, card] = candidates[Math.floor(Math.random() * candidates.length)];
+    const view = activeViewRef.current;
+    const entries = Array.from(cardRegistry.current.entries())
+      .filter(([id]) => cardViewMap.current.get(id) === view);
+    if (entries.length === 0) return;
+    const [, card] = entries[Math.floor(Math.random() * entries.length)];
+    buildQueue(card.id, true);
+    handlePlayInternal(card);
+  }, [handlePlayInternal, buildQueue]);
+
+  // Prev track — walk queue index backward
+  const handlePrevTrack = useCallback(() => {
+    if (queueIndex.current <= 0) return;
+    queueIndex.current--;
+    const id = shuffleQueue.current[queueIndex.current];
+    const card = cardRegistry.current.get(id);
+    if (!card) return;
+    playOriginView.current = cardViewMap.current.get(id) || null;
     handlePlayInternal(card);
   }, [handlePlayInternal]);
 
-  // Play next sequential
-  const playNextSequential = useCallback(() => {
-    const current = nowPlayingCardRef.current;
-    if (!current) return;
-    const currentView = cardViewMap.current.get(current.id);
-    if (!currentView) {
-      playRandomTrack();
-      return;
-    }
-    const viewEntries = Array.from(cardRegistry.current.entries()).filter(
-      ([id]) => cardViewMap.current.get(id) === currentView
-    );
-    const currentIndex = viewEntries.findIndex(([id]) => id === current.id);
-    if (currentIndex === -1 || viewEntries.length === 0) {
-      playRandomTrack();
-      return;
-    }
-    const nextIndex = (currentIndex + 1) % viewEntries.length;
-    if (nextIndex === currentIndex) {
-      // Only one track in view — stop instead of replaying
-      return;
-    }
-    const [, nextCard] = viewEntries[nextIndex];
-    handlePlayInternal(nextCard);
-  }, [handlePlayInternal, playRandomTrack]);
-
-  // Prev track (with forward stack)
-  const handlePrevTrack = useCallback(() => {
-    const prev = playHistory.current.pop();
-    setHistoryLength(playHistory.current.length);
-    if (!prev) return;
-    // Push current to forward stack before going back
-    if (nowPlayingCardRef.current) {
-      playForwardStack.current.push(nowPlayingCardRef.current);
-    }
-    handlePlayInternal(prev, true);
-  }, [handlePlayInternal]);
-
-  // Next track (with forward stack support)
+  // Next track — walk queue index forward
   const handleNextTrack = useCallback(() => {
-    // If forward stack has entries (came back), use those first
-    if (playForwardStack.current.length > 0) {
-      const next = playForwardStack.current.pop()!;
-      // Push current to history
-      if (nowPlayingCardRef.current) {
-        playHistory.current.push(nowPlayingCardRef.current);
-        setHistoryLength(playHistory.current.length);
+    const queue = shuffleQueue.current;
+    if (queue.length === 0) return;
+
+    // Try to advance to next valid card
+    let nextIdx = queueIndex.current + 1;
+    while (nextIdx < queue.length) {
+      const card = cardRegistry.current.get(queue[nextIdx]);
+      if (card) {
+        queueIndex.current = nextIdx;
+        playOriginView.current = cardViewMap.current.get(card.id) || null;
+        handlePlayInternal(card);
+        return;
       }
-      handlePlayInternal(next, true);
-      return;
+      // Card was deregistered — skip it
+      nextIdx++;
     }
-    if (autoPlayEnabledRef.current) {
-      playRandomTrack();
-    } else {
-      playNextSequential();
+
+    // Queue exhausted — rebuild and continue
+    const currentId = nowPlayingCardRef.current?.id;
+    const view = queueView.current || activeViewRef.current;
+    const ids = Array.from(cardRegistry.current.entries())
+      .filter(([id]) => cardViewMap.current.get(id) === view && id !== currentId)
+      .map(([id]) => id);
+    if (ids.length === 0) return;
+    if (autoPlayEnabledRef.current) fisherYatesShuffle(ids);
+    shuffleQueue.current = ids;
+    queueIndex.current = 0;
+    queueView.current = view;
+    const card = cardRegistry.current.get(ids[0]);
+    if (card) {
+      playOriginView.current = cardViewMap.current.get(card.id) || null;
+      handlePlayInternal(card);
     }
-  }, [playRandomTrack, playNextSequential, handlePlayInternal]);
+  }, [handlePlayInternal]);
 
   // Stable ref for handleNextTrack (used in YT callbacks)
   const handleNextTrackRef = useRef(handleNextTrack);
@@ -516,12 +532,21 @@ export default function Home() {
     }
     const card = cardRegistry.current.get(id);
     if (!card) return;
-    // Manual selection clears forward stack
-    playForwardStack.current = [];
+
+    // Check if card is already in the current queue
+    const existingIdx = shuffleQueue.current.indexOf(id);
+    if (existingIdx !== -1) {
+      // Jump to its position in the queue
+      queueIndex.current = existingIdx;
+    } else {
+      // Different view or not in queue — build a new queue starting from this card
+      buildQueue(id, autoPlayEnabledRef.current);
+    }
+
     // Record which view the user played from (for locate)
     playOriginView.current = activeViewRef.current;
     handlePlayInternal(card);
-  }, [handlePlayInternal, handleTogglePlay]);
+  }, [handlePlayInternal, handleTogglePlay, buildQueue]);
 
   // Commit any pending unlike (soft-delete stays, just dismiss toast)
   const commitPendingUnlike = useCallback(() => {
@@ -562,6 +587,43 @@ export default function Home() {
     }
   }, [session?.user?.email]);
 
+  // Restore a card from recently removed back to saved
+  const handleRestoreRemoved = useCallback((id: string) => {
+    const item = recentlyRemoved.find((c) => c.id === id);
+    if (!item) return;
+    // Move back to savedCards + likedIds
+    const { deletedAt: _, ...card } = item;
+    setRecentlyRemoved((prev) => prev.filter((c) => c.id !== id));
+    setSavedCards((prev) => [card, ...prev]);
+    setLikedIds((prev) => new Set(prev).add(id));
+    // Clear deleted_at in Supabase
+    const email = session?.user?.email;
+    if (email) {
+      supabase.from("likes").update({ deleted_at: null }).eq("user_email", email).eq("video_id", id)
+        .then(({ error }) => { if (error) console.error("Failed to restore like:", error); });
+    }
+  }, [recentlyRemoved, session?.user?.email]);
+
+  // Hard delete — permanently remove from DB
+  const handleHardDelete = useCallback((id: string) => {
+    setRecentlyRemoved((prev) => prev.filter((c) => c.id !== id));
+    const email = session?.user?.email;
+    if (email) {
+      supabase.from("likes").delete().eq("user_email", email).eq("video_id", id)
+        .then(({ error }) => { if (error) console.error("Failed to hard-delete like:", error); });
+    }
+  }, [session?.user?.email]);
+
+  // Clear all recently removed
+  const handleClearAllRemoved = useCallback(() => {
+    setRecentlyRemoved([]);
+    const email = session?.user?.email;
+    if (email) {
+      supabase.from("likes").delete().eq("user_email", email).not("deleted_at", "is", null)
+        .then(({ error }) => { if (error) console.error("Failed to clear removed:", error); });
+    }
+  }, [session?.user?.email]);
+
   const toggleLike = useCallback((id: string) => {
     const wasLiked = likedIds.has(id);
     const wasSoftDeleted = softDeletedIds.has(id);
@@ -580,13 +642,18 @@ export default function Home() {
       // Card stays in grid — just add to softDeletedIds
       setSoftDeletedIds((prev) => new Set(prev).add(id));
     } else {
-      // Re-liking a grace-period card — remove from softDeletedIds
+      // Re-liking a grace-period card — remove from softDeletedIds + cancel pending timer
       if (wasSoftDeleted) {
         setSoftDeletedIds((prev) => {
           const next = new Set(prev);
           next.delete(id);
           return next;
         });
+        if (pendingUnlike.current?.id === id) {
+          clearTimeout(pendingUnlike.current.timer);
+          pendingUnlike.current = null;
+          setUndoToastVisible(false);
+        }
       } else if (card) {
         // Fresh like — prepend to savedCards
         setSavedCards((prev) => [card, ...prev]);
@@ -611,12 +678,19 @@ export default function Home() {
           if (error) console.error("Failed to soft-delete like:", error);
         });
 
-      // Show undo toast with 5s window
+      // Show undo toast with 5s window — after expiry, move card to recently removed
+      const deletedAt = new Date().toISOString();
       const timer = setTimeout(() => {
+        if (pendingUnlike.current?.id !== id) return;
         pendingUnlike.current = null;
         setUndoToastVisible(false);
+        // Move from main grid to recently removed
+        setSavedCards((prev) => prev.filter((c) => c.id !== id));
+        setSoftDeletedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        if (card) setRecentlyRemoved((prev) => [{ ...card, deletedAt }, ...prev]);
       }, 5000);
       pendingUnlike.current = { id, card, timer };
+      setUndoTrackName(card.name || "Track");
       setUndoToastVisible(true);
     } else {
       // Liking — upsert with deleted_at cleared (handles re-liking a soft-deleted row)
@@ -642,6 +716,11 @@ export default function Home() {
     setNowPlayingCard(null);
     setAudioProgress(0);
     setAudioDuration(0);
+    shuffleQueue.current = [];
+    queueIndex.current = -1;
+    queueView.current = null;
+    setCanGoPrev(false);
+    setShowQueue(false);
   }, [stopYTProgressPoller]);
 
   const handleClosePlayerRef = useRef(handleClosePlayer);
@@ -792,8 +871,41 @@ export default function Home() {
     });
   }, [volume]);
 
+  const handlePlayQueueIndex = useCallback((index: number) => {
+    const id = shuffleQueue.current[index];
+    const card = cardRegistry.current.get(id);
+    if (!card) return;
+    queueIndex.current = index;
+    playOriginView.current = cardViewMap.current.get(id) || null;
+    handlePlayInternal(card);
+  }, [handlePlayInternal]);
+
   const handleToggleAutoPlay = useCallback(() => {
-    setAutoPlayEnabled((prev) => !prev);
+    setAutoPlayEnabled((prev) => {
+      const next = !prev;
+      const currentIdx = queueIndex.current;
+      const queue = shuffleQueue.current;
+
+      if (currentIdx >= 0 && queue.length > 0) {
+        // Preserve history (everything up to and including current track)
+        const history = queue.slice(0, currentIdx + 1);
+        const upcoming = queue.slice(currentIdx + 1);
+
+        if (next) {
+          // Shuffle on → randomize upcoming
+          fisherYatesShuffle(upcoming);
+        } else {
+          // Shuffle off → sort upcoming by registry insertion order
+          const registryOrder = Array.from(cardRegistry.current.keys());
+          upcoming.sort((a, b) => registryOrder.indexOf(a) - registryOrder.indexOf(b));
+        }
+
+        shuffleQueue.current = [...history, ...upcoming];
+        // queueIndex stays the same — history preserved
+      }
+
+      return next;
+    });
   }, []);
 
   // ── Keyboard shortcuts ──
@@ -813,7 +925,7 @@ export default function Home() {
           break;
         case "ArrowLeft":
           e.preventDefault();
-          if (nowPlayingCard && historyLength > 0) handlePrevTrack();
+          if (nowPlayingCard && canGoPrev) handlePrevTrack();
           break;
         case "n":
         case "N":
@@ -821,7 +933,7 @@ export default function Home() {
           break;
         case "p":
         case "P":
-          if (nowPlayingCard && historyLength > 0) handlePrevTrack();
+          if (nowPlayingCard && canGoPrev) handlePrevTrack();
           break;
         case "s":
         case "S":
@@ -869,7 +981,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, historyLength, handleToggleMute, handleLocateCard, handleViewChange, volume, handleVolumeChange]);
+  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, canGoPrev, handleToggleMute, handleLocateCard, handleViewChange, volume, handleVolumeChange]);
 
   const hasPlayer = !!nowPlayingCard;
 
@@ -965,10 +1077,14 @@ export default function Home() {
           activeTagFilters={activeTagFilters}
           isAuthenticated={isAuthenticated}
           onCardsLoaded={registerSavedCards}
+          recentlyRemoved={recentlyRemoved}
+          onRestoreRemoved={handleRestoreRemoved}
+          onHardDelete={handleHardDelete}
+          onClearAllRemoved={handleClearAllRemoved}
         />
       </div>
 
-      <UndoToast visible={undoToastVisible} onUndo={handleUndoUnlike} />
+      <UndoToast visible={undoToastVisible} onUndo={handleUndoUnlike} trackName={undoTrackName} />
 
 
       <AnimatePresence>
@@ -983,7 +1099,7 @@ export default function Home() {
             onLocate={handleLocateCard}
             onPrevTrack={handlePrevTrack}
             onNextTrack={handleNextTrack}
-            hasPrev={historyLength > 0}
+            hasPrev={canGoPrev}
             audioProgress={audioProgress}
             audioDuration={audioDuration}
             onSeek={handleSeek}
@@ -997,9 +1113,20 @@ export default function Home() {
             isLiked={likedIds.has(nowPlayingCard.id)}
             onToggleLike={() => toggleLike(nowPlayingCard.id)}
             isAuthenticated={isAuthenticated}
+            showQueue={showQueue}
+            onToggleQueue={() => setShowQueue((v) => !v)}
           />
         )}
       </AnimatePresence>
+
+      <QueuePanel
+        isOpen={showQueue}
+        onClose={() => setShowQueue(false)}
+        queue={shuffleQueue.current}
+        currentIndex={queueIndex.current}
+        cardRegistry={cardRegistry.current}
+        onPlayIndex={handlePlayQueueIndex}
+      />
 
       <WelcomeScreen show={showWelcome} onDismiss={handleWelcomeDismiss} />
       <OnboardingOverlay show={showOnboarding} onComplete={handleOnboardingComplete} onPlayRandom={playRandomTrack} />

@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 interface UndoToastProps {
   visible: boolean;
   onUndo: () => void;
+  trackName?: string;
   duration?: number;
 }
 
-export default function UndoToast({ visible, onUndo, duration = 5000 }: UndoToastProps) {
+export default function UndoToast({ visible, onUndo, trackName = "Track", duration = 5000 }: UndoToastProps) {
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
@@ -33,19 +34,39 @@ export default function UndoToast({ visible, onUndo, duration = 5000 }: UndoToas
   return (
     <AnimatePresence>
       {visible && (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          onClick={onUndo}
-          className="fixed bottom-[calc(var(--player-height,0px)+16px)] right-4 lg:right-6 z-50 font-mono text-[12px] uppercase tracking-wider text-white/70 hover:text-white transition-colors cursor-pointer"
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          className="fixed left-1/2 -translate-x-1/2 z-50 min-[1152px]:left-[calc(var(--sidebar-width)/2+50%)] bottom-[calc(var(--player-height,0px)+12px)]"
         >
-          Undo
-          <div className="mt-0.5 h-px bg-white/20 w-full">
-            <motion.div className="h-full bg-white/50" style={{ width: `${progress}%` }} />
+          <div className="relative flex items-center gap-4 px-5 py-3 bg-[var(--bg-alt)]/90 backdrop-blur-xl border border-[var(--border)]/50 rounded-xl shadow-2xl overflow-hidden">
+            {/* Water fill — rises from bottom as time runs out */}
+            <div
+              className="absolute inset-0 bg-[var(--text)]/8 transition-none pointer-events-none"
+              style={{ clipPath: `inset(${progress}% 0 0 0)` }}
+            />
+
+            {/* Info */}
+            <div className="flex flex-col min-w-0 relative z-10">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                Removed from saved
+              </span>
+              <span className="font-mono text-[12px] text-[var(--text)] truncate max-w-[240px] sm:max-w-[320px]">
+                {trackName}
+              </span>
+            </div>
+
+            {/* Undo button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onUndo(); }}
+              className="shrink-0 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-wider text-[var(--text)] bg-[var(--text)]/10 hover:bg-[var(--text)]/20 rounded-lg transition-colors cursor-pointer relative z-10"
+            >
+              Undo
+            </button>
           </div>
-        </motion.button>
+        </motion.div>
       )}
     </AnimatePresence>
   );

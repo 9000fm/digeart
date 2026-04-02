@@ -59,8 +59,16 @@ export default memo(function MusicCard({
   const [tipLocked, setTipLocked] = useState(false);
   const [burst, setBurst] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  // (hoverFilled removed — heart uses scale+color shift only)
   const burstKey = useRef(0);
+  const prevSavedRef = useRef(saved);
+
+  // Trigger heart bounce on undo/restore (saved transitions false→true externally)
+  useEffect(() => {
+    if (saved && !prevSavedRef.current) {
+      setBurst(true);
+    }
+    prevSavedRef.current = saved;
+  }, [saved]);
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -174,19 +182,19 @@ export default memo(function MusicCard({
           // If no specific tags matched above but filters are set, still compute from data
           if (tags.length === 0) {
             if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-            if (card.viewCount != null && card.viewCount < 5_000 && !isNew) tags.push({ label: "Rare", color: "bg-pink-500" });
+            if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (Date.now() - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
             if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
           }
         } else {
           // No filter — compute from card data
           if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-          if (card.viewCount != null && card.viewCount < 5_000 && !isNew) tags.push({ label: "Rare", color: "bg-pink-500" });
+          if (card.starred && card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (Date.now() - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
           if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
         }
 
         if (tags.length === 0) return null;
         return (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end min-[1152px]:opacity-0 min-[1152px]:group-hover:opacity-100 transition-opacity duration-200">
             {tags.map((t) => (
               <span key={t.label} className={`px-2.5 py-1 ${t.color} text-white font-mono text-[11px] font-bold rounded-md shadow-sm`}>
                 {t.label}

@@ -226,13 +226,15 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
   if (tags.length === 0 || (tags.length === 1 && tags[0] === "all")) return pool;
 
   const thirtyDaysMs = 30 * 86_400_000;
+  const twoYearsMs = 2 * 365 * 86_400_000;
   const now = Date.now();
 
   return pool.filter((c) => {
     for (const t of tags) {
       if (t === "all") return true;
       if (t === "hot" && c.viewCount != null && c.viewCount >= 50_000) return true;
-      if (t === "rare" && c.viewCount != null && c.viewCount < 5_000) return true;
+      if (t === "rare" && c.starred && c.viewCount != null && c.viewCount < 10_000
+        && c.publishedAt && now - new Date(c.publishedAt).getTime() > twoYearsMs) return true;
       if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= thirtyDaysMs) return true;
     }
     return false;
@@ -415,7 +417,7 @@ function videoThumbnail(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 }
 
-function videoToCard(v: YouTubeVideo): CardData {
+function videoToCard(v: YouTubeVideo, starred = false): CardData {
   const { name, artist } = parseVideoTitle(v.title, v.channelTitle);
   return {
     id: `yt-${v.id}`,
@@ -438,6 +440,7 @@ function videoToCard(v: YouTubeVideo): CardData {
     viewCount: v.viewCount,
     publishedAt: v.publishedAt,
     description: v.description,
+    starred,
   };
 }
 
@@ -590,16 +593,25 @@ function smartSample(
     return result;
   };
 
-  const starredCards = sampleGroup(starred).map(videoToCard);
-  const regularCards = sampleGroup(regular).map(videoToCard);
+  const starredCards = sampleGroup(starred).map((v) => videoToCard(v, true));
+  const regularCards = sampleGroup(regular).map((v) => videoToCard(v, false));
   const totalAvailable = starredCards.length + regularCards.length;
-  const starredTarget = Math.min(starredCards.length, Math.round(totalAvailable * 0.35));
+  const starredTarget = Math.min(starredCards.length, Math.round(totalAvailable * 0.50));
   const regularTarget = totalAvailable - starredTarget;
 
-  return seededShuffle([
-    ...seededShuffle(starredCards).slice(0, starredTarget),
-    ...seededShuffle(regularCards).slice(0, regularTarget),
-  ]);
+  const shuffledStarred = seededShuffle(starredCards).slice(0, starredTarget);
+  const shuffledRegular = seededShuffle(regularCards).slice(0, regularTarget);
+  const pool = seededShuffle([...shuffledStarred, ...shuffledRegular]);
+
+  // Guarantee first track is from a starred channel
+  if (shuffledStarred.length > 0) {
+    const firstStarredIdx = pool.findIndex((c) => c.starred);
+    if (firstStarredIdx > 0) {
+      [pool[0], pool[firstStarredIdx]] = [pool[firstStarredIdx], pool[0]];
+    }
+  }
+
+  return pool;
 }
 
 /* ── Discover (homepage) ─────────────────────────────────────────────── */

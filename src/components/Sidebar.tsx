@@ -244,19 +244,6 @@ export default function Sidebar({
     };
   }, [showAbout]);
 
-  // Auto-close about panel after 4s idle (mobile: no touch, desktop: mouse left handled inline)
-  useEffect(() => {
-    if (!showAbout) {
-      if (aboutIdleTimer.current) { clearTimeout(aboutIdleTimer.current); aboutIdleTimer.current = null; }
-      return;
-    }
-    // On mobile, start the 4s timer immediately when panel opens
-    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-      aboutIdleTimer.current = setTimeout(() => setShowAbout(false), 4000);
-    }
-    return () => { if (aboutIdleTimer.current) { clearTimeout(aboutIdleTimer.current); aboutIdleTimer.current = null; } };
-  }, [showAbout]);
-
   // Close tag dropdown on outside click or Escape
   useEffect(() => {
     if (!showTagDropdown) return;
@@ -855,7 +842,7 @@ export default function Sidebar({
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
               className="absolute bottom-0 left-0 right-0 max-h-[80vh] overflow-y-auto bg-[var(--bg)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl px-5 py-4"
               onClick={(e) => e.stopPropagation()}
-              onTouchStart={() => { if (aboutIdleTimer.current) clearTimeout(aboutIdleTimer.current); aboutIdleTimer.current = setTimeout(() => setShowAbout(false), 4000); }}
+              onTouchStart={(e) => e.stopPropagation()}
             >
               {/* Drag handle */}
               <div className="w-10 h-1 rounded-full bg-[var(--border)] mx-auto mb-3" />

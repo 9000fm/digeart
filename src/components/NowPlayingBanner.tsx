@@ -42,6 +42,8 @@ interface NowPlayingBannerProps {
   isLiked?: boolean;
   onToggleLike?: () => void;
   isAuthenticated?: boolean;
+  showQueue?: boolean;
+  onToggleQueue?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -74,6 +76,8 @@ export default function NowPlayingBanner({
   isLiked = false,
   onToggleLike,
   isAuthenticated = true,
+  showQueue = false,
+  onToggleQueue,
 }: NowPlayingBannerProps) {
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
@@ -469,6 +473,26 @@ export default function NowPlayingBanner({
     </Tooltip>
   );
 
+  const queueButton = onToggleQueue ? (
+    <Tooltip label="Queue" position="top">
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleQueue(); }}
+        className={`shrink-0 flex items-center justify-center transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-95 ${
+          showQueue ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+        }`}
+      >
+        <svg className="w-4 h-4 2xl:w-5 2xl:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+      </button>
+    </Tooltip>
+  ) : null;
+
   // Info button (reusable like likeButton)
   const infoButton = (size: "sm" | "md" = "md") => isAuthenticated ? (
     <button
@@ -547,7 +571,7 @@ export default function NowPlayingBanner({
     return (
       <div className="group/vol relative flex items-center gap-1.5">
         {/* Speaker button: mute toggle at ≥1111px, popup toggle below */}
-        <Tooltip label={isMuted ? "Unmute (m)" : "Mute (m)"} className="hidden md:block">
+        <Tooltip label={isMuted ? "Unmute (m)" : "Volume (m)"}>
           <button
             ref={volumeIconRef}
             onClick={(e) => {
@@ -889,9 +913,9 @@ export default function NowPlayingBanner({
       {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
-      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3" style={{ gridTemplateColumns: "1fr min(100%, 700px) 1fr" }}>
         {/* LEFT: Album art + Track info */}
-        <div className="shrink-0 flex items-center gap-2.5" style={{ width: "clamp(340px, 28vw, 450px)" }}>
+        <div className="flex items-center gap-2.5 min-w-0">
           {thumbUrl && (
             <Tooltip label="Watch on YouTube" position="top" align="start">
               <div
@@ -954,8 +978,9 @@ export default function NowPlayingBanner({
           </div>
         </div>
 
-        {/* RIGHT: Volume + Fullscreen */}
+        {/* RIGHT: Queue + Volume + Fullscreen */}
         <div className="flex items-center gap-2.5 justify-self-end relative z-10">
+          {queueButton}
           {volumeControl()}
           {fullscreenButton}
         </div>
@@ -1049,9 +1074,9 @@ export default function NowPlayingBanner({
             <div className="flex items-center justify-center gap-3">
               {infoButton("sm")}
               {likeButton("sm")}
-              {prevButton(28)}
-              {playPauseButton(36, 14)}
-              {nextButton(28)}
+              {prevButton(32)}
+              {playPauseButton(40, 16)}
+              {nextButton(32)}
               {onToggleAutoPlay && (
                 <button
                   onClick={(e) => {
@@ -1074,6 +1099,7 @@ export default function NowPlayingBanner({
                   <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current transition-opacity duration-200 ${autoPlay ? "opacity-100" : "opacity-0"}`} />
                 </button>
               )}
+              {queueButton}
               {mobileVolumePopup()}
             </div>
 
@@ -1088,9 +1114,9 @@ export default function NowPlayingBanner({
           {/* Expanded 2-row layout — tablet (500-1023px) */}
           <div className="h-full hidden min-[500px]:flex flex-col justify-center px-3 gap-1">
             {/* Row 1: art + controls */}
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
               {/* Left: chevron + art + track info */}
-              <div className="shrink-0 flex items-center gap-2" style={{ maxWidth: "clamp(320px, 38vw, 420px)" }}>
+              <div className="flex items-center gap-2 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
                   className="shrink-0 w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
@@ -1130,12 +1156,12 @@ export default function NowPlayingBanner({
                     </>
                   )}
                 </div>
-                <div className="shrink-0 ml-1">
+                <div className="shrink-0 ml-auto">
                   {eqBars}
                 </div>
               </div>
               {/* Center: info, heart, transport, shuffle, locate */}
-              <div className="flex-1 flex items-center justify-center gap-1">
+              <div className="flex items-center justify-center gap-1">
                 {infoButton("sm")}
                 {likeButton("sm")}
                 {prevButton(28)}
@@ -1165,8 +1191,9 @@ export default function NowPlayingBanner({
                 )}
                 {locateButton("sm")}
               </div>
-              {/* Right: volume + fullscreen */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Right: queue + volume + fullscreen */}
+              <div className="flex items-center gap-1.5 shrink-0 justify-self-end">
+                {queueButton}
                 {volumeControl(volTrackTabletRef)}
                 {fullscreenButton}
               </div>
