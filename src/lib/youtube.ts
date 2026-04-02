@@ -645,9 +645,8 @@ async function getDiscoverPool(genre?: string): Promise<{ pool: CardData[]; need
     return { pool: sbCached.data, needsRebuild: sbCached.isStale };
   }
 
-  // Layer 3: rebuild from YouTube (only on true cold start — no data at all)
-  const pool = await buildDiscoverPool(genre);
-  return { pool, needsRebuild: false };
+  // Layer 3: no cached data at all — signal rebuild but don't block the response
+  return { pool: [], needsRebuild: true };
 }
 
 /** Full YouTube rebuild for discover pool — called synchronously on cold start or via after() on stale */
@@ -765,7 +764,8 @@ export async function discoverMixes(
   }
 
   if (!pool || pool.length === 0) {
-    pool = await buildMixesPool(genre);
+    needsRebuild = true;
+    pool = [];
   }
 
   const filtered = applyTagFilter(pool, tag);
@@ -850,7 +850,8 @@ export async function discoverSamples(
   }
 
   if (!pool || pool.length === 0) {
-    pool = await buildSamplesPool(genre);
+    needsRebuild = true;
+    pool = [];
   }
 
   const filtered = applyTagFilter(pool, tag);
