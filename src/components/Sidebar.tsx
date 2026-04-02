@@ -35,14 +35,15 @@ const SEARCH_PHRASES = [
 
 const BANNER_PHRASES = [
   "DIGEART — MUSIC DISCOVERY",
-  "DIG DEEPER",
-  "SUPERSOUNDS FROM THE UNDERGROUND",
-  "KEEP DIGGING",
-  "RARE CUTS ONLY",
-  "STRAIGHT FROM THE SOURCE",
-  "DEEP CUTS DEEP LOVE",
+  "RARE GROOVES",
   "TRUST YOUR EARS",
-  "LET THE MUSIC FIND YOU",
+  "HIDDEN GEMS DAILY",
+  "DIG DEEPER",
+  "STRAIGHT FROM THE SOURCE",
+  "HUMAN SELECTED",
+  "THE UNDERGROUND, CURATED",
+  "RARE FINDS",
+  "MUSIC FOR DIGGERS",
 ];
 
 const SEPARATOR_ICONS = ["✦", "◇", "⬥", "✧", "◆", "⏣", "✦"];
@@ -567,7 +568,7 @@ export default function Sidebar({
                 } : undefined}
               >
                 <p className="font-mono text-base text-[var(--text)] font-bold">digeart</p>
-                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Deep cuts from 150+ curated channels. All underground. All human-selected.</p>
+                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Music discovery for diggers. All underground. All human-selected.</p>
 
                 {/* Tag legend */}
                 <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
@@ -576,7 +577,7 @@ export default function Sidebar({
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Hot</span></span>
                     <span className="font-mono text-[10px] text-[var(--text-muted)]">Trending picks</span>
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
-                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Deep cuts, low plays</span>
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Hidden gems</span>
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
                     <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
                   </div>
@@ -860,7 +861,7 @@ export default function Sidebar({
               <div className="w-10 h-1 rounded-full bg-[var(--border)] mx-auto mb-3" />
 
               <p className="font-mono text-base text-[var(--text)] font-bold">digeart</p>
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Deep cuts from 150+ curated channels. All underground. All human-selected.</p>
+              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">Music discovery for diggers. All underground. All human-selected.</p>
 
               {/* Tag legend */}
               <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
@@ -869,7 +870,7 @@ export default function Sidebar({
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Hot</span></span>
                   <span className="font-mono text-[10px] text-[var(--text-muted)]">Trending picks</span>
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
-                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Deep cuts, low plays</span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Hidden gems</span>
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
                   <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
                 </div>
