@@ -20,12 +20,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, account }) {
-      // Initial login — store tokens and expiry
+    async jwt({ token, account, profile }) {
+      // Initial login — store tokens, expiry, and curator status
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = Date.now() + (account.expires_in as number) * 1000;
+
+        // Check curator status once at login
+        const email = profile?.email;
+        if (email) {
+          try {
+            const res = await fetch(
+              `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/curators?email=eq.${encodeURIComponent(email)}&select=id`,
+              {
+                headers: {
+                  apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                  Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+                },
+              }
+            );
+            const curators = await res.json();
+            token.isCurator = Array.isArray(curators) && curators.length > 0;
+          } catch {
+            token.isCurator = false;
+          }
+        } else {
+          token.isCurator = false;
+        }
+
         return token;
       }
 
@@ -69,6 +92,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.accessToken as string;
       (session as unknown as { error?: string }).error =
         token.error as string | undefined;
+      (session as unknown as { isCurator: boolean }).isCurator =
+        token.isCurator as boolean;
       return session;
     },
   },

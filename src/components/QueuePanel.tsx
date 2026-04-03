@@ -241,7 +241,7 @@ export default function QueuePanel({
           <div className="px-1 py-2">
             <div className="flex items-center justify-between px-4 py-1.5">
               <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold">Queue</p>
-              <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer text-xl leading-none" aria-label="Close queue">&times;</button>
+              <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer text-2xl leading-none" aria-label="Close queue">&times;</button>
             </div>
             {content}
           </div>

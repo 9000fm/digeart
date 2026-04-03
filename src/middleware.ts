@@ -9,27 +9,10 @@ export default auth(async (req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Check curator allowlist
-  const email = req.auth.user?.email;
-  if (!email) {
-    if (req.nextUrl.pathname.startsWith("/api/curator")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    return NextResponse.redirect(new URL("/", req.url));
-  }
+  // Read curator status from JWT (set once at login in auth.ts)
+  const isCurator = (req.auth as unknown as { isCurator?: boolean }).isCurator;
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/curators?email=eq.${encodeURIComponent(email)}&select=id`,
-    {
-      headers: {
-        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-      },
-    }
-  );
-  const curators = await res.json();
-
-  if (!Array.isArray(curators) || curators.length === 0) {
+  if (!isCurator) {
     if (req.nextUrl.pathname.startsWith("/api/curator")) {
       return NextResponse.json({ error: "Not a curator" }, { status: 403 });
     }
