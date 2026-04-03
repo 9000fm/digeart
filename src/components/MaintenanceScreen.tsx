@@ -7,17 +7,6 @@ const ROWS = Array.from({ length: 30 }, () => SYMBOL_ROW);
 export default function MaintenanceScreen() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center relative overflow-hidden">
-      {/* Background: drifting marquee symbols */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-        <div
-          className="font-mono text-[14px] leading-[2.5] text-[var(--text)] whitespace-pre opacity-[0.03]"
-          style={{ animation: "driftDiagonal 40s linear infinite", width: "200%", height: "200%" }}
-        >
-          {ROWS.map((row, i) => (
-            <div key={i}>{row}</div>
-          ))}
-        </div>
-      </div>
 
       {/* Spinning gem (Y-axis 3D rotation) */}
       <div className="mb-5" style={{ perspective: "400px" }}>
