@@ -214,7 +214,7 @@ export default function QueuePanel({
                 <div className="w-8 h-1 rounded-full bg-[var(--text-muted)]/30" />
               </div>
               <div className="px-1 pb-2">
-                <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-4 py-2">Queue</p>
+                <p className="font-mono text-base uppercase tracking-wider text-[var(--text)] font-bold px-4 py-2">Queue</p>
                 {content}
               </div>
             </motion.div>
@@ -233,13 +233,16 @@ export default function QueuePanel({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="fixed right-4 min-[1152px]:right-6 w-[360px] z-[60] bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
+          className="fixed right-14 min-[1152px]:right-16 w-[360px] z-[60] bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
           style={{ bottom: "calc(var(--player-height) + 8px)" }}
           onMouseEnter={resetIdleTimer}
           onMouseMove={resetIdleTimer}
         >
           <div className="px-1 py-2">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-4 py-1.5">Queue</p>
+            <div className="flex items-center justify-between px-4 py-1.5">
+              <p className="font-mono text-base uppercase tracking-wider text-[var(--text)] font-bold">Queue</p>
+              <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer text-xl leading-none" aria-label="Close queue">&times;</button>
+            </div>
             {content}
           </div>
         </motion.div>
