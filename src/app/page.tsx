@@ -982,6 +982,10 @@ export default function Home() {
         case "-":
           if (nowPlayingCard) handleVolumeChange(Math.max(0, volume - 5));
           break;
+        case "q":
+        case "Q":
+          if (nowPlayingCard) setShowQueue((v) => !v);
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1132,6 +1136,8 @@ export default function Home() {
         currentIndex={queueIndex.current}
         cardRegistry={cardRegistry.current}
         onPlayIndex={handlePlayQueueIndex}
+        likedIds={likedIds}
+        onToggleLike={toggleLike}
       />
 
       <WelcomeScreen show={showWelcome} onDismiss={handleWelcomeDismiss} />

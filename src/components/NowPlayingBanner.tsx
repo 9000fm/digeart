@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import Tooltip from "./Tooltip";
@@ -94,10 +95,12 @@ export default function NowPlayingBanner({
 
   // Copy title to clipboard
   const [copied, setCopied] = useState(false);
-  const copyTitle = useCallback(() => {
-    navigator.clipboard.writeText(`${card.name} — ${card.artist}`);
+  const [copyPos, setCopyPos] = useState<{ x: number; y: number } | null>(null);
+  const copyTitle = useCallback((e: React.MouseEvent) => {
+    navigator.clipboard.writeText(`${card.name} - ${card.artist}`);
+    setCopyPos({ x: e.clientX, y: e.clientY - 40 });
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => { setCopied(false); setCopyPos(null); }, 2000);
   }, [card.name, card.artist]);
 
   // Delayed close button reveal
@@ -123,6 +126,8 @@ export default function NowPlayingBanner({
   const volTrackRef = useRef<HTMLDivElement>(null);
   const volTrackTabletRef = useRef<HTMLDivElement>(null);
   const volFaderRef = useRef<HTMLDivElement>(null);
+  const desktopVolFaderRef = useRef<HTMLDivElement>(null);
+  const tabletVolFaderRef = useRef<HTMLDivElement>(null);
   const mobileVolFaderRef = useRef<HTMLDivElement>(null);
   const miniVolTrackRef = useRef<HTMLDivElement>(null);
   const isDraggingVolRef = useRef(false);
@@ -226,8 +231,8 @@ export default function NowPlayingBanner({
     if (!showVolumeFader) return;
     const handler = (e: PointerEvent) => {
       const t = e.target as Node;
-      const insideFader = volumeFaderRef.current?.contains(t) || mobileVolumeFaderRef.current?.contains(t);
-      const insideIcon = volumeIconRef.current?.contains(t) || mobileVolumeIconRef.current?.contains(t);
+      const insideFader = (t as HTMLElement).closest?.("[data-volume-fader]") || mobileVolumeFaderRef.current?.contains(t);
+      const insideIcon = (t as HTMLElement).closest?.("[data-volume-icon]") || mobileVolumeIconRef.current?.contains(t);
       if (!insideFader && !insideIcon) {
         setShowVolumeFader(false);
       }
@@ -236,13 +241,13 @@ export default function NowPlayingBanner({
     return () => document.removeEventListener("pointerdown", handler);
   }, [showVolumeFader]);
 
-  // Auto-dismiss volume fader after 3s idle
+  // Auto-dismiss volume fader after 5s idle
   useEffect(() => {
     if (!showVolumeFader) return;
     if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
-    volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 3000);
+    volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 5000);
     return () => { if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current); };
-  }, [showVolumeFader, volume, isMuted]);
+  }, [showVolumeFader]);
 
   // Dismiss info popover on outside click
   useEffect(() => {
@@ -268,6 +273,7 @@ export default function NowPlayingBanner({
       const mobile = window.innerWidth < 1152;
       setIsMobile(mobile);
       if (!mobile) setIsMinimized(false);
+      setShowVolumeFader(false);
       // Read CSS-defined expanded height (temporarily remove inline override)
       const el = document.documentElement;
       const inlineVal = el.style.getPropertyValue('--player-height');
@@ -506,8 +512,9 @@ export default function NowPlayingBanner({
   );
 
   const queueButton = onToggleQueue ? (
-    <Tooltip label="Queue" position="top" hideOnClick>
+    <Tooltip label="Queue (q)" position="top" hideOnClick>
       <button
+        data-queue-btn
         onClick={(e) => { e.stopPropagation(); onToggleQueue(); }}
         className={`shrink-0 flex items-center justify-center transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-95 ${
           showQueue ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -576,7 +583,7 @@ export default function NowPlayingBanner({
   ) : null;
 
   // Volume slider (desktop/tablet)
-  const volumeControl = (trackRef: React.RefObject<HTMLDivElement | null> = volTrackRef) => {
+  const volumeControl = (trackRef: React.RefObject<HTMLDivElement | null> = volTrackRef, sliderClass = "hidden md:flex", faderRef: React.RefObject<HTMLDivElement | null> = volFaderRef) => {
     const effectiveVolume = isMuted ? 0 : dragVolume;
     const speakerIcon = (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -599,15 +606,19 @@ export default function NowPlayingBanner({
 
     return (
       <div className="group/vol relative flex items-center gap-1.5">
-        {/* Speaker button: mute toggle at ≥1111px, popup toggle below */}
-        <Tooltip label={isMuted ? "Unmute (m)" : "Volume (m)"}>
+        {/* Speaker button: mute toggle (wide) or popup toggle (compact/narrow) */}
+        <Tooltip label={showVolumeFader ? "" : (isMuted ? "Unmute (m)" : "Volume (m)")} hideOnClick>
           <button
             ref={volumeIconRef}
+            data-volume-icon
             onClick={(e) => {
               e.stopPropagation();
-              if (window.innerWidth >= 768) {
+              const sliderVisible = trackRef.current && getComputedStyle(trackRef.current).display !== "none";
+              if (sliderVisible) {
                 onToggleMute?.();
               } else {
+                isDraggingVolRef.current = false;
+                setIsDraggingVol(false);
                 updateDragVolume(volume);
                 setShowVolumeFader((prev) => !prev);
               }
@@ -617,10 +628,10 @@ export default function NowPlayingBanner({
             {speakerIcon}
           </button>
         </Tooltip>
-        {/* Horizontal slider — wide screens only */}
+        {/* Horizontal slider — visibility controlled by sliderClass */}
         <div
           ref={trackRef}
-          className="hidden md:flex items-center w-20 h-7 cursor-pointer touch-none"
+          className={`${sliderClass} items-center w-20 h-7 cursor-pointer touch-none`}
           onPointerDown={(e) => {
             if (!trackRef.current) return;
             e.preventDefault();
@@ -648,40 +659,48 @@ export default function NowPlayingBanner({
             <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ left: `${effectiveVolume}%`, top: '50%', transform: 'translate(-50%, -50%)', transition: isDraggingVol ? 'none' : 'left 150ms cubic-bezier(0.4,0,0.2,1)' }} />
           </div>
         </div>
-        {/* Vertical fader popup — narrow screens */}
+        {/* Vertical fader popup — narrow screens only */}
         {showVolumeFader && (
           <div
             ref={volumeFaderRef}
-            className="absolute left-1/2 -translate-x-1/2 px-3 py-3 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50 md:hidden"
+            data-volume-fader
+            className="absolute left-1/2 -translate-x-1/2 px-3 py-3 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50"
             style={{ bottom: "calc(100% + 8px)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              ref={volFaderRef}
+              ref={faderRef}
               className="relative w-5 h-24 cursor-pointer touch-none mx-auto"
               onPointerDown={(e) => {
-                if (!volFaderRef.current) return;
+                if (!faderRef.current) return;
                 e.preventDefault();
+                e.stopPropagation();
                 (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
                 isDraggingVolRef.current = true;
                 setIsDraggingVol(true);
-                const rect = volFaderRef.current.getBoundingClientRect();
+                const rect = faderRef.current.getBoundingClientRect();
                 const ratio = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
                 const newVol = Math.round(ratio * 100);
                 updateDragVolume(newVol);
                 onVolumeChange?.(newVol);
                 if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
-                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 3000);
+                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 5000);
               }}
               onPointerMove={(e) => {
-                if (!isDraggingVolRef.current || !volFaderRef.current) return;
-                const rect = volFaderRef.current.getBoundingClientRect();
+                if (!isDraggingVolRef.current || !faderRef.current) return;
+                const rect = faderRef.current.getBoundingClientRect();
                 const ratio = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
                 const newVol = Math.round(ratio * 100);
                 updateDragVolume(newVol);
                 onVolumeChange?.(newVol);
               }}
-              onPointerUp={() => { isDraggingVolRef.current = false; setIsDraggingVol(false); onVolumeCommit?.(dragVolumeRef.current); }}
+              onPointerUp={() => {
+                isDraggingVolRef.current = false;
+                setIsDraggingVol(false);
+                onVolumeCommit?.(dragVolumeRef.current);
+                if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
+                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 5000);
+              }}
             >
               {/* Visual track (thin) centered inside the wide transparent hit area */}
               <div className="absolute left-1/2 -translate-x-1/2 w-1 h-full bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
@@ -750,9 +769,10 @@ export default function NowPlayingBanner({
                 updateDragVolume(newVol);
                 onVolumeChange?.(newVol);
                 if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
-                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 3000);
+                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 5000);
               }}
               onPointerMove={(e) => {
+                if (e.buttons === 0) { isDraggingVolRef.current = false; return; }
                 if (!isDraggingVolRef.current || !mobileVolFaderRef.current) return;
                 const rect = mobileVolFaderRef.current.getBoundingClientRect();
                 const ratio = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
@@ -966,7 +986,7 @@ export default function NowPlayingBanner({
       {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
-      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3" style={{ gridTemplateColumns: "1fr min(100%, 700px) 1fr" }}>
+      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
         {/* LEFT: Album art + Track info */}
         <div className="flex items-center gap-2.5 min-w-0">
           {thumbUrl && (
@@ -990,15 +1010,15 @@ export default function NowPlayingBanner({
               </div>
             </Tooltip>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
             {isUnavailable ? (
               <p className="font-mono text-sm text-[var(--text-muted)] uppercase truncate leading-tight">
                 Unavailable &middot; skipping&hellip;
               </p>
             ) : (
               <>
-                <p className="font-mono text-[14px] text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
-                  {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[11px]"> (copied)</span>}
+                <p className="font-mono text-[14px] text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
+                  {card.name}
                 </p>
                 <p className="font-mono text-[12px] text-[var(--text-secondary)] uppercase truncate leading-tight">
                   {card.artist}
@@ -1031,11 +1051,13 @@ export default function NowPlayingBanner({
           </div>
         </div>
 
-        {/* RIGHT: Queue + Volume + Fullscreen */}
-        <div className="flex items-center gap-2.5 justify-self-end relative z-10">
+        {/* RIGHT: Queue ··· Volume + Fullscreen */}
+        <div className="flex items-center w-full relative z-10">
           {queueButton}
-          {volumeControl()}
-          {fullscreenButton}
+          <div className="flex items-center gap-2.5 ml-auto">
+            {volumeControl(volTrackRef, "hidden min-[1350px]:flex", desktopVolFaderRef)}
+            {fullscreenButton}
+          </div>
         </div>
       </div>
 
@@ -1102,15 +1124,15 @@ export default function NowPlayingBanner({
                   )}
                 </a>
               )}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
                 {isUnavailable ? (
                   <p className="font-mono text-sm text-[var(--text-muted)] uppercase truncate leading-tight">
                     Unavailable &middot; skipping&hellip;
                   </p>
                 ) : (
                   <>
-                    <p className="font-mono text-[15px] text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
-                      {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[11px]"> (copied)</span>}
+                    <p className="font-mono text-[15px] text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
+                      {card.name}
                     </p>
                     <p className="font-mono text-xs text-[var(--text-secondary)] uppercase truncate leading-tight">
                       {card.artist}
@@ -1167,7 +1189,7 @@ export default function NowPlayingBanner({
           {/* Expanded 2-row layout — tablet (500-1023px) */}
           <div className="h-full hidden min-[500px]:flex flex-col justify-center px-3 gap-1">
             {/* Row 1: art + controls */}
-            <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+            <div className="grid items-center gap-2" style={{ gridTemplateColumns: "minmax(150px, 1fr) auto minmax(80px, 1fr)" }}>
               {/* Left: chevron + art + track info */}
               <div className="flex items-center gap-2 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
                 <button
@@ -1193,15 +1215,15 @@ export default function NowPlayingBanner({
                     <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
                   </a>
                 )}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
                   {isUnavailable ? (
                     <p className="font-mono text-xs text-[var(--text-muted)] uppercase truncate leading-tight">
                       Unavailable &middot; skipping&hellip;
                     </p>
                   ) : (
                     <>
-                      <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
-                        {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[10px]"> (copied)</span>}
+                      <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
+                        {card.name}
                       </p>
                       <p className="font-mono text-[11px] text-[var(--text-secondary)] uppercase truncate leading-tight">
                         {card.artist}
@@ -1244,11 +1266,13 @@ export default function NowPlayingBanner({
                 )}
                 {locateButton("sm")}
               </div>
-              {/* Right: queue + volume + fullscreen */}
-              <div className="flex items-center gap-1.5 shrink-0 justify-self-end">
+              {/* Right: queue ··· volume + fullscreen */}
+              <div className="flex items-center w-full relative z-10">
                 {queueButton}
-                {volumeControl(volTrackTabletRef)}
-                {fullscreenButton}
+                <div className="flex items-center gap-1.5 ml-auto">
+                  {volumeControl(volTrackTabletRef, "hidden md:flex", tabletVolFaderRef)}
+                  {fullscreenButton}
+                </div>
               </div>
             </div>
             {/* Row 2: Seek bar */}
@@ -1292,6 +1316,17 @@ export default function NowPlayingBanner({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating "Copied!" toast — portal to body to escape motion.div transform */}
+      {copied && copyPos && createPortal(
+        <div
+          className="fixed z-[100] px-2 py-1 bg-[var(--bg-card)] border border-[var(--border)] rounded font-mono text-[10px] text-[var(--text)] shadow-lg pointer-events-none animate-fade-in"
+          style={{ left: copyPos.x, top: copyPos.y, transform: "translate(-50%, -100%)" }}
+        >
+          Copied!
+        </div>,
+        document.body
+      )}
     </motion.div>
   );
 }

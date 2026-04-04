@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { CardData } from "@/lib/types";
 
@@ -11,13 +11,17 @@ interface QueuePanelProps {
   currentIndex: number;
   cardRegistry: Map<string, CardData>;
   onPlayIndex: (index: number) => void;
+  likedIds: Set<string>;
+  onToggleLike: (id: string) => void;
 }
 
-function QueueRow({ card, isCurrent, dimmed, onClick, isMobile = false }: {
+function QueueRow({ card, isCurrent, dimmed, onClick, isLiked, onToggleLike, isMobile = false }: {
   card: CardData;
   isCurrent: boolean;
   dimmed: boolean;
   onClick: () => void;
+  isLiked: boolean;
+  onToggleLike: () => void;
   isMobile?: boolean;
 }) {
   return (
@@ -60,6 +64,18 @@ function QueueRow({ card, isCurrent, dimmed, onClick, isMobile = false }: {
           </div>
         </div>
       )}
+      <div
+        onClick={(e) => { e.stopPropagation(); onToggleLike(); }}
+        className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
+          isCurrent
+            ? "text-[var(--bg)]/60 hover:text-[var(--bg)]"
+            : "text-[var(--text-muted)] hover:text-[var(--text)]"
+        }`}
+      >
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+        </svg>
+      </div>
     </button>
   );
 }
@@ -71,10 +87,13 @@ export default function QueuePanel({
   currentIndex,
   cardRegistry,
   onPlayIndex,
+  likedIds,
+  onToggleLike,
 }: QueuePanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [panelRight, setPanelRight] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1152);
@@ -82,6 +101,21 @@ export default function QueuePanel({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Position desktop panel above the queue button (layoutEffect to avoid slide)
+  useLayoutEffect(() => {
+    if (!isOpen || isMobile) return;
+    const btn = document.querySelector("[data-queue-btn]") as HTMLElement | null;
+    if (!btn) return;
+    const update = () => {
+      const rect = btn.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      setPanelRight(Math.max(16, window.innerWidth - centerX - 180));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [isOpen, isMobile]);
 
   // Close on Escape
   useEffect(() => {
@@ -106,11 +140,21 @@ export default function QueuePanel({
     return () => { if (idleTimer.current) clearTimeout(idleTimer.current); };
   }, [isOpen, isMobile, resetIdleTimer, queue, currentIndex]);
 
-  // Lock body scroll when mobile sheet is open
+  // Lock body scroll when mobile sheet is open (iOS Safari-safe)
   useEffect(() => {
     if (isOpen && isMobile) {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
       document.body.style.overflow = "hidden";
-      return () => { document.body.style.overflow = ""; };
+      return () => {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        document.body.style.overflow = "";
+        window.scrollTo(0, scrollY);
+      };
     }
   }, [isOpen, isMobile]);
 
@@ -158,13 +202,13 @@ export default function QueuePanel({
         return (
           <Fragment key={row.id}>
             {showPrevHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1">Previously played</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1 relative z-[1]">Previously played</p>
             )}
             {showCurrentHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1">Now playing</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">Now playing</p>
             )}
             {showNextHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1">Up next</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">Up next</p>
             )}
             <motion.div layout transition={layoutAnim}>
               <div style={{ opacity }}>
@@ -173,6 +217,8 @@ export default function QueuePanel({
                   isCurrent={row.section === "current"}
                   dimmed={row.section === "prev"}
                   onClick={row.section === "current" ? () => {} : () => onPlayIndex(row.index)}
+                  isLiked={likedIds.has(row.id)}
+                  onToggleLike={() => onToggleLike(row.id)}
                   isMobile={row.section === "current" ? isMobile : false}
                 />
               </div>
@@ -201,6 +247,7 @@ export default function QueuePanel({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70]"
+              style={{ touchAction: "none" }}
               onClick={(e) => { e.stopPropagation(); onClose(); }}
             />
             <motion.div
@@ -236,8 +283,8 @@ export default function QueuePanel({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="fixed right-14 min-[1152px]:right-16 w-[360px] z-[60] bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
-          style={{ bottom: "calc(var(--player-height) + 8px)" }}
+          className="fixed w-[360px] z-[60] bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
+          style={{ bottom: "calc(var(--player-height) + 8px)", right: panelRight != null ? `${panelRight}px` : 64 }}
           onMouseEnter={resetIdleTimer}
           onMouseMove={resetIdleTimer}
         >
