@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import Image from "next/image";
+// Using <img> instead of next/image — YouTube serves optimized thumbnails already
 import Tooltip from "./Tooltip";
 import type { CardData } from "@/lib/types";
 
@@ -54,6 +54,7 @@ export default memo(function MusicCard({
   viewContext = "default",
   isAuthenticated = true,
 }: MusicCardProps) {
+  const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
   const [nudge, setNudge] = useState(false);
   const [tipLocked, setTipLocked] = useState(false);
@@ -66,6 +67,7 @@ export default memo(function MusicCard({
 
   // Trigger heart fill-from-below on undo/restore ONLY (not manual like)
   const fillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: animation trigger needs sync setState */
   useLayoutEffect(() => {
     if (saved && !prevSavedRef.current && !burst) {
       setFillUp(true);
@@ -78,6 +80,7 @@ export default memo(function MusicCard({
     }
     prevSavedRef.current = saved;
   }, [saved, burst, fillUp]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -158,12 +161,11 @@ export default memo(function MusicCard({
             <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-widest">DIGEART</span>
           </div>
         ) : (
-          <Image
+          <img
             src={card.image || "/placeholder.svg"}
             alt={`${card.name} by ${card.artist}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
             onClick={handlePlay}
             onError={() => setImgError(true)}
             title="YouTube"
@@ -180,7 +182,7 @@ export default memo(function MusicCard({
 
       {/* Status tags — top right */}
       {(() => {
-        const isNew = card.publishedAt ? (Date.now() - new Date(card.publishedAt).getTime()) / 86400000 <= 30 : false;
+        const isNew = card.publishedAt ? (now - new Date(card.publishedAt).getTime()) / 86400000 <= 30 : false;
         const tags: { label: string; color: string }[] = [];
 
         // When specific filters are active, trust the API — show matching badges
@@ -191,13 +193,13 @@ export default memo(function MusicCard({
           // If no specific tags matched above but filters are set, still compute from data
           if (tags.length === 0) {
             if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-            if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (Date.now() - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
+            if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (now - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
             if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
           }
         } else {
           // No filter — compute from card data
           if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-          if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (Date.now() - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
+          if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (now - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
           if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
         }
 
