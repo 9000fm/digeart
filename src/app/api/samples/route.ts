@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { after } from "next/server";
-import { discoverSamples, rebuildSamplesPool, isValidTag } from "@/lib/youtube";
+import { discoverSamples, isValidTag } from "@/lib/youtube";
 import type { Tag } from "@/lib/youtube";
 
 export async function GET(request: NextRequest) {
@@ -14,11 +13,7 @@ export async function GET(request: NextRequest) {
     const genre = searchParams.get("genre") || undefined;
     const rotate = parseInt(searchParams.get("rotate") || "0", 10) || undefined;
 
-    const { cards, totalFiltered, needsRebuild } = await discoverSamples(limit, offset, tag, genre, rotate);
-
-    if (needsRebuild) {
-      after(() => rebuildSamplesPool());
-    }
+    const { cards, totalFiltered } = await discoverSamples(limit, offset, tag, genre, rotate);
 
     return NextResponse.json({
       cards,

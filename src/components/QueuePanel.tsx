@@ -207,7 +207,8 @@ export default function QueuePanel({
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
               className="fixed bottom-0 left-0 right-0 z-[70] bg-[var(--bg-alt)] border-t border-[var(--border)]/50 rounded-t-2xl shadow-2xl overflow-y-auto overscroll-contain"
-              style={{ maxHeight: "65vh" }}
+              style={{ maxHeight: "65vh", touchAction: "pan-y" }}
+              onTouchMove={(e) => e.stopPropagation()}
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-2.5 pb-1 cursor-pointer" onClick={onClose}>

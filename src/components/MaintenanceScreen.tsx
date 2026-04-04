@@ -15,12 +15,12 @@ export default function MaintenanceScreen() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center relative overflow-hidden">
       {/* Wordmark */}
-      <p className="font-[family-name:var(--font-display)] text-2xl text-[var(--text-muted)]/30 mb-4">
+      <p className="font-[family-name:var(--font-display)] text-4xl text-[var(--text-muted)]/20 mb-6">
         digeart
       </p>
 
       {/* Spinning gem (Y-axis 3D rotation) */}
-      <div className="mb-4" style={{ perspective: "400px" }}>
+      <div className="mb-3" style={{ perspective: "400px" }}>
         <svg
           className="w-12 h-12 text-[var(--text-muted)]"
           viewBox="0 0 32 32"
@@ -38,7 +38,7 @@ export default function MaintenanceScreen() {
 
       {/* Gem shadow — syncs with gem rotation */}
       <div
-        className="h-[3px] rounded-full bg-[var(--text-muted)]/25 mb-4"
+        className="h-[3px] rounded-full bg-[var(--text-muted)]/40 mb-6"
         style={{ width: "3rem", animation: "gemShadow 3s ease-in-out infinite" }}
       />
 

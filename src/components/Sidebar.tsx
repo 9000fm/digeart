@@ -208,9 +208,8 @@ export default function Sidebar({
   const aboutIconRef = useRef<HTMLButtonElement>(null);
   const aboutIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [aboutAnchor, setAboutAnchor] = useState<DOMRect | null>(null);
-  const phraseIndex = useRef(
-    Math.floor(Math.random() * SEARCH_PHRASES.length)
-  );
+  const [initialPhrase] = useState(() => Math.floor(Math.random() * SEARCH_PHRASES.length));
+  const phraseIndex = useRef(initialPhrase);
   const charIndex = useRef(0);
   const isDeleting = useRef(false);
   const typingPaused = useRef(false);
@@ -567,7 +566,7 @@ export default function Sidebar({
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
                     <span className="font-mono text-[10px] text-[var(--text-muted)]">Hidden gems</span>
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
-                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">Added recently</span>
                   </div>
                 </div>
 
@@ -860,29 +859,7 @@ export default function Sidebar({
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">Rare</span></span>
                   <span className="font-mono text-[10px] text-[var(--text-muted)]">Hidden gems</span>
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold">New</span></span>
-                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Added this month</span>
-                </div>
-              </div>
-
-              {/* Keyboard shortcuts */}
-              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
-                <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Shortcuts</p>
-                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                  {[
-                    ["Space", "Play / Pause"],
-                    ["N / \u2192", "Next track"],
-                    ["P / \u2190", "Previous track"],
-                    ["S", "Toggle shuffle"],
-                    ["M", "Mute / Unmute"],
-                    ["L", "Locate track"],
-                    ["1\u20134", "Switch tab"],
-                    ["?", "Toggle this panel"],
-                  ].map(([key, desc]) => (
-                    <Fragment key={key}>
-                      <kbd className="font-mono text-[8px] text-[var(--text)] font-bold bg-[var(--border)]/40 px-1 py-px rounded text-center min-w-[22px]">{key}</kbd>
-                      <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
-                    </Fragment>
-                  ))}
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">Added recently</span>
                 </div>
               </div>
 

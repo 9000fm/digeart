@@ -679,8 +679,9 @@ async function buildDiscoverPool(): Promise<CardData[]> {
   return pool;
 }
 
-/** Background rebuild for discover pool — Supabase lock prevents duplicates across instances */
+/** Background rebuild for discover pool — only called by cron or manual refresh */
 export async function rebuildDiscoverPool(): Promise<void> {
+  if (process.env.NODE_ENV === "development") return;
   const locked = await acquireRebuildLock("discover");
   if (!locked) return;
   try {
@@ -741,6 +742,7 @@ async function buildMixesPool(): Promise<CardData[]> {
 }
 
 export async function rebuildMixesPool(): Promise<void> {
+  if (process.env.NODE_ENV === "development") return;
   const locked = await acquireRebuildLock("mixes");
   if (!locked) return;
   try {
@@ -822,6 +824,7 @@ async function buildSamplesPool(): Promise<CardData[]> {
 }
 
 export async function rebuildSamplesPool(): Promise<void> {
+  if (process.env.NODE_ENV === "development") return;
   const locked = await acquireRebuildLock("samples");
   if (!locked) return;
   try {
