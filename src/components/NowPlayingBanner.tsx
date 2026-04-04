@@ -92,6 +92,14 @@ export default function NowPlayingBanner({
   // Hover preview tooltip
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
 
+  // Copy title to clipboard
+  const [copied, setCopied] = useState(false);
+  const copyTitle = useCallback(() => {
+    navigator.clipboard.writeText(`${card.name} — ${card.artist}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [card.name, card.artist]);
+
   // Delayed close button reveal
   const [showClose, setShowClose] = useState(false);
   useEffect(() => {
@@ -942,11 +950,13 @@ export default function NowPlayingBanner({
   return (
     <motion.div
       initial={{ y: "100%", opacity: 0.5 }}
+      /* eslint-disable react-hooks/refs -- framer-motion animate prop reads ref safely */
       animate={{
         y: 0,
         opacity: 1,
         ...(isMobile ? { height: isMinimized ? 44 : expandedHeightRef.current } : {}),
       }}
+      /* eslint-enable react-hooks/refs */
       exit={{ y: "100%", opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={`group player-banner fixed left-0 right-0 min-[1152px]:left-[var(--sidebar-width)] bg-[var(--bg-alt)]/85 backdrop-blur-2xl backdrop-saturate-150 border-t border-[var(--border)]/50 overflow-visible`}
@@ -987,8 +997,8 @@ export default function NowPlayingBanner({
               </p>
             ) : (
               <>
-                <p className="font-mono text-[14px] text-[var(--text)] uppercase truncate leading-tight font-bold">
-                  {card.name}
+                <p className="font-mono text-[14px] text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
+                  {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[11px]"> (copied)</span>}
                 </p>
                 <p className="font-mono text-[12px] text-[var(--text-secondary)] uppercase truncate leading-tight">
                   {card.artist}
@@ -1099,8 +1109,8 @@ export default function NowPlayingBanner({
                   </p>
                 ) : (
                   <>
-                    <p className="font-mono text-[15px] text-[var(--text)] uppercase truncate leading-tight font-bold">
-                      {card.name}
+                    <p className="font-mono text-[15px] text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
+                      {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[11px]"> (copied)</span>}
                     </p>
                     <p className="font-mono text-xs text-[var(--text-secondary)] uppercase truncate leading-tight">
                       {card.artist}
@@ -1190,8 +1200,8 @@ export default function NowPlayingBanner({
                     </p>
                   ) : (
                     <>
-                      <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold">
-                        {card.name}
+                      <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold cursor-pointer hover:text-[var(--accent)] transition-colors" onClick={copyTitle}>
+                        {card.name}{copied && <span className="text-[var(--text-muted)] font-normal text-[10px]"> (copied)</span>}
                       </p>
                       <p className="font-mono text-[11px] text-[var(--text-secondary)] uppercase truncate leading-tight">
                         {card.artist}

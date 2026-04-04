@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { readFileSync } from "fs";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
@@ -12,4 +13,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const analyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
+export default analyzer(nextConfig);
