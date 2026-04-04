@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { CardData } from "@/lib/types";
 
@@ -156,7 +156,7 @@ export default function QueuePanel({
           : 1;
 
         return (
-          <motion.div key={row.id} layout transition={layoutAnim}>
+          <Fragment key={row.id}>
             {showPrevHeader && (
               <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1">Previously played</p>
             )}
@@ -166,16 +166,18 @@ export default function QueuePanel({
             {showNextHeader && (
               <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1">Up next</p>
             )}
-            <div style={{ opacity }}>
-              <QueueRow
-                card={row.card}
-                isCurrent={row.section === "current"}
-                dimmed={row.section === "prev"}
-                onClick={row.section === "current" ? () => {} : () => onPlayIndex(row.index)}
-                isMobile={row.section === "current" ? isMobile : false}
-              />
-            </div>
-          </motion.div>
+            <motion.div layout transition={layoutAnim}>
+              <div style={{ opacity }}>
+                <QueueRow
+                  card={row.card}
+                  isCurrent={row.section === "current"}
+                  dimmed={row.section === "prev"}
+                  onClick={row.section === "current" ? () => {} : () => onPlayIndex(row.index)}
+                  isMobile={row.section === "current" ? isMobile : false}
+                />
+              </div>
+            </motion.div>
+          </Fragment>
         );
       })}
 
