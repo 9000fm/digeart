@@ -348,6 +348,10 @@ export default function Home() {
           const dur = event.target.getDuration();
           if (dur > 0) setAudioDuration(dur);
         } catch { /* ignore */ }
+        // Re-apply DJ mode playback rate on new track
+        if (playbackRateRef.current !== 1) {
+          try { event.target.setPlaybackRate(playbackRateRef.current); } catch { /* ignore */ }
+        }
       } else if (event.data === 2) {
         // PAUSED
         // Don't set isPlaying to false here — we control it ourselves
@@ -1066,7 +1070,7 @@ export default function Home() {
         onToggleAbout={() => setShowAbout((v) => !v)}
         onRunTutorial={() => { setShowAbout(false); setShowQueue(false); setShowOnboarding(true); }}
         djMode={djMode}
-        onToggleDjMode={handleDjModeToggle}
+        onToggleDjMode={isAuthenticated ? handleDjModeToggle : undefined}
       />
 
       <div style={{ display: activeView === "home" ? undefined : "none" }}>

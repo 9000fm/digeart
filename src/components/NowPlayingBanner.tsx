@@ -250,6 +250,19 @@ export default function NowPlayingBanner({
     return () => document.removeEventListener("pointerdown", handler);
   }, [showVolumeFader]);
 
+  // Dismiss pitch fader on outside click
+  useEffect(() => {
+    if (!showPitchFader) return;
+    const handler = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!(t as HTMLElement).closest?.("[data-pitch-fader]")) {
+        setShowPitchFader(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [showPitchFader]);
+
   // Auto-dismiss volume fader after 5s idle
   useEffect(() => {
     if (!showVolumeFader) return;
@@ -621,7 +634,7 @@ export default function NowPlayingBanner({
       {/* Vertical pitch popup — outside overflow-hidden, CDJ style */}
       {djMode && showPitchFader && onPlaybackRateChange && (
         <div
-          data-volume-fader
+          data-pitch-fader
           className="absolute left-1/2 -translate-x-1/2 px-2 py-2.5 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50 min-[1152px]:hidden"
           style={{ bottom: "calc(100% + 8px)" }}
           onClick={(e) => e.stopPropagation()}
