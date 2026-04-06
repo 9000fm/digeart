@@ -254,7 +254,7 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
     for (const t of tags) {
       if (t === "all") return true;
       if (t === "hot" && c.viewCount != null && c.viewCount >= 50_000) return true;
-      if (t === "rare" && c.starred && c.viewCount != null && c.viewCount < 10_000
+      if (t === "rare" && c.viewCount != null && c.viewCount < 10_000
         && c.publishedAt && now - new Date(c.publishedAt).getTime() > twoYearsMs) return true;
       if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= thirtyDaysMs) return true;
     }

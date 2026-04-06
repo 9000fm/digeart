@@ -160,7 +160,16 @@ export default function DiscoverGrid({
         <>
           {!showSavedOnly && displayCards.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-              <MaintenanceScreen />
+              {activeTagFilters.length > 0 || activeGenreLabels.length > 0 ? (
+                <>
+                  <svg className="w-10 h-10 text-[var(--text-muted)] mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                  </svg>
+                  <p className="font-mono text-sm text-[var(--text-muted)]">No tracks match these filters</p>
+                </>
+              ) : (
+                <MaintenanceScreen />
+              )}
             </div>
           ) : showSavedOnly && displayCards.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">

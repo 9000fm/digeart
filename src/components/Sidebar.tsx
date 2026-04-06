@@ -519,7 +519,7 @@ export default function Sidebar({
                   onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   className={`w-12 h-12 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 ${
                     isActive
-                      ? "text-[var(--text)] bg-[var(--bg-alt)] opacity-100 shadow-sm"
+                      ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
                       : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
                   }`}
                 >
@@ -840,7 +840,7 @@ export default function Sidebar({
                 onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className={`w-12 h-12 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 ${
                   isActive
-                    ? "text-[var(--text)] bg-[var(--bg-alt)] opacity-100 shadow-sm"
+                    ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
                     : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
                 }`}
               >

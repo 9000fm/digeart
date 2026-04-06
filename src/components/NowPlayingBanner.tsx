@@ -104,7 +104,7 @@ export default function NowPlayingBanner({
   const [copyPos, setCopyPos] = useState<{ x: number; y: number } | null>(null);
   const copyTitle = useCallback((e: React.MouseEvent) => {
     navigator.clipboard.writeText(`${card.name} - ${card.artist}`);
-    setCopyPos({ x: e.clientX, y: e.clientY - 40 });
+    setCopyPos({ x: e.clientX + 16, y: e.clientY - 20 });
     setCopied(true);
     setTimeout(() => { setCopied(false); setCopyPos(null); }, 2000);
   }, [card.name, card.artist]);
@@ -666,9 +666,15 @@ export default function NowPlayingBanner({
             </div>
             <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ top: `${pitchPercent}%`, left: '50%', transform: 'translate(-50%, -50%)' }} />
           </div>
-          <div className="flex items-center justify-center gap-4 mt-2">
-            <span className={`font-mono text-sm font-bold transition-colors ${playbackRate < 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}>−</span>
-            <span className={`font-mono text-sm font-bold transition-colors ${playbackRate > 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}>+</span>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onPlaybackRateChange?.(Math.max(0.88, Math.round((playbackRate - 0.01) * 100) / 100)); }}
+              className={`w-6 h-6 flex items-center justify-center font-mono text-xs font-bold transition-colors cursor-pointer ${playbackRate < 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
+            >−</button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onPlaybackRateChange?.(Math.min(1.12, Math.round((playbackRate + 0.01) * 100) / 100)); }}
+              className={`w-6 h-6 flex items-center justify-center font-mono text-xs font-bold transition-colors cursor-pointer ${playbackRate > 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
+            >+</button>
           </div>
         </div>
       )}
@@ -1416,10 +1422,12 @@ export default function NowPlayingBanner({
       {/* Floating "Copied!" toast — portal to body to escape motion.div transform */}
       {copied && copyPos && createPortal(
         <div
-          className="fixed z-[100] px-2 py-1 bg-[var(--bg-card)] border border-[var(--border)] rounded font-mono text-[10px] text-[var(--text)] shadow-lg pointer-events-none animate-fade-in"
+          className="fixed z-[100] pointer-events-none"
           style={{ left: copyPos.x, top: copyPos.y, transform: "translate(-50%, -100%)" }}
         >
-          Copied!
+          <div className="px-2.5 py-1 bg-[var(--bg-card)] border border-[var(--border)] rounded font-mono text-xs text-[var(--text)] shadow-lg animate-fade-in">
+            Copied!
+          </div>
         </div>,
         document.body
       )}
