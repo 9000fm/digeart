@@ -46,6 +46,9 @@ interface NowPlayingBannerProps {
   showQueue?: boolean;
   onToggleQueue?: () => void;
   undoRestoredId?: string | null;
+  djMode?: boolean;
+  playbackRate?: number;
+  onPlaybackRateChange?: (rate: number) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -81,6 +84,9 @@ export default function NowPlayingBanner({
   showQueue = false,
   onToggleQueue,
   undoRestoredId = null,
+  djMode = false,
+  playbackRate = 1,
+  onPlaybackRateChange,
 }: NowPlayingBannerProps) {
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
@@ -131,6 +137,9 @@ export default function NowPlayingBanner({
   const mobileVolFaderRef = useRef<HTMLDivElement>(null);
   const miniVolTrackRef = useRef<HTMLDivElement>(null);
   const isDraggingVolRef = useRef(false);
+  const isDraggingPitchRef = useRef(false);
+  const pitchTrackRef = useRef<HTMLDivElement>(null);
+  const [showPitchFader, setShowPitchFader] = useState(false);
   const [isDraggingVol, setIsDraggingVol] = useState(false);
   const [dragVolume, setDragVolume] = useState(volume);
   const dragVolumeRef = useRef(volume);
@@ -373,8 +382,8 @@ export default function NowPlayingBanner({
 
   const likeFillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useLayoutEffect(() => {
-    const isUndo = undoRestoredId === card.id;
-    if (isLiked && !prevIsLikedRef.current && isUndo) {
+    const isFirstLike = isLiked && !prevIsLikedRef.current;
+    if (isFirstLike) {
       setLikeFillUp(true);
       if (likeFillTimerRef.current) clearTimeout(likeFillTimerRef.current);
       likeFillTimerRef.current = setTimeout(() => setLikeFillUp(false), 2500);
@@ -383,7 +392,7 @@ export default function NowPlayingBanner({
       if (likeFillTimerRef.current) clearTimeout(likeFillTimerRef.current);
     }
     prevIsLikedRef.current = isLiked;
-  }, [isLiked, undoRestoredId, card.id, likeFillUp]);
+  }, [isLiked, card.id, likeFillUp]);
   const likeButton = (size: "sm" | "md" = "md") => onToggleLike ? (
     <Tooltip label={isAuthenticated ? (isLiked ? "Saved!" : "Save") : "Log in to save"} position="top">
       <motion.button
@@ -392,8 +401,9 @@ export default function NowPlayingBanner({
           e.stopPropagation();
           if (isAuthenticated) {
             if (!isLiked) {
-              setLikeBurst(true);
-              if (!confettiedIds.current.has(card.id)) {
+              const isFirstTime = !confettiedIds.current.has(card.id);
+              if (isFirstTime) {
+                // First like per session: confetti + paint fill, no scale
                 confettiedIds.current.add(card.id);
                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                 const x = (rect.left + rect.width / 2) / window.innerWidth;
@@ -410,6 +420,9 @@ export default function NowPlayingBanner({
                   origin: { x, y },
                   disableForReducedMotion: true,
                 });
+              } else {
+                // Re-likes: scale burst only
+                setLikeBurst(true);
               }
             }
             onToggleLike();
@@ -434,7 +447,7 @@ export default function NowPlayingBanner({
         >
           <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill={isLiked && !likeFillUp ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isLiked && !likeFillUp ? 0 : 2} strokeLinecap="round" strokeLinejoin="round" />
           {likeFillUp && (
-            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill="currentColor" className="animate-[heartFillUp_2s_cubic-bezier(0.22,1,0.36,1)_forwards]" />
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill="currentColor" className="animate-[heartPaintFill_0.6s_cubic-bezier(0.22,1,0.36,1)_forwards]" />
           )}
         </svg>
       </motion.button>
@@ -532,6 +545,122 @@ export default function NowPlayingBanner({
       </button>
     </Tooltip>
   ) : null;
+
+  // Pitch fader (DJ mode)
+  const pitchDisplay = playbackRate === 1 ? "0%" : `${playbackRate > 1 ? "+" : ""}${Math.round((playbackRate - 1) * 100)}%`;
+  const pitchPercent = ((playbackRate - 0.88) / 0.24) * 100;
+  const pitchHorizontal = (
+    <div
+      className="hidden min-[1152px]:flex items-center w-20 h-7 cursor-pointer touch-none"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+        isDraggingPitchRef.current = true;
+        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        onPlaybackRateChange?.(0.88 + ratio * 0.24);
+      }}
+      onPointerMove={(e) => {
+        if (!isDraggingPitchRef.current) return;
+        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        onPlaybackRateChange?.(0.88 + ratio * 0.24);
+      }}
+      onPointerUp={() => { isDraggingPitchRef.current = false; }}
+      onDoubleClick={() => onPlaybackRateChange?.(1)}
+    >
+      <div className="relative w-full h-1 bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
+        <div className="absolute top-0 h-full bg-[var(--text)] rounded-full" style={pitchPercent >= 50 ? { left: '50%', width: `${pitchPercent - 50}%` } : { left: `${pitchPercent}%`, width: `${50 - pitchPercent}%` }} />
+        <div className="absolute left-1/2 -translate-x-1/2 w-px h-1 bg-[var(--text)]/60 -top-[11px]" />
+        <div className="absolute left-1/2 -translate-x-1/2 w-px h-1 bg-[var(--text)]/60 -bottom-[11px]" />
+        <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ left: `${pitchPercent}%`, top: '50%', transform: 'translate(-50%, -50%)' }} />
+      </div>
+    </div>
+  );
+  const pitchFaderInner = onPlaybackRateChange ? (
+    <div className="relative flex items-center gap-1.5 shrink-0 mr-2 bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg px-1.5 py-0.5">
+      <Tooltip label="Speed adjust" position="top">
+        <span
+          className="relative flex items-center justify-center font-mono text-[11px] text-[var(--text)] shrink-0 py-0.5 pl-[22px] pr-1 rounded cursor-pointer hover:text-[var(--text)] transition-colors active:scale-95"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.innerWidth >= 1152) {
+              onPlaybackRateChange(1);
+            } else {
+              setShowPitchFader((v) => !v);
+            }
+          }}
+        >
+          <svg className="absolute left-1 w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.153 8.188l-.72-3.236a2.493 2.493 0 00-4.867 0l-3.025 13.614a2 2 0 001.952 2.434h7.014a2 2 0 001.952-2.434l-.524-2.357m-4.935 1.791l9-13" />
+            <circle cx="20" cy="5" r="1" fill="currentColor" />
+          </svg>
+          <span className="w-[28px] text-center">{pitchDisplay}</span>
+        </span>
+      </Tooltip>
+      {pitchHorizontal}
+    </div>
+  ) : null;
+
+  const pitchFader = (
+    <div className="relative">
+      <AnimatePresence>
+        {djMode && pitchFaderInner && (
+          <motion.div
+            key="pitch"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "auto", opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+            className="overflow-hidden"
+          >
+            {pitchFaderInner}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Vertical pitch popup — outside overflow-hidden, CDJ style */}
+      {djMode && showPitchFader && onPlaybackRateChange && (
+        <div
+          data-volume-fader
+          className="absolute left-1/2 -translate-x-1/2 px-2 py-2.5 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50 min-[1152px]:hidden"
+          style={{ bottom: "calc(100% + 8px)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="relative w-5 h-24 cursor-pointer touch-none mx-auto"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const el = e.currentTarget as HTMLDivElement;
+              const rect = el.getBoundingClientRect();
+              const ratio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+              onPlaybackRateChange(0.88 + ratio * 0.24);
+              const onMove = (ev: MouseEvent) => {
+                const r = el.getBoundingClientRect();
+                const rat = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+                onPlaybackRateChange(0.88 + rat * 0.24);
+              };
+              const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+              window.addEventListener("mousemove", onMove);
+              window.addEventListener("mouseup", onUp);
+            }}
+            onDoubleClick={() => onPlaybackRateChange(1)}
+          >
+            <div className="absolute top-1/2 -translate-y-1/2 w-1 h-px bg-[var(--text)]/60 -left-[7px]" />
+            <div className="absolute top-1/2 -translate-y-1/2 w-1 h-px bg-[var(--text)]/60 -right-[7px]" />
+            <div className="absolute left-1/2 -translate-x-1/2 w-1 h-full bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
+              <div className="absolute left-0 w-full bg-[var(--text)] rounded-full" style={pitchPercent >= 50 ? { top: '50%', height: `${pitchPercent - 50}%` } : { top: `${pitchPercent}%`, height: `${50 - pitchPercent}%` }} />
+            </div>
+            <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ top: `${pitchPercent}%`, left: '50%', transform: 'translate(-50%, -50%)' }} />
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <span className={`font-mono text-sm font-bold transition-colors ${playbackRate < 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}>−</span>
+            <span className={`font-mono text-sm font-bold transition-colors ${playbackRate > 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}>+</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   // Info button (reusable like likeButton)
   const infoButton = (size: "sm" | "md" = "md") => isAuthenticated ? (
@@ -719,84 +848,31 @@ export default function NowPlayingBanner({
   };
 
   // Mobile volume icon + vertical fader popup
-  const mobileVolumePopup = () => {
-    const effectiveVolume = isMuted ? 0 : dragVolume;
-    return (
-      <div className="relative shrink-0">
-        <button
-          ref={mobileVolumeIconRef}
-          onClick={(e) => {
-            e.stopPropagation();
-            updateDragVolume(volume);
-            setShowVolumeFader((prev) => !prev);
-          }}
-          className="w-7 h-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            {isMuted || effectiveVolume === 0 ? (
-              <>
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </>
-            ) : effectiveVolume < 50 ? (
-              <path d="M15.54 8.46a5 5 0 010 7.07" />
-            ) : (
-              <>
-                <path d="M15.54 8.46a5 5 0 010 7.07" />
-                <path d="M19.07 4.93a10 10 0 010 14.14" />
-              </>
-            )}
-          </svg>
-        </button>
-
-        {/* Vertical fader popup */}
-        {showVolumeFader && (
-          <div
-            ref={mobileVolumeFaderRef}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-3 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-[60] touch-none"
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          >
-            <div
-              ref={mobileVolFaderRef}
-              className="relative w-5 h-28 cursor-pointer touch-none mx-auto"
-              onPointerDown={(e) => {
-                if (!mobileVolFaderRef.current) return;
-                e.preventDefault();
-                (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-                isDraggingVolRef.current = true;
-                setIsDraggingVol(true);
-                const rect = mobileVolFaderRef.current.getBoundingClientRect();
-                const ratio = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
-                const newVol = Math.round(ratio * 100);
-                updateDragVolume(newVol);
-                onVolumeChange?.(newVol);
-                if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
-                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 5000);
-              }}
-              onPointerMove={(e) => {
-                if (e.buttons === 0) { isDraggingVolRef.current = false; return; }
-                if (!isDraggingVolRef.current || !mobileVolFaderRef.current) return;
-                const rect = mobileVolFaderRef.current.getBoundingClientRect();
-                const ratio = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
-                const newVol = Math.round(ratio * 100);
-                updateDragVolume(newVol);
-                onVolumeChange?.(newVol);
-              }}
-              onPointerUp={() => { isDraggingVolRef.current = false; setIsDraggingVol(false); onVolumeCommit?.(dragVolumeRef.current); }}
-            >
-              {/* Thin visual track centered inside wider hit area */}
-              <div className="absolute left-1/2 -translate-x-1/2 w-1 h-full bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
-                <div className="absolute bottom-0 left-0 w-full bg-[var(--text)] rounded-full" style={{ height: `${effectiveVolume}%`, transition: isDraggingVol ? 'none' : 'height 150ms cubic-bezier(0.4,0,0.2,1)' }} />
-              </div>
-              <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ bottom: `${effectiveVolume}%`, left: '50%', transform: 'translate(-50%, 50%)', transition: isDraggingVol ? 'none' : 'bottom 150ms cubic-bezier(0.4,0,0.2,1)' }} />
-            </div>
-          </div>
+  // Mobile volume — simple mute/unmute toggle (phone hardware controls volume)
+  const mobileVolumeToggle = () => (
+    <button
+      ref={mobileVolumeIconRef}
+      onClick={(e) => { e.stopPropagation(); onToggleMute?.(); }}
+      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95"
+    >
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        {isMuted ? (
+          <>
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </>
+        ) : volume < 50 ? (
+          <path d="M15.54 8.46a5 5 0 010 7.07" />
+        ) : (
+          <>
+            <path d="M15.54 8.46a5 5 0 010 7.07" />
+            <path d="M19.07 4.93a10 10 0 010 14.14" />
+          </>
         )}
-      </div>
-    );
-  };
+      </svg>
+    </button>
+  );
 
   // Seek bar
   const seekBar = (barRef: React.RefObject<HTMLDivElement | null>) => (
@@ -1046,6 +1122,7 @@ export default function NowPlayingBanner({
             <Tooltip label="Next (n)" position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
             {locateButton("md")}
+            {pitchFader}
           </div>
           {/* Row 2: Seek bar */}
           <div className="w-full flex items-center gap-1.5 px-4">
@@ -1090,7 +1167,7 @@ export default function NowPlayingBanner({
             <div className="flex-1 min-w-[40px]">
               {seekBar(miniBarRef)}
             </div>
-            {mobileVolumePopup()}
+            {mobileVolumeToggle()}
           </div>
         ) : (
           <>
@@ -1179,7 +1256,8 @@ export default function NowPlayingBanner({
                 </button>
               )}
               {queueButton}
-              {mobileVolumePopup()}
+              {pitchFader}
+              {mobileVolumeToggle()}
             </div>
 
             {/* Row 3: Seek bar */}
@@ -1269,6 +1347,7 @@ export default function NowPlayingBanner({
                   </button>
                 )}
                 {locateButton("sm")}
+                {pitchFader}
               </div>
               {/* Right: queue ··· volume + fullscreen */}
               <div className="flex items-center w-full relative z-10">

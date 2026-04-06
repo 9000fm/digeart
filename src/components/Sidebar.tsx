@@ -87,6 +87,19 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    key: "mixes",
+    label: "Mixes",
+    icon: (active) => (
+        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <line x1="4" y1="10" x2="4" y2="14" />
+          <line x1="8" y1="6" x2="8" y2="18" />
+          <line x1="12" y1="4" x2="12" y2="20" />
+          <line x1="16" y1="8" x2="16" y2="16" />
+          <line x1="20" y1="7" x2="20" y2="17" />
+        </svg>
+      ),
+  },
+  {
     key: "samples",
     label: "Samples",
     icon: (active) =>
@@ -99,19 +112,6 @@ const NAV_ITEMS: NavItem[] = [
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
           <circle cx="12" cy="12" r="10" />
           <circle cx="12" cy="12" r="2" />
-        </svg>
-      ),
-  },
-  {
-    key: "mixes",
-    label: "Mixes",
-    icon: (active) => (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-          <line x1="4" y1="10" x2="4" y2="14" />
-          <line x1="8" y1="6" x2="8" y2="18" />
-          <line x1="12" y1="4" x2="12" y2="20" />
-          <line x1="16" y1="8" x2="16" y2="16" />
-          <line x1="20" y1="7" x2="20" y2="17" />
         </svg>
       ),
   },
@@ -144,6 +144,8 @@ interface SidebarProps {
   showAbout?: boolean;
   onToggleAbout?: () => void;
   onRunTutorial?: () => void;
+  djMode?: boolean;
+  onToggleDjMode?: () => void;
 }
 
 export { GENRE_PRESETS };
@@ -183,6 +185,8 @@ export default function Sidebar({
   showAbout: showAboutProp,
   onToggleAbout,
   onRunTutorial,
+  djMode,
+  onToggleDjMode,
 }: SidebarProps) {
   const [placeholder, setPlaceholder] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -617,8 +621,8 @@ export default function Sidebar({
                   <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                     {[
                       ["For You", "1", "Electronic cuts from the underground"],
-                      ["Samples", "2", "World, funk, jazz, ambient & rare finds"],
-                      ["Mixes", "3", "DJ sets & live sets"],
+                      ["Mixes", "2", "DJ sets & live sets"],
+                      ["Samples", "3", "World, funk, jazz, ambient & rare finds"],
                       ["Saved", "4", "Your liked tracks"],
                     ].map(([tab, key, desc]) => (
                       <Fragment key={tab}>
@@ -917,7 +921,7 @@ export default function Sidebar({
       </AnimatePresence>
 
       {/* Settings Panel */}
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} />
     </>
   );
 }

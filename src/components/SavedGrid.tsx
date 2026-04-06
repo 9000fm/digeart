@@ -6,6 +6,14 @@ import MusicCard from "./MusicCard";
 import MaintenanceScreen from "./MaintenanceScreen";
 import type { CardData } from "@/lib/types";
 
+type SavedFilterType = "all" | "tracks" | "samples" | "mixes" | "deleted";
+
+function inferTrackType(card: CardData): "tracks" | "samples" | "mixes" {
+  if (card.duration && card.duration >= 2400) return "mixes";
+  if (card.duration && card.duration <= 240) return "samples";
+  return "tracks";
+}
+
 interface SavedGridProps {
   cards: CardData[];
   loading: boolean;
@@ -22,6 +30,7 @@ interface SavedGridProps {
   onRestoreRemoved?: (id: string) => void;
   onHardDelete?: (id: string) => void;
   onClearAllRemoved?: () => void;
+  onFilterChange?: (filter: SavedFilterType) => void;
 }
 
 function daysLeft(deletedAt: string): string {
@@ -48,12 +57,30 @@ export default function SavedGrid({
   onRestoreRemoved,
   onHardDelete,
   onClearAllRemoved,
+  onFilterChange,
 }: SavedGridProps) {
   const [removedOpen, setRemovedOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<SavedFilterType>("all");
+
+  const tracks = cards.filter((c) => inferTrackType(c) === "tracks");
+  const samples = cards.filter((c) => inferTrackType(c) === "samples");
+  const mixes = cards.filter((c) => inferTrackType(c) === "mixes");
+
+  const handleFilterChange = (filter: SavedFilterType) => {
+    setActiveFilter(filter);
+    onFilterChange?.(filter);
+    if (filter === "deleted") setRemovedOpen(true);
+  };
+
+  const filteredCards = activeFilter === "all" ? cards
+    : activeFilter === "tracks" ? tracks
+    : activeFilter === "samples" ? samples
+    : mixes;
 
   useEffect(() => {
-    if (cards.length > 0 && onCardsLoaded) onCardsLoaded(cards);
-  }, [cards, onCardsLoaded]);
+    const allCards = [...cards, ...recentlyRemoved.map(({ deletedAt: _, ...c }) => c)];
+    if (allCards.length > 0 && onCardsLoaded) onCardsLoaded(allCards);
+  }, [cards, recentlyRemoved, onCardsLoaded]);
 
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
@@ -98,39 +125,129 @@ export default function SavedGrid({
     );
   }
 
+  const renderGrid = (items: CardData[]) => (
+    <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
+      <AnimatePresence>
+        {items.map((card) => (
+          <motion.div
+            key={card.id}
+            layout
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          >
+            <MusicCard
+              card={card}
+              saved={likedIds.has(card.id)}
+              isGracePeriod={softDeletedIds?.has(card.id)}
+              isPlaying={playingId === card.id && isPlaying}
+              activeTagFilters={activeTagFilters}
+              viewContext="saved"
+              onPlay={() => onPlay(card.id)}
+              onSave={() => onToggleLike(card.id)}
+              onShare={() => shareCard(card)}
+              isAuthenticated={isAuthenticated}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+
+  const filterTabs: { key: SavedFilterType; label: string; count: number }[] = [
+    { key: "all", label: "All", count: cards.length },
+    { key: "tracks", label: "Tracks", count: tracks.length },
+    { key: "mixes", label: "Mixes", count: mixes.length },
+    { key: "samples", label: "Samples", count: samples.length },
+  ];
+
   return (
     <div>
-      {/* Main saved cards grid */}
+      {/* Sub-tabs */}
       {cards.length > 0 && (
-        <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
-          <AnimatePresence>
-            {cards.map((card) => (
-              <motion.div
-                key={card.id}
-                layout
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              >
-                <MusicCard
-                  card={card}
-                  saved={likedIds.has(card.id)}
-                  isGracePeriod={softDeletedIds?.has(card.id)}
-                  isPlaying={playingId === card.id && isPlaying}
-                  activeTagFilters={activeTagFilters}
-                  viewContext="saved"
-                  onPlay={() => onPlay(card.id)}
-                  onSave={() => onToggleLike(card.id)}
-                  onShare={() => shareCard(card)}
-                  isAuthenticated={isAuthenticated}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+        <div className="flex items-center gap-1.5 px-2 sm:px-[11px] pt-2 pb-1">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handleFilterChange(tab.key)}
+              className={`px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer ${
+                activeFilter === tab.key
+                  ? "bg-[var(--text)] text-[var(--bg)] font-bold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+          {recentlyRemoved.length > 0 && (
+            <button
+              onClick={() => handleFilterChange("deleted")}
+              className={`ml-auto px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1 ${
+                activeFilter === "deleted"
+                  ? "bg-[var(--text)] text-[var(--bg)] font-bold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+              }`}
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" /><path d="M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+              </svg>
+              ({recentlyRemoved.length})
+            </button>
+          )}
         </div>
       )}
 
-      {/* Recently removed section */}
-      {recentlyRemoved.length > 0 && (
+      {/* Content */}
+      {cards.length > 0 && activeFilter === "all" ? (
+        <>
+          {tracks.length > 0 && (
+            <>
+              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Tracks ({tracks.length})</p>
+              {renderGrid(tracks)}
+            </>
+          )}
+          {mixes.length > 0 && (
+            <>
+              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Mixes ({mixes.length})</p>
+              {renderGrid(mixes)}
+            </>
+          )}
+          {samples.length > 0 && (
+            <>
+              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Samples ({samples.length})</p>
+              {renderGrid(samples)}
+            </>
+          )}
+        </>
+      ) : cards.length > 0 && filteredCards.length > 0 ? (
+        renderGrid(filteredCards)
+      ) : activeFilter !== "all" && activeFilter !== "deleted" && filteredCards.length === 0 ? (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          {activeFilter === "tracks" && (
+            <svg className="w-12 h-12 text-[var(--text-muted)]/30 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+            </svg>
+          )}
+          {activeFilter === "samples" && (
+            <svg className="w-12 h-12 text-[var(--text-muted)]/30 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="6.5" strokeDasharray="2 3" />
+            </svg>
+          )}
+          {activeFilter === "mixes" && (
+            <svg className="w-12 h-12 text-[var(--text-muted)]/30 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="4" height="12" rx="1" /><rect x="10" y="3" width="4" height="18" rx="1" /><rect x="18" y="8" width="4" height="8" rx="1" />
+            </svg>
+          )}
+          <p className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+            No saved {activeFilter} yet
+          </p>
+          <p className="font-mono text-[10px] text-[var(--text-muted)] mt-2">
+            Head to <span className="font-bold text-[var(--text-secondary)]">{activeFilter === "tracks" ? "For You" : activeFilter === "samples" ? "Samples" : "Mixes"}</span> to discover some
+          </p>
+        </div>
+      ) : null}
+
+      {/* Recently removed section — only on "deleted" tab */}
+      {recentlyRemoved.length > 0 && activeFilter === "deleted" && (
         <div className="mt-2 mx-2 sm:mx-[11px] mb-2">
           {/* Collapsible header */}
           <button

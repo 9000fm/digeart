@@ -42,6 +42,8 @@ interface YTPlayer {
   destroy(): void;
   loadVideoById(videoId: string, startSeconds?: number): void;
   cueVideoById(videoId: string, startSeconds?: number): void;
+  setPlaybackRate(suggestedRate: number): void;
+  getPlaybackRate(): number;
 }
 
 interface YTPlayerEvent {
@@ -66,6 +68,12 @@ export default function Home() {
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const [djMode, setDjMode] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("digeart-dj-mode") === "1";
+    return false;
+  });
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const playbackRateRef = useRef(1);
   const [canGoPrev, setCanGoPrev] = useState(false);
   const [volume, setVolume] = useState(() => {
     if (typeof window !== "undefined") {
@@ -86,6 +94,7 @@ export default function Home() {
   isMutedRef.current = isMuted;
   const [skippingUnavailable, setSkippingUnavailable] = useState(false);
   const [savedCards, setSavedCards] = useState<CardData[]>([]);
+  const savedFilterRef = useRef<"all" | "tracks" | "samples" | "mixes" | "deleted">("all");
   const [savedLoading, setSavedLoading] = useState(false);
   const [softDeletedIds, setSoftDeletedIds] = useState<Set<string>>(new Set());
   const [recentlyRemoved, setRecentlyRemoved] = useState<(CardData & { deletedAt: string })[]>([]);
@@ -400,9 +409,21 @@ export default function Home() {
   // Build a queue of card IDs for a given view
   const buildQueue = useCallback((startingCardId: string, shuffle: boolean) => {
     const view = cardViewMap.current.get(startingCardId) || activeViewRef.current;
-    const ids = Array.from(cardRegistry.current.entries())
+    let ids = Array.from(cardRegistry.current.entries())
       .filter(([id]) => cardViewMap.current.get(id) === view)
       .map(([id]) => id);
+
+    // Filter by type when playing from saved with an active filter
+    if (view === "saved" && savedFilterRef.current !== "all") {
+      const filter = savedFilterRef.current;
+      ids = ids.filter((id) => {
+        const card = cardRegistry.current.get(id);
+        if (!card?.duration) return filter === "tracks";
+        if (card.duration >= 2400) return filter === "mixes";
+        if (card.duration <= 240) return filter === "samples";
+        return filter === "tracks";
+      });
+    }
 
     if (shuffle) {
       fisherYatesShuffle(ids);
@@ -881,6 +902,27 @@ export default function Home() {
     });
   }, [volume]);
 
+  const handlePlaybackRateChange = useCallback((rate: number) => {
+    const clamped = Math.round(Math.max(0.88, Math.min(1.12, rate)) * 100) / 100;
+    playbackRateRef.current = clamped;
+    setPlaybackRate(clamped);
+    if (ytPlayerRef.current) try { ytPlayerRef.current.setPlaybackRate(clamped); } catch { /* ignore */ }
+  }, []);
+
+  const handleDjModeToggle = useCallback(() => {
+    setDjMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("digeart-dj-mode", next ? "1" : "");
+      if (!next) {
+        // Reset speed when turning off
+        playbackRateRef.current = 1;
+        setPlaybackRate(1);
+        if (ytPlayerRef.current) try { ytPlayerRef.current.setPlaybackRate(1); } catch { /* ignore */ }
+      }
+      return next;
+    });
+  }, []);
+
   const handlePlayQueueIndex = useCallback((index: number) => {
     const id = shuffleQueue.current[index];
     const card = cardRegistry.current.get(id);
@@ -969,10 +1011,10 @@ export default function Home() {
           handleViewChange("home");
           break;
         case "2":
-          handleViewChange("samples");
+          handleViewChange("mixes");
           break;
         case "3":
-          handleViewChange("mixes");
+          handleViewChange("samples");
           break;
         case "4":
           handleViewChange("saved");
@@ -1023,6 +1065,8 @@ export default function Home() {
         showAbout={showAbout}
         onToggleAbout={() => setShowAbout((v) => !v)}
         onRunTutorial={() => { setShowAbout(false); setShowQueue(false); setShowOnboarding(true); }}
+        djMode={djMode}
+        onToggleDjMode={handleDjModeToggle}
       />
 
       <div style={{ display: activeView === "home" ? undefined : "none" }}>
@@ -1042,24 +1086,6 @@ export default function Home() {
         />
       </div>
 
-      <div style={{ display: activeView === "samples" ? undefined : "none" }}>
-        {mountedTabs.has("samples") && (
-          <SamplesGrid
-            savedIds={likedIds}
-            likedIds={likedIds}
-            playingId={playingId}
-            isPlaying={isPlaying}
-            onPlay={handlePlay}
-            onToggleSave={toggleLike}
-            onToggleLike={toggleLike}
-            activeTagFilters={activeTagFilters}
-            activeGenreLabels={activeGenreLabels}
-            onCardsLoaded={registerSamplesCards}
-            isAuthenticated={isAuthenticated}
-          />
-        )}
-      </div>
-
       <div style={{ display: activeView === "mixes" ? undefined : "none" }}>
         {mountedTabs.has("mixes") && (
           <MixesGrid
@@ -1073,6 +1099,24 @@ export default function Home() {
             activeTagFilters={activeTagFilters}
             activeGenreLabels={activeGenreLabels}
             onCardsLoaded={registerMixesCards}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
+      </div>
+
+      <div style={{ display: activeView === "samples" ? undefined : "none" }}>
+        {mountedTabs.has("samples") && (
+          <SamplesGrid
+            savedIds={likedIds}
+            likedIds={likedIds}
+            playingId={playingId}
+            isPlaying={isPlaying}
+            onPlay={handlePlay}
+            onToggleSave={toggleLike}
+            onToggleLike={toggleLike}
+            activeTagFilters={activeTagFilters}
+            activeGenreLabels={activeGenreLabels}
+            onCardsLoaded={registerSamplesCards}
             isAuthenticated={isAuthenticated}
           />
         )}
@@ -1095,6 +1139,7 @@ export default function Home() {
           onRestoreRemoved={handleRestoreRemoved}
           onHardDelete={handleHardDelete}
           onClearAllRemoved={handleClearAllRemoved}
+          onFilterChange={(f) => { savedFilterRef.current = f; }}
         />
       </div>
 
@@ -1130,6 +1175,9 @@ export default function Home() {
             showQueue={showQueue}
             onToggleQueue={() => setShowQueue((v) => !v)}
             undoRestoredId={undoRestoredId}
+            djMode={djMode}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={handlePlaybackRateChange}
           />
         )}
       </AnimatePresence>

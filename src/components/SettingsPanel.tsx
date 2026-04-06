@@ -9,9 +9,11 @@ interface SettingsPanelProps {
   onClose: () => void;
   anchorRect?: DOMRect | null;
   onRunTutorial?: () => void;
+  djMode?: boolean;
+  onToggleDjMode?: () => void;
 }
 
-export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial, djMode, onToggleDjMode }: SettingsPanelProps) {
   const { theme, toggleTheme } = useTheme();
 
   // Close on Escape
@@ -99,6 +101,25 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                   {theme === "light" ? "Light" : "Dark"}
                 </button>
               </div>
+
+              {/* DJ Mode toggle */}
+              {onToggleDjMode && (
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-[var(--text)]">
+                    DJ Mode
+                  </span>
+                  <button
+                    onClick={onToggleDjMode}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs active:scale-95 transition-all duration-100 ${
+                      djMode
+                        ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]"
+                        : "bg-[var(--bg-alt)] text-[var(--text)] border-[var(--border)] hover:border-[var(--text-muted)]"
+                    }`}
+                  >
+                    {djMode ? "On" : "Off"}
+                  </button>
+                </div>
+              )}
 
               {/* Tutorial */}
               {onRunTutorial && (

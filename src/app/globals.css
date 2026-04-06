@@ -170,6 +170,14 @@ body {
   100% { clip-path: inset(0 0 0 0); }
 }
 
+/* Heart paint splash fill — rises from bottom with organic wave edge */
+@keyframes heartPaintFill {
+  0%   { clip-path: inset(100% 0 0 0 round 0); opacity: 0.6; }
+  30%  { clip-path: inset(50% 0 0 0 round 40%); opacity: 0.9; }
+  60%  { clip-path: inset(15% 0 0 0 round 20%); opacity: 1; }
+  100% { clip-path: inset(0 0 0 0 round 0); opacity: 1; }
+}
+
 /* EQ bar base — GPU-accelerated via scaleY (no layout reflow) */
 .eq-bar-base {
   height: 100%;
