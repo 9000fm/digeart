@@ -520,7 +520,7 @@ export default function NowPlayingBanner({
       <button
         data-queue-btn
         onClick={(e) => { e.stopPropagation(); onToggleQueue(); }}
-        className={`shrink-0 flex items-center justify-center transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-95 ${
+        className={`shrink-0 flex items-center justify-center transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-[0.89] transition-transform ${
           showQueue ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >

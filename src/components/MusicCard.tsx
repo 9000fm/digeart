@@ -240,7 +240,7 @@ export default memo(function MusicCard({
         onClick={handlePlay}
       >
         <span
-          className={`font-mono text-6xl sm:text-7xl lg:text-8xl leading-none transition-colors drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] ${
+          className={`font-mono text-5xl sm:text-6xl min-[1152px]:text-8xl leading-none transition-colors drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] ${
             isPlaying ? "text-white" : "text-white hover:text-zinc-300"
           }`}
         >
