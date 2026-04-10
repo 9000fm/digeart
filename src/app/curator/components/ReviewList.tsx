@@ -2,12 +2,19 @@
 
 import { useState, useMemo } from "react";
 import { relativeDate } from "../utils";
+import { ActivityDot } from "./ActivityDot";
+import { formatChannelCount } from "@/lib/curator-activity";
+import type { ActivityTier } from "../types";
 
 interface ReviewChannel {
   name: string;
   id: string;
   origin?: string;
   importedAt?: string | null;
+  activityTier?: ActivityTier | null;
+  lastUploadAt?: string | null;
+  totalUploads?: number | null;
+  subscriberCount?: number | null;
 }
 
 interface ReviewListProps {
@@ -154,10 +161,10 @@ export function ReviewList({
           onClick={onSync}
           disabled={syncing || syncDone}
           className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-all disabled:opacity-40 shrink-0 ${
-            syncDone ? "border-emerald-500/30 text-emerald-500" : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-secondary)]"
+            syncDone ? "border-[var(--text)] bg-[var(--text)] text-[var(--bg)]" : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-secondary)]"
           }`}
         >
-          {syncing ? "..." : syncDone ? "SYNCED" : "SYNC"}
+          {syncing ? "..." : syncDone ? "SYNCED ✓" : "SYNC"}
         </button>
         <form onSubmit={handleSubmitUrl} className="flex items-center gap-1.5 shrink-0">
           <input
@@ -198,18 +205,31 @@ export function ReviewList({
               className="flex items-center gap-4 px-4 py-3.5 border border-[var(--border)] rounded-lg hover:border-[var(--text-muted)]/50 hover:bg-[var(--bg-alt)]/30 transition-all cursor-pointer group"
             >
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold text-[var(--text)] group-hover:text-[var(--text-secondary)] transition-colors truncate block">
-                  {ch.name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <ActivityDot tier={ch.activityTier} lastUploadAt={ch.lastUploadAt} />
+                  <span className="text-sm font-bold text-[var(--text)] group-hover:text-[var(--text-secondary)] transition-colors truncate">
+                    {ch.name}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {ch.origin && (
                     <span className="text-[8px] px-2 py-0.5 bg-[var(--bg-alt)] text-[var(--text-muted)] rounded-full uppercase tracking-wider">
                       {ch.origin}
                     </span>
                   )}
+                  {ch.subscriberCount != null && (
+                    <span className="text-[8px] text-[var(--text-muted)] tabular-nums uppercase tracking-wider">
+                      {formatChannelCount(ch.subscriberCount)} subs
+                    </span>
+                  )}
+                  {ch.totalUploads != null && (
+                    <span className="text-[8px] text-[var(--text-muted)] tabular-nums uppercase tracking-wider">
+                      · {formatChannelCount(ch.totalUploads)} uploads
+                    </span>
+                  )}
                   {ch.importedAt && (
                     <span className="text-[8px] text-[var(--text-muted)]/40">
-                      {relativeDate(ch.importedAt)}
+                      · {relativeDate(ch.importedAt)}
                     </span>
                   )}
                 </div>

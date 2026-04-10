@@ -45,23 +45,72 @@ function seededShuffle<T>(arr: T[]): T[] {
 
 /* ── Approved channels from Supabase (cached) ───────────────────────── */
 
-type ApprovedChannel = { name: string; id: string; labels?: string[]; starred?: boolean };
+type ActivityTier = "purple" | "green" | "yellow" | "red";
+type BoostState = "boost" | "default" | "bury";
+
+type ApprovedChannel = {
+  name: string;
+  id: string;
+  labels?: string[];
+  starred?: boolean;
+  activityTier?: ActivityTier | null;
+  boostState?: BoostState | null;
+};
+
+/**
+ * Per-channel weight for the homepage pool sampling.
+ * Pure multiplication so any axis can be tuned independently.
+ *
+ * channelWeight = boostMultiplier × tierMultiplier × starMultiplier
+ *
+ * Locked thresholds (2026-04-09):
+ *   boost:  BOOST 1.7 / DEFAULT 1.0 / BURY 0.3
+ *   tier:   purple 1.5 / green 1.2 / yellow 1.0 / red 0.6 / null 1.0
+ *   star:   starred 1.5 / not 1.0
+ */
+export function computeChannelWeight(
+  boost: BoostState | null | undefined,
+  tier: ActivityTier | null | undefined,
+  starred: boolean
+): number {
+  const boostMul = boost === "boost" ? 1.7 : boost === "bury" ? 0.3 : 1.0;
+  const tierMul =
+    tier === "purple" ? 1.5 :
+    tier === "green" ? 1.2 :
+    tier === "red" ? 0.6 :
+    1.0;
+  const starMul = starred ? 1.5 : 1.0;
+  return boostMul * tierMul * starMul;
+}
 
 async function getApprovedChannels(): Promise<ApprovedChannel[]> {
-  const cacheKey = "supabase-approved-channels-v1";
+  const cacheKey = "supabase-approved-channels-v2"; // bumped after schema extension
   const cached = cacheGet<ApprovedChannel[]>(cacheKey);
   if (cached) return cached;
 
-  const { data } = await supabase
+  // Try with new columns first (boost_state, activity_tier); fall back if migration not applied
+  let rows: { channel_id: string; name: string; labels?: string[] | null; starred?: boolean | null; activity_tier?: string | null; boost_state?: string | null }[] | null = null;
+  const withMeta = await supabase
     .from("curator_channels")
-    .select("channel_id, name, labels, starred")
+    .select("channel_id, name, labels, starred, activity_tier, boost_state")
     .eq("status", "approved");
+  if (withMeta.error) {
+    const fallback = await supabase
+      .from("curator_channels")
+      .select("channel_id, name, labels, starred")
+      .eq("status", "approved");
+    rows = fallback.data;
+  } else {
+    rows = withMeta.data;
+  }
 
-  const channels: ApprovedChannel[] = (data || []).map((c) => ({
+  const channels: ApprovedChannel[] = (rows || []).map((c) => ({
     id: c.channel_id,
     name: c.name,
     labels: c.labels || [],
     starred: c.starred === true,
+    activityTier: (c.activity_tier as ActivityTier | null | undefined) ?? null,
+    boostState: (c.boost_state as BoostState | null | undefined) ?? "default",
   }));
 
   // Fall back to static JSON if Supabase returns empty (first-time setup)
@@ -408,6 +457,71 @@ export async function getChannelUploads(
   return allVideos;
 }
 
+/**
+ * Fetch channel-level statistics from YouTube channels.list (subscriberCount, videoCount).
+ * Used by curator rescan to populate activity classification + display metadata.
+ */
+export async function getChannelStats(channelId: string): Promise<{ subscriberCount: number | null; videoCount: number | null } | null> {
+  try {
+    const params = new URLSearchParams({
+      part: "statistics",
+      id: channelId,
+      key: API_KEY,
+    });
+    const res = await fetch(`${YT_API}/channels?${params}`, { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const item = data.items?.[0];
+    if (!item) return null;
+    const subs = item.statistics?.subscriberCount;
+    const videos = item.statistics?.videoCount;
+    return {
+      subscriberCount: subs != null ? parseInt(subs, 10) : null,
+      videoCount: videos != null ? parseInt(videos, 10) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch the OLDEST upload's published date by paginating through the uploads playlist.
+ * Used once per channel to determine "years active" for the purple-tier classification.
+ * Caches the result, so subsequent calls are free.
+ */
+export async function getOldestUploadDate(channelId: string): Promise<string | null> {
+  const cacheKey = `yt-oldest-${channelId}`;
+  const cached = cacheGet<string | null>(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const playlistId = uploadsPlaylistId(channelId);
+  let pageToken: string | undefined;
+  let lastItem: { snippet?: { publishedAt?: string } } | null = null;
+
+  // Hard cap at 20 pages (1000 items) to avoid quota burn on giant channels
+  for (let page = 0; page < 20; page++) {
+    const params = new URLSearchParams({
+      part: "snippet",
+      playlistId,
+      maxResults: "50",
+      key: API_KEY,
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const res = await fetch(`${YT_API}/playlistItems?${params}`, { next: { revalidate: 24 * 3600 } });
+    if (!res.ok) break;
+    const data = await res.json();
+    const items = data.items || [];
+    if (items.length > 0) lastItem = items[items.length - 1];
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+
+  const oldest = lastItem?.snippet?.publishedAt || null;
+  cacheSet(cacheKey, oldest);
+  return oldest;
+}
+
 export function parseVideoTitle(
   title: string,
   channelName: string
@@ -491,6 +605,8 @@ interface RawVideo {
   video: YouTubeVideo;
   starred: boolean;
   labels?: string[];
+  activityTier?: ActivityTier | null;
+  boostState?: BoostState | null;
 }
 
 async function getRawVideos(
@@ -547,7 +663,13 @@ async function getRawVideos(
     for (let j = 0; j < batch.length; j++) {
       if (results[j].status === "fulfilled") {
         for (const v of (results[j] as PromiseFulfilledResult<YouTubeVideo[]>).value) {
-          allRaw.push({ video: v, starred: batch[j].starred === true, labels: batch[j].labels });
+          allRaw.push({
+            video: v,
+            starred: batch[j].starred === true,
+            labels: batch[j].labels,
+            activityTier: batch[j].activityTier ?? null,
+            boostState: batch[j].boostState ?? "default",
+          });
         }
       }
     }
@@ -562,6 +684,36 @@ async function getRawVideos(
 
 /* ── Smart sampling (recientes + populares + random) ────────────────── */
 
+/**
+ * Weighted random selection without replacement (seeded for daily stability).
+ * Each item has a numeric weight; pick probability ∝ weight.
+ * Uses the daily seeded PRNG so the result is stable for the day.
+ */
+function weightedSampleSeeded<T>(
+  items: { item: T; weight: number }[],
+  count: number,
+  rand: () => number
+): T[] {
+  const pool = items.filter((x) => x.weight > 0);
+  const out: T[] = [];
+  while (pool.length > 0 && out.length < count) {
+    const totalWeight = pool.reduce((s, x) => s + x.weight, 0);
+    if (totalWeight <= 0) break;
+    let r = rand() * totalWeight;
+    let pickIdx = 0;
+    for (let i = 0; i < pool.length; i++) {
+      r -= pool[i].weight;
+      if (r <= 0) {
+        pickIdx = i;
+        break;
+      }
+    }
+    out.push(pool[pickIdx].item);
+    pool.splice(pickIdx, 1);
+  }
+  return out;
+}
+
 function smartSample(
   raw: RawVideo[],
   videoFilter: (v: YouTubeVideo) => boolean,
@@ -570,65 +722,67 @@ function smartSample(
   randomPct = 0.2
 ): CardData[] {
   const filtered = raw.filter(({ video }) => videoFilter(video));
-  const starred = filtered.filter((v) => v.starred);
-  const regular = filtered.filter((v) => !v.starred);
+  if (filtered.length === 0) return [];
 
-  const sampleGroup = (group: RawVideo[]) => {
-    const total = group.length;
-    if (total === 0) return [] as YouTubeVideo[];
-    const recentCount = Math.ceil(total * recentPct);
-    const popularCount = Math.ceil(total * popularPct);
-    const randomCount = Math.ceil(total * randomPct);
-
-    const byDate = [...group].sort(
-      (a, b) => new Date(b.video.publishedAt || 0).getTime() - new Date(a.video.publishedAt || 0).getTime()
-    );
-    const byViews = [...group].sort(
-      (a, b) => (b.video.viewCount || 0) - (a.video.viewCount || 0)
-    );
-
-    const selected = new Set<string>();
-    const result: YouTubeVideo[] = [];
-
-    for (const v of byDate) {
-      if (selected.size >= recentCount) break;
-      if (!selected.has(v.video.id)) { selected.add(v.video.id); result.push(v.video); }
-    }
-    for (const v of byViews) {
-      if (result.length >= recentCount + popularCount) break;
-      if (!selected.has(v.video.id)) { selected.add(v.video.id); result.push(v.video); }
-    }
-    const remaining = group.filter((v) => !selected.has(v.video.id));
-    const shuffled = seededShuffle(remaining);
-    for (const v of shuffled.slice(0, randomCount)) {
-      result.push(v.video);
-    }
-
-    return result;
-  };
-
-  // Build lookup: videoId → channel labels
+  // Build label lookup so videoToCard can attach genre tags
   const labelMap = new Map<string, string[]>();
   for (const rv of raw) {
     if (rv.labels) labelMap.set(rv.video.id, rv.labels);
   }
 
-  const starredCards = sampleGroup(starred).map((v) => videoToCard(v, true, labelMap.get(v.id)));
-  const regularCards = sampleGroup(regular).map((v) => videoToCard(v, false, labelMap.get(v.id)));
-  const totalAvailable = starredCards.length + regularCards.length;
-  const starredTarget = Math.min(starredCards.length, Math.round(totalAvailable * 0.50));
-  const regularTarget = totalAvailable - starredTarget;
+  // STEP 1 — weighted random selection by channel weight (boost × tier × star)
+  // Replaces the old 50/50 starred-vs-regular split. The weight formula shapes
+  // the candidate pool BEFORE smart-sample picks the order.
+  const weighted = filtered.map((rv) => ({
+    item: rv,
+    weight: computeChannelWeight(rv.boostState, rv.activityTier, rv.starred),
+  }));
 
-  const shuffledStarred = seededShuffle(starredCards).slice(0, starredTarget);
-  const shuffledRegular = seededShuffle(regularCards).slice(0, regularTarget);
-  const pool = seededShuffle([...shuffledStarred, ...shuffledRegular]);
+  // Use the daily seeded PRNG so the weighted selection is stable for the day
+  const rand = mulberry32(dailySeed());
+  const targetCount = filtered.length; // sample everything that's eligible
+  const candidates = weightedSampleSeeded(weighted, targetCount, rand);
 
-  // Guarantee first track is from a starred channel
-  if (shuffledStarred.length > 0) {
-    const firstStarredIdx = pool.findIndex((c) => c.starred);
-    if (firstStarredIdx > 0) {
-      [pool[0], pool[firstStarredIdx]] = [pool[firstStarredIdx], pool[0]];
-    }
+  // STEP 2 — apply the existing 40/40/20 recent/popular/random shape on the weighted candidates
+  const total = candidates.length;
+  const recentCount = Math.ceil(total * recentPct);
+  const popularCount = Math.ceil(total * popularPct);
+  const randomCount = Math.ceil(total * randomPct);
+
+  const byDate = [...candidates].sort(
+    (a, b) => new Date(b.video.publishedAt || 0).getTime() - new Date(a.video.publishedAt || 0).getTime()
+  );
+  const byViews = [...candidates].sort(
+    (a, b) => (b.video.viewCount || 0) - (a.video.viewCount || 0)
+  );
+
+  const selected = new Set<string>();
+  const ordered: RawVideo[] = [];
+
+  for (const rv of byDate) {
+    if (selected.size >= recentCount) break;
+    if (!selected.has(rv.video.id)) { selected.add(rv.video.id); ordered.push(rv); }
+  }
+  for (const rv of byViews) {
+    if (ordered.length >= recentCount + popularCount) break;
+    if (!selected.has(rv.video.id)) { selected.add(rv.video.id); ordered.push(rv); }
+  }
+  const remaining = candidates.filter((rv) => !selected.has(rv.video.id));
+  const shuffledRemaining = seededShuffle(remaining);
+  for (const rv of shuffledRemaining.slice(0, randomCount)) {
+    ordered.push(rv);
+  }
+
+  // Convert to cards (preserves star/labels for downstream display)
+  const cards = ordered.map((rv) => videoToCard(rv.video, rv.starred, labelMap.get(rv.video.id)));
+
+  // Final daily shuffle
+  const pool = seededShuffle(cards);
+
+  // Guarantee first track is from a starred channel (when one exists)
+  const firstStarredIdx = pool.findIndex((c) => c.starred);
+  if (firstStarredIdx > 0) {
+    [pool[0], pool[firstStarredIdx]] = [pool[firstStarredIdx], pool[0]];
   }
 
   return pool;
@@ -717,10 +871,10 @@ export async function discoverFromYouTube(
 
 /* ── Mixes ───────────────────────────────────────────────────────────── */
 
-/** Full YouTube rebuild for mixes pool */
+/** Mix video filter — duration > 45 min, no shorts, music-related */
 function isValidMixVideo(v: YouTubeVideo): boolean {
   if (v.title === "Private video" || v.title === "Deleted video") return false;
-  if (!v.duration || v.duration < 2400) return false;
+  if (!v.duration || v.duration < 2700) return false; // 45 min threshold (Part C)
   const lower = v.title.toLowerCase();
   if (lower.includes("#shorts") || lower.includes("#short")) return false;
   if (!titleContainsAny(v.title, MIX_TITLE_KEYWORDS)) {
@@ -730,8 +884,36 @@ function isValidMixVideo(v: YouTubeVideo): boolean {
 }
 
 async function buildMixesPool(): Promise<CardData[]> {
-  const { raw } = await getRawVideos("mixes");
-  const pool = smartSample(raw, isValidMixVideo);
+  // Pull raw from BOTH mix-labeled channels AND discover (tracks/samples) channels.
+  // Long videos (> 45 min) from any channel get routed here, so mixed channels
+  // like AlbionStreetMusic83 contribute their occasional long DJ sets.
+  const [mixRaw, discoverRaw] = await Promise.all([
+    getRawVideos("mixes"),
+    getRawVideos("discover"),
+  ]);
+
+  // Dedupe by video id (the same channel may appear in both lists if multi-labeled)
+  const seen = new Set<string>();
+  const combined: typeof mixRaw.raw = [];
+  for (const item of [...mixRaw.raw, ...discoverRaw.raw]) {
+    if (seen.has(item.video.id)) continue;
+    seen.add(item.video.id);
+    combined.push(item);
+  }
+
+  // Drop the exact case Flavi flagged: long videos (>45min) from sample-tagged channels
+  // must NEVER end up in the mixes pool. Sample-channel long uploads stay in samples (or nowhere).
+  const isSampleLabeled = (labels?: string[]) =>
+    labels?.some((l) =>
+      STRICT_SAMPLE_LABELS.some((sl) => sl.toLowerCase() === l.toLowerCase())
+    ) ?? false;
+  const filtered = combined.filter((rv) => {
+    const dur = rv.video.duration ?? 0;
+    if (dur > 2700 && isSampleLabeled(rv.labels)) return false;
+    return true;
+  });
+
+  const pool = smartSample(filtered, isValidMixVideo);
 
   if (pool.length > 0) {
     cacheSet("pool-mixes", pool, POOL_MAX_AGE);

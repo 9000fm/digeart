@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { CuratorData } from "../types";
 import { GenreLabels } from "./GenreLabels";
 import { ChannelUploadGrid } from "./ChannelUploadGrid";
@@ -22,6 +21,8 @@ interface ReviewQueueProps {
   onExit: () => void;
   notes: string;
   onNotesChange: (notes: string) => void;
+  lastUndoable?: { id: string; name: string; decision: "approve" | "reject"; timestamp: number } | null;
+  onUndoLastDecision?: () => void;
 }
 
 export function ReviewQueue({
@@ -40,6 +41,8 @@ export function ReviewQueue({
   onExit,
   notes,
   onNotesChange,
+  lastUndoable,
+  onUndoLastDecision,
 }: ReviewQueueProps) {
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [localStarred, setLocalStarred] = useState(isStarred);
@@ -192,54 +195,30 @@ export function ReviewQueue({
             <button
               onClick={() => fireDecision("approve")}
               disabled={acting}
-              className="relative flex-[3] flex items-center rounded-none bg-emerald-600 text-white transition-all duration-100 hover:bg-emerald-500 hover:shadow-[0_4px_20px_rgba(16,185,129,0.3)] active:scale-[0.93] active:shadow-none disabled:opacity-30 disabled:hover:shadow-none disabled:active:scale-100 overflow-hidden"
+              className="relative flex-[3] flex items-center rounded-lg bg-[var(--text)] text-[var(--bg)] transition-all duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-30 disabled:active:scale-100 overflow-hidden"
             >
-              <div className="w-1.5 self-stretch bg-emerald-400 shrink-0" />
               <div className="flex-1 flex items-center justify-between px-3 py-1.5">
                 <span className="text-xs font-bold uppercase tracking-[0.15em]">
-                  + APPROVE
+                  {flash === "approve" ? "APPROVED ✓" : "+ APPROVE"}
                 </span>
-                <kbd className="text-[8px] font-normal opacity-60 border border-current/20 px-1 py-px">
+                <kbd className="text-[8px] font-normal opacity-60 border border-current/20 px-1 py-px rounded-sm">
                   A
                 </kbd>
               </div>
-              <AnimatePresence>
-                {flash === "approve" && (
-                  <motion.div
-                    key="approve-flash"
-                    initial={{ opacity: 0.7 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ duration: 0.35, ease: "easeOut" }}
-                    className="absolute inset-0 bg-emerald-400 pointer-events-none"
-                  />
-                )}
-              </AnimatePresence>
             </button>
             <button
               onClick={() => fireDecision("reject")}
               disabled={acting}
-              className="relative flex-[2] flex items-center rounded-none bg-[var(--text-muted)]/15 text-[var(--text)] transition-all duration-200 hover:bg-[var(--text-muted)]/30 active:scale-[0.93] disabled:opacity-30 disabled:active:scale-100 overflow-hidden"
+              className="relative flex-[2] flex items-center rounded-lg bg-[var(--bg-alt)] text-[var(--text-muted)] border border-[var(--border)] transition-all duration-150 hover:text-[var(--text)] hover:border-[var(--text-muted)] active:scale-[0.97] disabled:opacity-30 disabled:active:scale-100"
             >
-              <div className="w-1 self-stretch bg-[var(--text-muted)]/60 shrink-0" />
               <div className="flex-1 flex items-center justify-between px-3 py-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider">
-                  &times; REJECT
+                  {flash === "reject" ? "REJECTED" : "× REJECT"}
                 </span>
-                <kbd className="text-[8px] font-normal opacity-40 border border-[var(--border)] px-1 py-px">
+                <kbd className="text-[8px] font-normal opacity-40 border border-[var(--border)] px-1 py-px rounded-sm">
                   R
                 </kbd>
               </div>
-              <AnimatePresence>
-                {flash === "reject" && (
-                  <motion.div
-                    key="reject-flash"
-                    initial={{ opacity: 0.85 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ duration: 0.45, ease: "easeOut" }}
-                    className="absolute inset-0 bg-black pointer-events-none"
-                  />
-                )}
-              </AnimatePresence>
             </button>
           </div>
           <div className="flex items-center gap-5 text-[var(--text)] text-[11px] font-medium tracking-wider uppercase py-1">
@@ -251,6 +230,26 @@ export function ReviewQueue({
               <kbd className="border border-[var(--text-muted)]/40 px-1.5 py-0.5 rounded-sm mr-1.5">B</kbd>
               BACK
             </button>
+            {lastUndoable && onUndoLastDecision && (
+              <button
+                onClick={onUndoLastDecision}
+                className="relative px-3 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md transition-all hover:opacity-90 active:scale-[0.95] flex items-center gap-1.5"
+                aria-label="Undo last decision"
+              >
+                <span className="text-[10px] font-bold">UNDO</span>
+                <span className="text-[9px] opacity-70 normal-case truncate max-w-[120px]">{lastUndoable.name}</span>
+                <span
+                  onClick={(e) => { e.stopPropagation(); /* no-op, parent handles undo */ }}
+                  className="ml-0.5 w-3 h-3 flex items-center justify-center opacity-50"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+              </button>
+            )}
             <button
               onClick={onSkip}
               disabled={acting}

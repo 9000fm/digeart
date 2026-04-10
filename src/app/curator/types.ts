@@ -5,7 +5,12 @@ export interface Upload {
   channelTitle: string;
   viewCount?: number | null;
   isTopViewed?: boolean;
+  duration?: number | null;
 }
+
+export type ActivityTier = "purple" | "green" | "yellow" | "red";
+
+export type BoostState = "boost" | "default" | "bury";
 
 export interface CuratorData {
   channel?: { name: string; id: string };
@@ -19,6 +24,13 @@ export interface CuratorData {
   done?: boolean;
   rejectedCount?: number;
   topics?: string[];
+  // Channel metadata (populated on rescan)
+  activityTier?: ActivityTier | null;
+  lastUploadAt?: string | null;
+  totalUploads?: number | null;
+  subscriberCount?: number | null;
+  curatorNotes?: string | null;
+  boostState?: BoostState | null;
 }
 
 export interface ApprovedChannel {
@@ -28,6 +40,12 @@ export interface ApprovedChannel {
   isStarred?: boolean;
   reviewedAt?: string | null;
   notes?: string;
+  activityTier?: ActivityTier | null;
+  lastUploadAt?: string | null;
+  totalUploads?: number | null;
+  subscriberCount?: number | null;
+  curatorNotes?: string | null;
+  boostState?: BoostState | null;
 }
 
 export interface CuratorStats {

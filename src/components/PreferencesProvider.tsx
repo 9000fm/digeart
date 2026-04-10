@@ -41,8 +41,8 @@ export default function PreferencesProvider({
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (typeof parsed.gridCols === "number") setGridColsState(parsed.gridCols);
-        if (typeof parsed.reducedAnimations === "boolean") setReducedAnimationsState(parsed.reducedAnimations);
+        if (typeof parsed.gridCols === "number") setGridColsState(parsed.gridCols); // eslint-disable-line react-hooks/set-state-in-effect
+        if (typeof parsed.reducedAnimations === "boolean") setReducedAnimationsState(parsed.reducedAnimations);  
       }
     } catch {}
   }, []);

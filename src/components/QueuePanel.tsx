@@ -2,6 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import HeartLikeButton from "./HeartLikeButton";
+import { useTheme } from "./ThemeProvider";
 import type { CardData } from "@/lib/types";
 
 interface QueuePanelProps {
@@ -64,19 +66,30 @@ function QueueRow({ card, isCurrent, dimmed, onClick, isLiked, onToggleLike, isM
           </div>
         </div>
       )}
-      <div
-        onClick={(e) => { e.stopPropagation(); onToggleLike(); }}
-        className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full transition-colors active:scale-90 ${
-          isCurrent
-            ? "text-[var(--bg)]/60 hover:text-[var(--bg)]"
-            : "text-[var(--text-muted)] hover:text-[var(--text)]"
-        }`}
-      >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-        </svg>
-      </div>
+      <span className="ml-auto shrink-0">
+        <QueueHeart isLiked={isLiked} trackId={card.id} onToggleLike={onToggleLike} isCurrent={isCurrent} />
+      </span>
     </button>
+  );
+}
+
+/** Queue heart wrapper — computes lottieVariant from theme + row state */
+function QueueHeart({ isLiked, trackId, onToggleLike, isCurrent }: { isLiked: boolean; trackId: string; onToggleLike: () => void; isCurrent: boolean }) {
+  const { theme } = useTheme();
+  // Current row has inverted bg (dark in light, light in dark) → burst matches the bg-contrast heart
+  // Non-current rows follow the normal theme (dark burst in light, light burst in dark)
+  const variant: "light" | "dark" = isCurrent
+    ? (theme === "dark" ? "dark" : "light")
+    : (theme === "dark" ? "light" : "dark");
+  return (
+    <HeartLikeButton
+      isLiked={isLiked}
+      trackId={trackId}
+      onToggle={onToggleLike}
+      size="sm"
+      className={isCurrent ? "text-[var(--bg)]/60 hover:text-[var(--bg)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}
+      lottieVariant={variant}
+    />
   );
 }
 

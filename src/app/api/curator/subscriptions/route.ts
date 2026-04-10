@@ -14,12 +14,43 @@ interface YTSubscriptionResponse {
   nextPageToken?: string;
 }
 
+// In-memory rate limit (per-process)
+const syncRateMap = new Map<string, number[]>();
+function checkSyncRate(key: string): { ok: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const windowMs = 5 * 60_000; // 5 min
+  const maxCalls = 3;
+  const calls = (syncRateMap.get(key) || []).filter((t) => now - t < windowMs);
+  if (calls.length >= maxCalls) {
+    return { ok: false, retryAfter: Math.ceil((windowMs - (now - calls[0])) / 1000) };
+  }
+  calls.push(now);
+  syncRateMap.set(key, calls);
+  return { ok: true };
+}
+
 export async function POST() {
   const session = await auth();
   const accessToken = (session as unknown as { accessToken?: string })?.accessToken;
+  const curatorEmail = process.env.CURATOR_EMAIL;
 
-  if (!session || !accessToken) {
+  if (!session?.user?.email || !accessToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  if (!curatorEmail) {
+    return NextResponse.json({ error: "Curator not configured" }, { status: 503 });
+  }
+  if (session.user.email !== curatorEmail) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Rate limit: 3 syncs per 5 min per session email
+  const limit = checkSyncRate(session.user.email);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: `Rate limited — retry in ${limit.retryAfter}s` },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
   }
 
   // Fetch all YouTube subscriptions (paginated)

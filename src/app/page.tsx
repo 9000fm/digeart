@@ -105,11 +105,10 @@ export default function Home() {
   const [mountedTabs, setMountedTabs] = useState<Set<ViewType>>(new Set(["home"]));
   const scrollPositions = useRef<Record<string, number>>({});
 
-  // Undo unlike state
-  const [undoToastVisible, setUndoToastVisible] = useState(false);
-  const [undoTrackName, setUndoTrackName] = useState("");
+  // Undo unlike state — stacking: each unlike gets its own toast + timer
+  const [undoItems, setUndoItems] = useState<import("@/components/UndoToast").UndoItem[]>([]);
   const [undoRestoredId, setUndoRestoredId] = useState<string | null>(null);
-  const pendingUnlike = useRef<{ id: string; card: CardData; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const pendingUnlikes = useRef<Map<string, { undoId: number; card: CardData; timer: ReturnType<typeof setTimeout> }>>(new Map());
 
   const skippingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -579,30 +578,30 @@ export default function Home() {
     handlePlayInternal(card);
   }, [handlePlayInternal, handleTogglePlay, buildQueue]);
 
-  // Commit any pending unlike (soft-delete stays, just dismiss toast)
+  // Commit all pending unlikes (soft-deletes stay, just dismiss toasts)
   const commitPendingUnlike = useCallback(() => {
-    if (pendingUnlike.current) {
-      clearTimeout(pendingUnlike.current.timer);
-      pendingUnlike.current = null;
-      setUndoToastVisible(false);
+    for (const [, pending] of pendingUnlikes.current) {
+      clearTimeout(pending.timer);
     }
+    pendingUnlikes.current.clear();
+    setUndoItems([]);
   }, []);
 
-  // Undo handler — restore the soft-deleted like
-  const handleUndoUnlike = useCallback(() => {
-    const pending = pendingUnlike.current;
+  // Undo handler — restore a specific soft-deleted like
+  const handleUndoUnlike = useCallback((item: import("@/components/UndoToast").UndoItem) => {
+    const pending = pendingUnlikes.current.get(item.trackId);
     if (!pending) return;
     clearTimeout(pending.timer);
-    pendingUnlike.current = null;
-    setUndoToastVisible(false);
+    pendingUnlikes.current.delete(item.trackId);
+    setUndoItems((prev) => prev.filter((i) => i.id !== item.id));
 
     // Restore in UI — card is still in grid, just remove from softDeletedIds
-    setUndoRestoredId(pending.id);
+    setUndoRestoredId(item.trackId);
     setTimeout(() => setUndoRestoredId(null), 100);
-    setLikedIds((prev) => new Set(prev).add(pending.id));
+    setLikedIds((prev) => new Set(prev).add(item.trackId));
     setSoftDeletedIds((prev) => {
       const next = new Set(prev);
-      next.delete(pending.id);
+      next.delete(item.trackId);
       return next;
     });
 
@@ -613,7 +612,7 @@ export default function Home() {
         .from("likes")
         .update({ deleted_at: null })
         .eq("user_email", email)
-        .eq("video_id", pending.id)
+        .eq("video_id", item.trackId)
         .then(({ error }) => {
           if (error) console.error("Failed to restore like:", error);
         });
@@ -684,10 +683,11 @@ export default function Home() {
           next.delete(id);
           return next;
         });
-        if (pendingUnlike.current?.id === id) {
-          clearTimeout(pendingUnlike.current.timer);
-          pendingUnlike.current = null;
-          setUndoToastVisible(false);
+        const pending = pendingUnlikes.current.get(id);
+        if (pending) {
+          clearTimeout(pending.timer);
+          pendingUnlikes.current.delete(id);
+          setUndoItems((prev) => prev.filter((i) => i.trackId !== id));
         }
       } else if (card) {
         // Fresh like — prepend to savedCards
@@ -700,9 +700,6 @@ export default function Home() {
     if (!email || !card) return;
 
     if (wasLiked) {
-      // Commit any previous pending unlike first
-      commitPendingUnlike();
-
       // Soft-delete: set deleted_at instead of DELETE
       supabase
         .from("likes")
@@ -715,18 +712,19 @@ export default function Home() {
 
       // Show undo toast with 5s window — after expiry, move card to recently removed
       const deletedAt = new Date().toISOString();
+      const undoId = Date.now();
+      const now = performance.now();
       const timer = setTimeout(() => {
-        if (pendingUnlike.current?.id !== id) return;
-        pendingUnlike.current = null;
-        setUndoToastVisible(false);
+        if (!pendingUnlikes.current.has(id)) return;
+        pendingUnlikes.current.delete(id);
+        setUndoItems((prev) => prev.filter((i) => i.id !== undoId));
         // Move from main grid to recently removed
         setSavedCards((prev) => prev.filter((c) => c.id !== id));
         setSoftDeletedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
         if (card) setRecentlyRemoved((prev) => [{ ...card, deletedAt }, ...prev]);
       }, 5000);
-      pendingUnlike.current = { id, card, timer };
-      setUndoTrackName(card.name || "Track");
-      setUndoToastVisible(true);
+      pendingUnlikes.current.set(id, { undoId, card, timer });
+      setUndoItems((prev) => [...prev, { id: undoId, trackId: id, trackName: card.name || "Track", createdAt: now }]);
     } else {
       // Liking — upsert with deleted_at cleared (handles re-liking a soft-deleted row)
       supabase
@@ -972,6 +970,8 @@ export default function Home() {
 
       switch (e.key) {
         case " ":
+        case "k":
+        case "K":
           e.preventDefault();
           if (nowPlayingCard) handleTogglePlay();
           break;
@@ -1147,7 +1147,7 @@ export default function Home() {
         />
       </div>
 
-      <UndoToast visible={undoToastVisible} onUndo={handleUndoUnlike} trackName={undoTrackName} />
+      <UndoToast items={undoItems} onUndo={handleUndoUnlike} playerVisible={!!nowPlayingCard} />
 
 
       <AnimatePresence>

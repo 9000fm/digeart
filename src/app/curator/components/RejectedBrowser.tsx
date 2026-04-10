@@ -140,7 +140,7 @@ export function RejectedBrowser({
               </a>
               <button
                 onClick={(e) => { e.stopPropagation(); onRescue(ch.id, ch.name); }}
-                className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-500 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/10 transition-all shrink-0 opacity-0 group-hover:opacity-100"
+                className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text)] border border-[var(--border)] rounded-lg hover:bg-[var(--bg-alt)] hover:border-[var(--text-muted)] transition-all shrink-0 opacity-0 group-hover:opacity-100"
                 title="Move back to Review"
               >
                 RESCUE

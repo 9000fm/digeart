@@ -7,6 +7,7 @@ interface ChannelUploadGridProps {
   playingVideoId: string | null;
   setPlayingVideoId: (id: string | null) => void;
   loading?: boolean;
+  onRescan?: () => void;
 }
 
 function ViewCount({ count }: { count: number }) {
@@ -38,13 +39,21 @@ export function ChannelUploadGrid({
   playingVideoId,
   setPlayingVideoId,
   loading,
+  onRescan,
 }: ChannelUploadGridProps) {
   if (loading) {
+    // Skeleton grid (B13) — 6 placeholder boxes matching the upload grid layout
     return (
-      <div className="flex items-center justify-center py-12">
-        <span className="animate-pulse text-[var(--text-muted)]">
-          LOADING UPLOADS...
-        </span>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="relative bg-[var(--bg-alt)] rounded-lg overflow-hidden">
+            <div className="aspect-video animate-pulse bg-[var(--text-muted)]/10" />
+            <div className="px-2 py-1.5 space-y-1">
+              <div className="h-2 w-3/4 animate-pulse bg-[var(--text-muted)]/15 rounded" />
+              <div className="h-2 w-1/2 animate-pulse bg-[var(--text-muted)]/10 rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -99,6 +108,11 @@ export function ChannelUploadGrid({
                       TOP
                     </span>
                   )}
+                  {upload.duration != null && upload.duration > 2700 && (
+                    <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 bg-[var(--text)] text-[var(--bg)] font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm" style={upload.isTopViewed ? { top: 28 } : undefined}>
+                      MIXES
+                    </span>
+                  )}
                   {upload.viewCount != null && upload.viewCount > 0 && (
                     <ViewCount count={upload.viewCount} />
                   )}
@@ -117,9 +131,17 @@ export function ChannelUploadGrid({
         ))}
       </div>
       {uploads.length === 0 && !loading && (
-        <p className="text-[var(--text-muted)] text-sm py-4">
-          No uploads found for this channel
-        </p>
+        <div className="text-center py-12">
+          <p className="text-[var(--text-muted)] text-sm font-mono mb-3">No uploads found for this channel</p>
+          {onRescan && (
+            <button
+              onClick={onRescan}
+              className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider bg-[var(--text)] text-[var(--bg)] rounded-lg hover:opacity-90 active:scale-[0.97] transition-all"
+            >
+              Try rescanning
+            </button>
+          )}
+        </div>
       )}
     </>
   );

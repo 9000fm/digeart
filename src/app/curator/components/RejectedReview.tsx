@@ -75,7 +75,7 @@ export function RejectedReview({
                   key={t}
                   className={`text-[11px] px-2.5 py-1 rounded-full uppercase tracking-wider ${
                     t.toLowerCase().includes("music")
-                      ? "bg-emerald-500/15 text-emerald-500"
+                      ? "bg-[var(--text)]/10 text-[var(--text)] border border-[var(--text)]/20"
                       : "bg-[var(--bg-alt)] text-[var(--text-muted)]"
                   }`}
                 >
@@ -116,14 +116,13 @@ export function RejectedReview({
               <button
                 onClick={onRescue}
                 disabled={acting}
-                className="relative flex-[2] flex items-center rounded-none bg-emerald-600 text-white transition-all duration-100 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] active:scale-[0.93] active:shadow-none disabled:opacity-30"
+                className="relative flex-[2] flex items-center rounded-lg bg-[var(--text)] text-[var(--bg)] transition-all duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-30"
               >
-                <div className="w-1.5 self-stretch bg-emerald-400 shrink-0" />
                 <div className="flex-1 flex items-center justify-between px-4 py-2.5">
                   <span className="text-sm font-bold uppercase tracking-[0.15em]">
                     RESCUE
                   </span>
-                  <kbd className="text-[9px] font-normal opacity-60 border border-current/20 px-1.5 py-0.5">
+                  <kbd className="text-[9px] font-normal opacity-60 border border-current/20 px-1.5 py-0.5 rounded-sm">
                     R
                   </kbd>
                 </div>
@@ -131,14 +130,13 @@ export function RejectedReview({
               <button
                 onClick={onNext}
                 disabled={acting}
-                className="relative flex-1 flex items-center rounded-none bg-[var(--bg-alt)] text-[var(--text-muted)] transition-all duration-100 hover:text-[var(--text)] hover:bg-[var(--border)] active:scale-[0.93] disabled:opacity-30"
+                className="relative flex-1 flex items-center rounded-lg bg-[var(--bg-alt)] text-[var(--text-muted)] border border-[var(--border)] transition-all duration-150 hover:text-[var(--text)] hover:border-[var(--text-muted)] active:scale-[0.97] disabled:opacity-30"
               >
-                <div className="w-1 self-stretch bg-[var(--text-muted)] shrink-0" />
                 <div className="flex-1 flex items-center justify-between px-3 py-2.5">
                   <span className="text-xs font-bold uppercase tracking-wider">
                     NEXT &rarr;
                   </span>
-                  <kbd className="text-[9px] font-normal opacity-40 border border-[var(--border)] px-1.5 py-0.5">
+                  <kbd className="text-[9px] font-normal opacity-40 border border-[var(--border)] px-1.5 py-0.5 rounded-sm">
                     N
                   </kbd>
                 </div>

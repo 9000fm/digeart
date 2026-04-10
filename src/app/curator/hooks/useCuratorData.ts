@@ -4,6 +4,7 @@ import type {
   CuratorStats,
   ApprovedChannel,
   FilteredChannel,
+  ActivityTier,
 } from "../types";
 
 export function useCuratorData() {
@@ -19,7 +20,7 @@ export function useCuratorData() {
   const [filteredChannels, setFilteredChannels] = useState<FilteredChannel[]>([]);
   const [filteredLoading, setFilteredLoading] = useState(false);
   const [pendingChannels, setPendingChannels] = useState<
-    { name: string; id: string; topics?: string[]; importedAt?: string | null }[]
+    { name: string; id: string; topics?: string[]; importedAt?: string | null; activityTier?: ActivityTier | null; lastUploadAt?: string | null; totalUploads?: number | null; subscriberCount?: number | null }[]
   >([]);
   const [pendingLoading, setPendingLoading] = useState(false);
 

@@ -18,7 +18,7 @@ export function CuratorTabBar({
   rejectedCount,
 }: CuratorTabBarProps) {
   const tabs: { key: CuratorTab; label: string; badge?: number; color?: string; shortcut: string }[] = [
-    { key: "approved", label: "Approved", badge: approvedCount, color: "text-emerald-500", shortcut: "1" },
+    { key: "approved", label: "Approved", badge: approvedCount, color: "text-[var(--text)]", shortcut: "1" },
     { key: "review", label: "Review", badge: reviewCount, color: "text-[var(--text-secondary)]", shortcut: "2" },
     { key: "rejected", label: "Rejected", badge: rejectedCount, shortcut: "3" },
   ];

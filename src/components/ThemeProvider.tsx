@@ -24,8 +24,8 @@ export default function ThemeProvider({
 
   useEffect(() => {
     const stored = localStorage.getItem("digeart-theme") as Theme | null;
-    if (stored) setTheme(stored);
-    setMounted(true);
+    if (stored) setTheme(stored); // eslint-disable-line react-hooks/set-state-in-effect
+    setMounted(true);  
   }, []);
 
   useEffect(() => {

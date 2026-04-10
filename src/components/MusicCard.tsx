@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, memo } from "react";
+import { useState, useCallback, useRef, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 // Using <img> instead of next/image — YouTube serves optimized thumbnails already
 import Tooltip from "./Tooltip";
+import HeartLikeButton from "./HeartLikeButton";
 import type { CardData } from "@/lib/types";
 
 interface MusicCardProps {
@@ -41,8 +41,6 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-const BURST_COLORS = ["#f87171", "#fb923c", "#f472b6", "#e879f9", "#fbbf24", "#34d399"];
-
 export default memo(function MusicCard({
   card,
   saved,
@@ -56,31 +54,7 @@ export default memo(function MusicCard({
 }: MusicCardProps) {
   const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
-  const [nudge, setNudge] = useState(false);
-  const [tipLocked, setTipLocked] = useState(false);
-  const [burst, setBurst] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const burstKey = useRef(0);
-  const prevSavedRef = useRef(saved);
-
-  const [fillUp, setFillUp] = useState(false);
-
-  // Trigger heart fill-from-below on undo/restore ONLY (not manual like)
-  const fillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional: animation trigger needs sync setState */
-  useLayoutEffect(() => {
-    if (saved && !prevSavedRef.current && !burst) {
-      setFillUp(true);
-      if (fillTimerRef.current) clearTimeout(fillTimerRef.current);
-      fillTimerRef.current = setTimeout(() => setFillUp(false), 2500);
-    } else if (!saved && fillUp) {
-      // Unlike during fill animation — cancel it
-      setFillUp(false);
-      if (fillTimerRef.current) clearTimeout(fillTimerRef.current);
-    }
-    prevSavedRef.current = saved;
-  }, [saved, burst, fillUp]);
-  /* eslint-enable react-hooks/set-state-in-effect */
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -102,37 +76,8 @@ export default memo(function MusicCard({
     onPlay();
   };
 
-  const heartBtnRef = useRef<HTMLButtonElement>(null);
-
-  const handleHeartClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isAuthenticated) {
-      if (!saved && heartBtnRef.current) {
-        burstKey.current += 1;
-        setBurst(true);
-        const rect = heartBtnRef.current.getBoundingClientRect();
-        const x = (rect.left + rect.width / 2) / window.innerWidth;
-        const y = (rect.top + rect.height / 2) / window.innerHeight;
-        confetti({
-          particleCount: 45,
-          spread: 40,
-          angle: 90,
-          startVelocity: 14,
-          gravity: 1.0,
-          scalar: 0.5,
-          ticks: 50,
-          colors: BURST_COLORS,
-          origin: { x, y },
-          disableForReducedMotion: true,
-        });
-      }
-      onSave();
-    } else {
-      setNudge(true);
-      setTipLocked(true);
-      setTimeout(() => { setNudge(false); setTipLocked(false); }, 1500);
-    }
-  }, [isAuthenticated, onSave, saved]);
+  // HeartLikeButton has disabled={!isAuthenticated}, so onSave only fires when auth'd
+  const handleHeartClick = useCallback(() => onSave(), [onSave]);
 
   return (
     <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${isGracePeriod ? "opacity-75" : ""}`}
@@ -268,14 +213,15 @@ export default memo(function MusicCard({
 
         {/* Like button */}
         <Tooltip label={isAuthenticated ? (saved ? "Saved!" : "Save") : "Log in to save"} position="top">
-          <motion.button
-            ref={heartBtnRef}
-            onClick={handleHeartClick}
-            onMouseLeave={() => { if (isAuthenticated) setTipLocked(false); }}
-            animate={burst ? { scale: [1, 1.4, 1] } : {}}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            onAnimationComplete={() => setBurst(false)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-black/70 text-white hover:bg-black/90 ${
+          <HeartLikeButton
+            isLiked={saved}
+            trackId={card.id}
+            onToggle={handleHeartClick}
+            size="md"
+            disabled={!isAuthenticated}
+            ariaLabel={isAuthenticated ? (saved ? "Unlike" : "Save") : "Log in to save"}
+            lottieVariant="light"
+            className={`rounded-full bg-black/70 text-white hover:bg-black/90 ${
               saved
                 ? "opacity-100"
                 : isGracePeriod
@@ -284,16 +230,7 @@ export default memo(function MusicCard({
                     ? "opacity-0 group-hover:opacity-100"
                     : "opacity-0 group-hover:opacity-50 cursor-default"
             }`}
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              {/* Outline (always visible when not saved) */}
-              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill={saved && !fillUp ? "currentColor" : "none"} stroke="currentColor" strokeWidth={saved && !fillUp ? 0 : 2} strokeLinecap="round" strokeLinejoin="round" />
-              {/* Fill from below on restore */}
-              {fillUp && (
-                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill="currentColor" className="animate-[heartFillUp_2s_cubic-bezier(0.22,1,0.36,1)_forwards]" />
-              )}
-            </svg>
-          </motion.button>
+          />
         </Tooltip>
       </div>
 

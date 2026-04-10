@@ -596,7 +596,7 @@ export default function Sidebar({
                   <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">Shortcuts</p>
                   <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                     {[
-                      ["Space", "Play / Pause"],
+                      ["Space / K", "Play / Pause"],
                       ["N / \u2192", "Next track"],
                       ["P / \u2190", "Previous track"],
                       ["S", "Toggle shuffle"],

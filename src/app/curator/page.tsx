@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import type { CuratorTab, ApprovedChannel, ApprovedView } from "./types";
 import { useCuratorData } from "./hooks/useCuratorData";
 import { useCuratorActions } from "./hooks/useCuratorActions";
@@ -14,6 +15,8 @@ import { AuditMode } from "./components/AuditMode";
 import { RejectedBrowser } from "./components/RejectedBrowser";
 import { RejectedReview } from "./components/RejectedReview";
 import { ReviewQueue } from "./components/ReviewQueue";
+import { CuratorToastPile } from "./components/CuratorToast";
+import { CuratorToastProvider, useCuratorToast } from "./hooks/useCuratorToast";
 import AuthButton from "@/components/AuthButton";
 
 interface ReviewChannel {
@@ -42,9 +45,9 @@ function CuratorAuthGate() {
           {(session as unknown as { error?: string })?.error ? "Session expired — please sign in again" : "Sign in to access the curator dashboard"}
         </p>
         <AuthButton />
-        <a href="/" className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs uppercase tracking-wider transition-colors mt-4">
+        <Link href="/" className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs uppercase tracking-wider transition-colors mt-4">
           &larr; Back to digeart
-        </a>
+        </Link>
       </div>
     );
   }
@@ -53,11 +56,18 @@ function CuratorAuthGate() {
 }
 
 export default function CuratorPage() {
-  return <CuratorAuthGate />;
+  return (
+    <CuratorToastProvider>
+      <CuratorAuthGate />
+      <CuratorToastPile />
+    </CuratorToastProvider>
+  );
 }
 
 function CuratorDashboard() {
+  const { showToast } = useCuratorToast();
   const [activeTab, setActiveTab] = useState<CuratorTab>("review");
+  const [lastUndoable, setLastUndoable] = useState<{ id: string; name: string; decision: "approve" | "reject"; timestamp: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [channelNotes, setChannelNotes] = useState("");
   const [isStarred, setIsStarred] = useState(false);
@@ -71,6 +81,8 @@ function CuratorDashboard() {
 
   // Track the full review list so we can auto-advance
   const reviewListRef = useRef<ReviewChannel[]>([]);
+  // Track channels decided in this session — used to filter stale snapshots so we don't re-load them
+  const decidedThisSessionRef = useRef<Set<string>>(new Set());
 
   const {
     data, setData, stats,
@@ -151,18 +163,27 @@ function CuratorDashboard() {
     async (decision: "approve" | "reject") => {
       if (!reviewingChannel) return;
       const currentId = reviewingChannel.id;
-      // Capture snapshot BEFORE any async work — guaranteed correct
-      const snapshot = [...reviewListRef.current];
+      const currentName = reviewingChannel.name;
+      // Mark as decided BEFORE the snapshot filter so rapid clicks don't re-load just-decided channels
+      decidedThisSessionRef.current.add(currentId);
+
+      // Capture snapshot, then filter out anything already decided this session (race-safe against slow refreshes)
+      const snapshot = [...reviewListRef.current].filter(
+        (c) => !decidedThisSessionRef.current.has(c.id)
+      );
 
       // Fire decision (now fire-and-forget internally)
       rawHandleDecision(decision);
 
+      // Track for one-click undo
+      setLastUndoable({ id: currentId, name: currentName, decision, timestamp: Date.now() });
+
       // Refresh lists in background — don't block the next channel load
       Promise.all([fetchPending(), fetchFiltered(), fetchStats()]).catch(console.error);
 
-      // Find next channel using the pre-async snapshot
+      // The snapshot is already filtered, so `remaining` is just the snapshot
       const currentIdx = snapshot.findIndex((c) => c.id === currentId);
-      const remaining = snapshot.filter((c) => c.id !== currentId);
+      const remaining = snapshot;
 
       if (remaining.length === 0) {
         setReviewingChannel(null);
@@ -190,6 +211,36 @@ function CuratorDashboard() {
     },
     [rawHandleDecision, fetchPending, fetchFiltered, fetchStats, reviewingChannel, preloadChannel]
   );
+
+  // Auto-clear lastUndoable after 8s
+  useEffect(() => {
+    if (!lastUndoable) return;
+    const t = setTimeout(() => setLastUndoable(null), 8000);
+    return () => clearTimeout(t);
+  }, [lastUndoable]);
+
+  // One-click undo of the last decision — reverts API + clears state
+  const handleUndoLastDecision = useCallback(async () => {
+    if (!lastUndoable) return;
+    const { id, name } = lastUndoable;
+    setLastUndoable(null);
+    try {
+      const res = await fetch("/api/curator", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "undoDecision", channelId: id, channelName: name }),
+      });
+      if (!res.ok) {
+        showToast("Undo failed", "error");
+        return;
+      }
+      showToast(`Undone: ${name}`, "success");
+      // Refresh lists so the channel reappears in review
+      Promise.all([fetchPending(), fetchFiltered(), fetchStats()]).catch(console.error);
+    } catch {
+      showToast("Network error — undo failed", "error");
+    }
+  }, [lastUndoable, fetchPending, fetchFiltered, fetchStats, showToast]);
 
   // Sync starred state
   useEffect(() => {
@@ -357,18 +408,25 @@ function CuratorDashboard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ urls: url }),
         });
+        if (!res.ok) {
+          showToast("Import failed", "error");
+          return;
+        }
         const result = await res.json();
         if (result.added?.length > 0) {
           fetchPending();
           fetchStats();
+          showToast(`Imported ${result.added.length} channel${result.added.length === 1 ? "" : "s"}`, "success");
+        } else {
+          showToast("No new channels found", "info");
         }
-      } catch (e) {
-        console.error("Import failed:", e);
+      } catch {
+        showToast("Network error — import failed", "error");
       } finally {
         setImporting(false);
       }
     },
-    [fetchPending, fetchStats]
+    [fetchPending, fetchStats, showToast]
   );
 
   const [syncDone, setSyncDone] = useState(false);
@@ -379,9 +437,17 @@ function CuratorDashboard() {
     setSyncDone(false);
     try {
       const res = await fetch("/api/curator/subscriptions", { method: "POST" });
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After");
+        showToast(`Slow down — retry in ${retryAfter || "a few"}s`, "error");
+        setSyncError("Rate limited");
+        setSyncing(false);
+        return;
+      }
       const result = await res.json();
       if (result.error) {
         setSyncError(result.error);
+        showToast(result.error, "error");
       } else {
         setNewSubCount(0);
         fetchPending();
@@ -389,26 +455,35 @@ function CuratorDashboard() {
         fetchRejected();
         fetchStats();
         setSyncDone(true);
+        showToast(`Synced: +${result.added || 0} new, ${result.filtered || 0} filtered`, "success");
       }
     } catch {
       setSyncError("Sync failed — check your connection");
+      showToast("Network error — sync failed", "error");
     }
     setSyncing(false);
-  }, [fetchPending, fetchFiltered, fetchRejected, fetchStats, setNewSubCount]);
+  }, [fetchPending, fetchFiltered, fetchRejected, fetchStats, setNewSubCount, showToast]);
 
   // --- Rescue from Rejected ---
   const handleRescueRejected = useCallback(
-    (channelId: string, channelName: string) => {
-      // Fire-and-forget — move from rejected back to Review
-      fetch("/api/curator", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rescueChannel", channelId, channelName }),
-      }).catch(console.error);
-      // Refresh lists in background
-      Promise.all([fetchRejected(), fetchPending(), fetchStats()]).catch(console.error);
+    async (channelId: string, channelName: string) => {
+      try {
+        const res = await fetch("/api/curator", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "rescueChannel", channelId, channelName }),
+        });
+        if (!res.ok) {
+          showToast("Rescue failed", "error");
+          return;
+        }
+        showToast(`Moved to review: ${channelName}`, "success");
+        Promise.all([fetchRejected(), fetchPending(), fetchStats()]).catch(console.error);
+      } catch {
+        showToast("Network error — rescue failed", "error");
+      }
     },
-    [fetchRejected, fetchPending, fetchStats]
+    [fetchRejected, fetchPending, fetchStats, showToast]
   );
 
   // --- Rejected review handlers ---
@@ -497,15 +572,31 @@ function CuratorDashboard() {
 
   // Audit mode (Approved tab, full-screen)
   if (approvedView.mode === "audit") {
+    const currentAuditId = approvedView.channel.id;
+    // Read the FRESH channel from approvedChannels each render so star toggles propagate
+    const freshChannel = approvedChannels.find((c) => c.id === currentAuditId) || approvedView.channel;
+    const auditIdx = approvedChannels.findIndex((c) => c.id === currentAuditId);
+    const prevChannel = auditIdx > 0 ? approvedChannels[auditIdx - 1] : null;
+    const nextChannel = auditIdx >= 0 && auditIdx < approvedChannels.length - 1 ? approvedChannels[auditIdx + 1] : null;
     return (
       <AuditMode
-        channel={approvedView.channel}
+        key={currentAuditId}
+        channel={freshChannel}
         stats={stats}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onExit={handleExitAudit}
         onChangeDecision={handleChangeDecision}
         fetchStats={fetchStats}
+        onPrev={prevChannel ? () => setApprovedView({ mode: "audit", channel: prevChannel }) : undefined}
+        onNext={nextChannel ? () => setApprovedView({ mode: "audit", channel: nextChannel }) : undefined}
+        position={auditIdx >= 0 ? { current: auditIdx + 1, total: approvedChannels.length } : undefined}
+        onStarUpdated={(id, isStarred) => {
+          setApprovedChannels((prev) => prev.map((c) => c.id === id ? { ...c, isStarred } : c));
+        }}
+        onBoostUpdated={(id, boostState) => {
+          setApprovedChannels((prev) => prev.map((c) => c.id === id ? { ...c, boostState } : c));
+        }}
       />
     );
   }
@@ -566,6 +657,8 @@ function CuratorDashboard() {
             onExit={handleExitReview}
             notes={channelNotes}
             onNotesChange={setChannelNotes}
+            lastUndoable={lastUndoable}
+            onUndoLastDecision={handleUndoLastDecision}
           />
         </div>
       </div>
@@ -581,9 +674,9 @@ function CuratorDashboard() {
             CURATOR
           </h1>
           <div className="flex items-center gap-4">
-            <a href="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] uppercase tracking-[0.15em] transition-colors border border-[var(--border)] hover:border-[var(--text-muted)] rounded-lg px-4 py-2 font-bold">
+            <Link href="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] uppercase tracking-[0.15em] transition-colors border border-[var(--border)] hover:border-[var(--text-muted)] rounded-lg px-4 py-2 font-bold">
               &larr; BACK TO DIGEART
-            </a>
+            </Link>
             <AuthButton />
           </div>
         </div>

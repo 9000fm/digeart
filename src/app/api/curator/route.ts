@@ -1,7 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChannelUploads } from "@/lib/youtube";
+import { getChannelUploads, getChannelStats, getOldestUploadDate } from "@/lib/youtube";
+import { classifyActivity } from "@/lib/curator-activity";
 import { auth } from "@/auth";
 import { supabase } from "@/lib/supabase";
+
+// Curator-only auth gate. Returns NextResponse if forbidden, null if allowed.
+async function requireCurator(): Promise<NextResponse | null> {
+  const session = await auth();
+  const curatorEmail = process.env.CURATOR_EMAIL;
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!curatorEmail) {
+    // Misconfigured server — fail closed
+    return NextResponse.json({ error: "Curator not configured" }, { status: 503 });
+  }
+  if (session.user.email !== curatorEmail) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
+// Simple in-memory rate limiter (per-process, resets on deploy)
+const rateLimitMap = new Map<string, number[]>();
+function checkRateLimit(key: string, maxCalls: number, windowMs: number): { ok: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const calls = (rateLimitMap.get(key) || []).filter((t) => now - t < windowMs);
+  if (calls.length >= maxCalls) {
+    return { ok: false, retryAfter: Math.ceil((windowMs - (now - calls[0])) / 1000) };
+  }
+  calls.push(now);
+  rateLimitMap.set(key, calls);
+  return { ok: true };
+}
 
 function pickUploads(allUploads: Awaited<ReturnType<typeof getChannelUploads>>) {
   const sorted = [...allUploads].sort(
@@ -105,13 +136,39 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Approved channels
+  // Approved channels — try with new activity columns, fall back if migration not applied
   if (mode === "approved") {
-    const { data: channels } = await supabase
+    type ApprovedRow = {
+      channel_id: string;
+      name: string;
+      labels?: string[] | null;
+      starred?: boolean | null;
+      reviewed_at?: string | null;
+      notes?: string | null;
+      activity_tier?: string | null;
+      last_upload_at?: string | null;
+      total_uploads?: number | null;
+      subscriber_count?: number | null;
+      curator_notes?: string | null;
+      boost_state?: string | null;
+    };
+    let channels: ApprovedRow[] | null = null;
+    const withMeta = await supabase
       .from("curator_channels")
-      .select("channel_id, name, labels, starred, reviewed_at, notes")
+      .select("channel_id, name, labels, starred, reviewed_at, notes, activity_tier, last_upload_at, total_uploads, subscriber_count, curator_notes, boost_state")
       .eq("status", "approved")
       .order("name");
+    if (withMeta.error) {
+      // Migration not applied yet — fall back to original columns
+      const fallback = await supabase
+        .from("curator_channels")
+        .select("channel_id, name, labels, starred, reviewed_at, notes")
+        .eq("status", "approved")
+        .order("name");
+      channels = fallback.data;
+    } else {
+      channels = withMeta.data;
+    }
 
     return NextResponse.json({
       channels: (channels || []).map((c) => ({
@@ -121,34 +178,90 @@ export async function GET(req: NextRequest) {
         isStarred: c.starred,
         reviewedAt: c.reviewed_at,
         notes: c.notes,
+        activityTier: c.activity_tier ?? null,
+        lastUploadAt: c.last_upload_at ?? null,
+        totalUploads: c.total_uploads ?? null,
+        subscriberCount: c.subscriber_count ?? null,
+        curatorNotes: c.curator_notes ?? null,
+        boostState: c.boost_state ?? "default",
       })),
     });
   }
 
-  // Pending channels (for Review tab)
+  // Pending channels (for Review tab) — same fallback pattern
   if (mode === "pending") {
-    const { data: channels } = await supabase
+    type PendingRow = {
+      channel_id: string;
+      name: string;
+      imported_at?: string | null;
+      activity_tier?: string | null;
+      last_upload_at?: string | null;
+      total_uploads?: number | null;
+      subscriber_count?: number | null;
+    };
+    let channels: PendingRow[] | null = null;
+    const withMeta = await supabase
       .from("curator_channels")
-      .select("channel_id, name, imported_at")
+      .select("channel_id, name, imported_at, activity_tier, last_upload_at, total_uploads, subscriber_count")
       .eq("status", "pending")
       .order("imported_at", { ascending: false });
+    if (withMeta.error) {
+      const fallback = await supabase
+        .from("curator_channels")
+        .select("channel_id, name, imported_at")
+        .eq("status", "pending")
+        .order("imported_at", { ascending: false });
+      channels = fallback.data;
+    } else {
+      channels = withMeta.data;
+    }
 
     return NextResponse.json({
       channels: (channels || []).map((c) => ({
         name: c.name,
         id: c.channel_id,
         importedAt: c.imported_at,
+        activityTier: c.activity_tier ?? null,
+        lastUploadAt: c.last_upload_at ?? null,
+        totalUploads: c.total_uploads ?? null,
+        subscriberCount: c.subscriber_count ?? null,
       })),
     });
   }
 
   // Rescan: fetch uploads + topics for a specific channel
   if (rescan === "true" && rescanChannelId) {
-    const { data: chData } = await supabase
+    // Curator-only + rate limit (rescan burns YouTube quota)
+    const forbidden = await requireCurator();
+    if (forbidden) return forbidden;
+
+    // Curator is auth-gated to a single user; rate limit is mostly for accidental quota protection.
+    // 60/min comfortably handles browsing through approved channels with arrow keys.
+    const limit = checkRateLimit("curator-rescan", 60, 60_000);
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: `Rate limited — retry in ${limit.retryAfter}s` },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+      );
+    }
+
+    // Fetch channel row — try with boost_state, fall back if migration not applied
+    let chData: { channel_id: string; name: string; starred?: boolean | null; boost_state?: string | null } | null = null;
+    const chWithBoost = await supabase
       .from("curator_channels")
-      .select("channel_id, name, starred")
+      .select("channel_id, name, starred, boost_state")
       .eq("channel_id", rescanChannelId)
       .single();
+    if (chWithBoost.error) {
+      const fallback = await supabase
+        .from("curator_channels")
+        .select("channel_id, name, starred")
+        .eq("channel_id", rescanChannelId)
+        .single();
+      chData = fallback.data;
+    } else {
+      chData = chWithBoost.data;
+    }
 
     if (!chData) {
       return NextResponse.json({ error: "Channel not found" }, { status: 404 });
@@ -161,15 +274,52 @@ export async function GET(req: NextRequest) {
       console.error("Failed to rescan uploads for", chData.name, e);
     }
 
-    // Update scan info (non-critical metadata)
-    const { error: scanErr } = await supabase
+    // Fetch channel-level stats (subscriber + total uploads) — used for activity classification
+    let channelStats: { subscriberCount: number | null; videoCount: number | null } | null = null;
+    let oldestUpload: string | null = null;
+    try {
+      channelStats = await getChannelStats(rescanChannelId);
+    } catch { /* ignore */ }
+    try {
+      oldestUpload = await getOldestUploadDate(rescanChannelId);
+    } catch { /* ignore */ }
+
+    // Compute activity tier
+    const uploadDates = allUploads.map((u) => u.publishedAt).filter((d): d is string => !!d);
+    const lastUploadAt = uploadDates.length > 0
+      ? uploadDates.map((d) => new Date(d).getTime()).sort((a, b) => b - a)[0]
+      : null;
+    const tier = classifyActivity({
+      uploadDates,
+      totalUploads: channelStats?.videoCount ?? allUploads.length,
+      oldestUploadDate: oldestUpload,
+    });
+
+    // Update scan info + activity metadata. Try with new columns; fall back to original if migration not applied.
+    const fullUpdate = await supabase
       .from("curator_channels")
       .update({
         last_scanned_at: new Date().toISOString(),
         uploads_fetched: allUploads.length,
+        activity_tier: tier,
+        last_upload_at: lastUploadAt ? new Date(lastUploadAt).toISOString() : null,
+        total_uploads: channelStats?.videoCount ?? null,
+        oldest_upload_at: oldestUpload,
+        subscriber_count: channelStats?.subscriberCount ?? null,
+        activity_computed_at: new Date().toISOString(),
       })
       .eq("channel_id", rescanChannelId);
-    if (scanErr) console.error("Failed to update scan info:", scanErr);
+    if (fullUpdate.error) {
+      // Migration not applied — fall back to original columns only
+      const { error: fallbackErr } = await supabase
+        .from("curator_channels")
+        .update({
+          last_scanned_at: new Date().toISOString(),
+          uploads_fetched: allUploads.length,
+        })
+        .eq("channel_id", rescanChannelId);
+      if (fallbackErr) console.error("Failed to update scan info:", fallbackErr);
+    }
 
     const uploads = pickUploads(allUploads);
 
@@ -205,6 +355,11 @@ export async function GET(req: NextRequest) {
       reviewed: 0,
       total: pendingCount || 0,
       isStarred: chData.starred,
+      activityTier: tier,
+      lastUploadAt: lastUploadAt ? new Date(lastUploadAt).toISOString() : null,
+      totalUploads: channelStats?.videoCount ?? null,
+      subscriberCount: channelStats?.subscriberCount ?? null,
+      boostState: chData.boost_state ?? "default",
     });
   }
 
@@ -258,8 +413,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Record a decision (approve/reject)
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
 
   const body = await req.json();
   const { channelId, decision, labels, notes } = body;
@@ -295,11 +450,11 @@ export async function POST(req: NextRequest) {
 }
 
 // PUT: Various actions
-const VALID_PUT_ACTIONS = ["sendToPending", "rescueChannel", "rescueFiltered", "rescueToFiltered", "confirmRejectFiltered", "changeDecision", "updateLabels"];
+const VALID_PUT_ACTIONS = ["sendToPending", "rescueChannel", "rescueFiltered", "rescueToFiltered", "confirmRejectFiltered", "changeDecision", "updateLabels", "undoDecision", "updateCuratorNotes", "updateBoostState"];
 
 export async function PUT(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
 
   const body = await req.json();
   const { action, channelId } = body;
@@ -357,11 +512,21 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Change decision (from approved → rejected)
+  // Change decision (from approved → rejected). Preserve labels in case of undo/rescue.
   if (action === "changeDecision") {
     const { error } = await supabase
       .from("curator_channels")
-      .update({ status: body.newDecision || "rejected", reviewed_at: new Date().toISOString(), labels: [] })
+      .update({ status: body.newDecision || "rejected", reviewed_at: new Date().toISOString() })
+      .eq("channel_id", channelId);
+    if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Undo last decision — revert channel to pending, clear reviewed_at
+  if (action === "undoDecision") {
+    const { error } = await supabase
+      .from("curator_channels")
+      .update({ status: "pending", reviewed_at: null })
       .eq("channel_id", channelId);
     if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
     return NextResponse.json({ ok: true });
@@ -378,13 +543,45 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Update curator notes (private free-text per channel) — silently no-op if migration not applied
+  if (action === "updateCuratorNotes") {
+    const notes = typeof body.curatorNotes === "string" ? body.curatorNotes.slice(0, 500) : null;
+    const { error } = await supabase
+      .from("curator_channels")
+      .update({ curator_notes: notes })
+      .eq("channel_id", channelId);
+    if (error) {
+      // Likely missing column (migration not applied) — return ok so the UI doesn't show an error
+      console.warn("updateCuratorNotes failed (migration applied?):", error.message);
+      return NextResponse.json({ ok: true, warning: "migration_pending" });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // Update boost state (boost / default / bury) — drives pool weighting
+  if (action === "updateBoostState") {
+    const boostState = body.boostState;
+    if (boostState !== "boost" && boostState !== "default" && boostState !== "bury") {
+      return NextResponse.json({ error: "boostState must be 'boost' | 'default' | 'bury'" }, { status: 400 });
+    }
+    const { error } = await supabase
+      .from("curator_channels")
+      .update({ boost_state: boostState })
+      .eq("channel_id", channelId);
+    if (error) {
+      console.warn("updateBoostState failed (migration applied?):", error.message);
+      return NextResponse.json({ ok: true, warning: "migration_pending" });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
 
 // PATCH: Toggle star
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
 
   const body = await req.json();
   const { channelId } = body;

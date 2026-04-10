@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import type { CuratorData, Upload } from "../types";
+import { useCuratorToast } from "./useCuratorToast";
 
 interface HistoryEntry {
   id: string;
@@ -35,6 +36,7 @@ export function useCuratorActions({
   const actingRef = useRef(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [rescanning, setRescanning] = useState(false);
+  const { showToast } = useCuratorToast();
 
   const handleDecision = useCallback(
     async (decision: "approve" | "reject") => {
@@ -42,8 +44,8 @@ export function useCuratorActions({
       actingRef.current = true;
       setActing(true);
       const labelsToSave = decision === "approve" ? Array.from(selectedLabels) : [];
-      // Always save current labels to history so go-back restores them
       const labelsForHistory = Array.from(selectedLabels);
+      const channelName = data.channel.name;
       setHistory((prev) => [
         ...prev,
         {
@@ -55,22 +57,30 @@ export function useCuratorActions({
           wasStarred: isStarred,
         },
       ]);
-      // Fire-and-forget — decision is idempotent, no need to block UI
-      fetch("/api/curator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          channelId: data.channel.id,
-          channelName: data.channel.name,
-          decision,
-          labels: labelsToSave,
-          notes: notes || undefined,
-        }),
-      }).catch(console.error);
+      try {
+        const res = await fetch("/api/curator", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelId: data.channel.id,
+            channelName: data.channel.name,
+            decision,
+            labels: labelsToSave,
+            notes: notes || undefined,
+          }),
+        });
+        if (!res.ok) {
+          showToast(`${decision === "approve" ? "Approve" : "Reject"} failed`, "error");
+        } else {
+          showToast(`${decision === "approve" ? "Approved" : "Rejected"}: ${channelName}`, "success");
+        }
+      } catch {
+        showToast("Network error — decision not saved", "error");
+      }
       actingRef.current = false;
       setActing(false);
     },
-    [data, selectedLabels, notes, isStarred]
+    [data, selectedLabels, notes, isStarred, showToast]
   );
 
   // Navigate back to previous channel (does NOT undo the decision)
@@ -91,23 +101,37 @@ export function useCuratorActions({
     }));
   }, [history, setData, setIsStarred, setSelectedLabels, setPlayingVideoId]);
 
-  const handleToggleStar = useCallback(() => {
+  const handleToggleStar = useCallback(async () => {
     if (!data?.channel) return;
+    const previousStarred = isStarred;
     const newStarred = !isStarred;
+    // Optimistic
     setIsStarred(newStarred);
-    fetch("/api/curator", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        channelId: data.channel.id,
-        channelName: data.channel.name,
-      }),
-    }).then((res) => res.json()).then((result) => {
+    try {
+      const res = await fetch("/api/curator", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channelId: data.channel.id,
+          channelName: data.channel.name,
+        }),
+      });
+      if (!res.ok) {
+        // Rollback
+        setIsStarred(previousStarred);
+        showToast("Star toggle failed", "error");
+        return;
+      }
+      const result = await res.json();
       setData((prev) =>
         prev ? { ...prev, starredCount: result.starredCount } : prev
       );
-    }).catch(console.error);
-  }, [data, isStarred, setIsStarred, setData]);
+      showToast(previousStarred ? "Unstarred" : "Starred", "success");
+    } catch {
+      setIsStarred(previousStarred);
+      showToast("Network error — star unchanged", "error");
+    }
+  }, [data, isStarred, setIsStarred, setData, showToast]);
 
   const handleRescan = useCallback(async () => {
     if (!data?.channel || rescanning) return;
@@ -116,15 +140,25 @@ export function useCuratorActions({
       const res = await fetch(
         `/api/curator?rescan=true&channelId=${data.channel.id}`
       );
+      if (!res.ok) {
+        if (res.status === 429) {
+          const retryAfter = res.headers.get("Retry-After");
+          showToast(`Slow down — retry in ${retryAfter || "a moment"}s`, "error");
+        } else {
+          showToast("Rescan failed", "error");
+        }
+        return;
+      }
       const json = await res.json();
       setData((prev) => prev ? { ...prev, uploads: json.uploads || [], topics: json.topics || [] } : json);
       setPlayingVideoId(null);
-    } catch (e) {
-      console.error("Rescan failed:", e);
+      showToast("Rescanned", "success");
+    } catch {
+      showToast("Network error — rescan failed", "error");
     } finally {
       setRescanning(false);
     }
-  }, [data, rescanning, setData, setPlayingVideoId]);
+  }, [data, rescanning, setData, setPlayingVideoId, showToast]);
 
   return {
     acting,

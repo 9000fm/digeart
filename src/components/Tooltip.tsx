@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useLayoutEffect, useState, useCallback, type ReactNode } from "react";
+import { useRef, useLayoutEffect, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
-export default function Tooltip({ label, children, position = "top", align = "center", className, show, hoverable = true, delay = 400, hideOnClick = false }: { label: string; children: ReactNode; position?: "top" | "bottom" | "left" | "right"; align?: "start" | "center" | "end"; className?: string; show?: boolean; hoverable?: boolean; delay?: number; hideOnClick?: boolean }) {
+export default function Tooltip({ label, children, position = "top", align = "center", className, show, hoverable = true, delay = 400, hideOnClick = false, portal = false }: { label: string; children: ReactNode; position?: "top" | "bottom" | "left" | "right"; align?: "start" | "center" | "end"; className?: string; show?: boolean; hoverable?: boolean; delay?: number; hideOnClick?: boolean; portal?: boolean }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const [shiftX, setShiftX] = useState(0);
@@ -28,7 +29,7 @@ export default function Tooltip({ label, children, position = "top", align = "ce
     } else if (tipLeft < pad) {
       shift = pad - tipLeft;
     }
-    setShiftX(shift);
+    setShiftX(shift); // eslint-disable-line react-hooks/set-state-in-effect -- layout measurement needs sync setState
   }, [label, isHorizontal]);
 
   const onEnter = useCallback(() => {
@@ -69,16 +70,64 @@ export default function Tooltip({ label, children, position = "top", align = "ce
 
   const visible = show || hovered;
 
+  // Portal mode — compute fixed-viewport position, escapes any overflow:hidden ancestor
+  const [portalPos, setPortalPos] = useState<{ top: number; left: number } | null>(null);
+  const recomputePortalPos = useCallback(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    setPortalPos({
+      top: rect.top - 8,
+      left: rect.left + rect.width / 2,
+    });
+  }, []);
+
+  useLayoutEffect(() => {  
+    if (!portal || !visible) return;
+    recomputePortalPos();
+  }, [portal, visible, label, recomputePortalPos]);
+
+  useEffect(() => {
+    if (!portal || !visible) return;
+    const onChange = () => recomputePortalPos();
+    window.addEventListener("scroll", onChange, true);
+    window.addEventListener("resize", onChange);
+    return () => {
+      window.removeEventListener("scroll", onChange, true);
+      window.removeEventListener("resize", onChange);
+    };
+  }, [portal, visible, recomputePortalPos]);
+
+  const portalNode = portal && typeof window !== "undefined" && portalPos
+    ? createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: portalPos.top,
+            left: portalPos.left,
+            transform: "translate(-50%, -100%)",
+          }}
+          className={`px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap pointer-events-none transition-opacity duration-150 z-[100] ${visible ? "opacity-100" : "opacity-0"}${className ? ` ${className}` : ""}`}
+        >
+          {label}
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div ref={wrapRef} className="relative" onMouseEnter={onEnter} onMouseLeave={onLeave} onClickCapture={onClickCapture}>
       {children}
-      <div
-        ref={tipRef}
-        style={translateStyle}
-        className={`absolute ${positionBase[position]} px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap pointer-events-none transition-opacity duration-150 z-50 ${visible ? "opacity-100" : "opacity-0"}${className ? ` ${className}` : ""}`}
-      >
-        {label}
-      </div>
+      {!portal && (
+        <div
+          ref={tipRef}
+          style={translateStyle}
+          className={`absolute ${positionBase[position]} px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap pointer-events-none transition-opacity duration-150 z-50 ${visible ? "opacity-100" : "opacity-0"}${className ? ` ${className}` : ""}`}
+        >
+          {label}
+        </div>
+      )}
+      {portalNode}
     </div>
   );
 }

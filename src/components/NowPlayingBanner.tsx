@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 import Tooltip from "./Tooltip";
+import HeartLikeButton from "./HeartLikeButton";
 import type { CardData } from "@/lib/types";
-
-const BURST_COLORS = ["#f87171", "#fb923c", "#f472b6", "#e879f9", "#fbbf24", "#34d399"];
 
 function formatViewCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -139,7 +137,52 @@ export default function NowPlayingBanner({
   const isDraggingVolRef = useRef(false);
   const isDraggingPitchRef = useRef(false);
   const pitchTrackRef = useRef<HTMLDivElement>(null);
+  const pitchTooltipDivRef = useRef<HTMLDivElement | null>(null);
   const [showPitchFader, setShowPitchFader] = useState(false);
+
+  // Vanilla-DOM hover bubble for the pitch slider — bypasses portal/framer-motion clipping issues entirely
+  const ensurePitchTooltip = useCallback(() => {
+    if (pitchTooltipDivRef.current) return pitchTooltipDivRef.current;
+    const div = document.createElement("div");
+    div.style.position = "fixed";
+    div.style.zIndex = "99999";
+    div.style.background = "var(--text)";
+    div.style.color = "var(--bg)";
+    div.style.padding = "2px 6px";
+    div.style.borderRadius = "4px";
+    div.style.fontFamily = "var(--font-space-mono, monospace)";
+    div.style.fontSize = "10px";
+    div.style.fontVariantNumeric = "tabular-nums";
+    div.style.pointerEvents = "none";
+    div.style.whiteSpace = "nowrap";
+    div.style.transform = "translate(-50%, -100%)";
+    document.body.appendChild(div);
+    pitchTooltipDivRef.current = div;
+    return div;
+  }, []);
+
+  const updatePitchTooltip = useCallback((sliderEl: HTMLDivElement, currentRate: number) => {
+    const rect = sliderEl.getBoundingClientRect();
+    const percent = ((currentRate - 0.88) / 0.24) * 100;
+    const label = currentRate === 1 ? "0%" : `${currentRate > 1 ? "+" : ""}${Math.round((currentRate - 1) * 100)}%`;
+    const div = ensurePitchTooltip();
+    div.textContent = label;
+    div.style.left = `${rect.left + (percent / 100) * rect.width}px`;
+    div.style.top = `${rect.top - 8}px`;
+  }, [ensurePitchTooltip]);
+
+  const removePitchTooltip = useCallback(() => {
+    if (pitchTooltipDivRef.current) {
+      pitchTooltipDivRef.current.remove();
+      pitchTooltipDivRef.current = null;
+    }
+  }, []);
+
+  // Cleanup tooltip on unmount
+  useEffect(() => {
+    return () => removePitchTooltip();
+  }, [removePitchTooltip]);
+
   const [isDraggingVol, setIsDraggingVol] = useState(false);
   const [dragVolume, setDragVolume] = useState(volume);
   const dragVolumeRef = useRef(volume);
@@ -250,12 +293,13 @@ export default function NowPlayingBanner({
     return () => document.removeEventListener("pointerdown", handler);
   }, [showVolumeFader]);
 
-  // Dismiss pitch fader on outside click
+  // Dismiss pitch fader on outside click — but NOT when clicking the pill itself (so the icon click can toggle)
   useEffect(() => {
     if (!showPitchFader) return;
     const handler = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (!(t as HTMLElement).closest?.("[data-pitch-fader]")) {
+      const el = t as HTMLElement;
+      if (!el.closest?.("[data-pitch-fader]") && !el.closest?.("[data-pitch-trigger]")) {
         setShowPitchFader(false);
       }
     };
@@ -385,85 +429,17 @@ export default function NowPlayingBanner({
   );
 
   // Like/Heart button
-  const [likeNudge, setLikeNudge] = useState(false);
-  const [tipLocked, setTipLocked] = useState(false);
-  const [likeBurst, setLikeBurst] = useState(false);
-  const [likeFillUp, setLikeFillUp] = useState(false);
-  const prevIsLikedRef = useRef(isLiked);
-  const likeBtnRef = useRef<HTMLButtonElement>(null);
-  const confettiedIds = useRef(new Set<string>());
-
-  const likeFillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useLayoutEffect(() => {
-    const isFirstLike = isLiked && !prevIsLikedRef.current;
-    if (isFirstLike) {
-      setLikeFillUp(true);
-      if (likeFillTimerRef.current) clearTimeout(likeFillTimerRef.current);
-      likeFillTimerRef.current = setTimeout(() => setLikeFillUp(false), 2500);
-    } else if (!isLiked && likeFillUp) {
-      setLikeFillUp(false);
-      if (likeFillTimerRef.current) clearTimeout(likeFillTimerRef.current);
-    }
-    prevIsLikedRef.current = isLiked;
-  }, [isLiked, card.id, likeFillUp]);
   const likeButton = (size: "sm" | "md" = "md") => onToggleLike ? (
     <Tooltip label={isAuthenticated ? (isLiked ? "Saved!" : "Save") : "Log in to save"} position="top">
-      <motion.button
-        ref={likeBtnRef}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isAuthenticated) {
-            if (!isLiked) {
-              const isFirstTime = !confettiedIds.current.has(card.id);
-              if (isFirstTime) {
-                // First like per session: confetti + paint fill, no scale
-                confettiedIds.current.add(card.id);
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const x = (rect.left + rect.width / 2) / window.innerWidth;
-                const y = (rect.top + rect.height / 2) / window.innerHeight;
-                confetti({
-                  particleCount: 30,
-                  spread: 35,
-                  angle: 90,
-                  startVelocity: 12,
-                  gravity: 1.0,
-                  scalar: 0.45,
-                  ticks: 40,
-                  colors: BURST_COLORS,
-                  origin: { x, y },
-                  disableForReducedMotion: true,
-                });
-              } else {
-                // Re-likes: scale burst only
-                setLikeBurst(true);
-              }
-            }
-            onToggleLike();
-          } else {
-            setLikeNudge(true);
-            setTipLocked(true);
-            setTimeout(() => { setLikeNudge(false); setTipLocked(false); }, 1500);
-          }
-        }}
-        onMouseLeave={() => { setTipLocked(false); }}
-        animate={likeBurst ? { scale: [1, 1.4, 1] } : {}}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        onAnimationComplete={() => setLikeBurst(false)}
-        className={`shrink-0 flex items-center justify-center rounded-full transition-colors duration-200 ease-out ${
-          size === "sm" ? "w-6 h-6" : "w-8 h-8 2xl:w-10 2xl:h-10"
-        } ${isLiked ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
-        style={{ transition: "color 0.2s ease-out" }}
-      >
-        <svg
-          className={size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"}
-          viewBox="0 0 24 24"
-        >
-          <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill={isLiked && !likeFillUp ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isLiked && !likeFillUp ? 0 : 2} strokeLinecap="round" strokeLinejoin="round" />
-          {likeFillUp && (
-            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" fill="currentColor" className="animate-[heartPaintFill_0.6s_cubic-bezier(0.22,1,0.36,1)_forwards]" />
-          )}
-        </svg>
-      </motion.button>
+      <HeartLikeButton
+        isLiked={isLiked}
+        trackId={card.id}
+        onToggle={() => onToggleLike()}
+        beforeToggle={isAuthenticated ? undefined : () => false}
+        size={size}
+        ariaLabel={isAuthenticated ? (isLiked ? "Unlike" : "Save") : "Log in to save"}
+        className={`${isLiked ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
+      />
     </Tooltip>
   ) : null;
 
@@ -565,36 +541,70 @@ export default function NowPlayingBanner({
   const pitchHorizontal = (
     <div
       className="hidden min-[1152px]:flex items-center w-20 h-7 cursor-pointer touch-none"
+      onMouseEnter={(e) => {
+        updatePitchTooltip(e.currentTarget as HTMLDivElement, playbackRate);
+      }}
+      onMouseLeave={() => {
+        if (!isDraggingPitchRef.current) removePitchTooltip();
+      }}
       onPointerDown={(e) => {
         e.preventDefault();
         (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
         isDraggingPitchRef.current = true;
-        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const sliderEl = e.currentTarget as HTMLDivElement;
+        const rect = sliderEl.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        onPlaybackRateChange?.(0.88 + ratio * 0.24);
+        const newRate = 0.88 + ratio * 0.24;
+        onPlaybackRateChange?.(newRate);
+        updatePitchTooltip(sliderEl, newRate);
       }}
       onPointerMove={(e) => {
         if (!isDraggingPitchRef.current) return;
-        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const sliderEl = e.currentTarget as HTMLDivElement;
+        const rect = sliderEl.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        onPlaybackRateChange?.(0.88 + ratio * 0.24);
+        const newRate = 0.88 + ratio * 0.24;
+        onPlaybackRateChange?.(newRate);
+        updatePitchTooltip(sliderEl, newRate);
       }}
-      onPointerUp={() => { isDraggingPitchRef.current = false; }}
-      onDoubleClick={() => onPlaybackRateChange?.(1)}
+      onPointerUp={(e) => {
+        isDraggingPitchRef.current = false;
+        // If pointer left the slider during drag, remove the tooltip now
+        const el = e.currentTarget as HTMLDivElement;
+        const rect = el.getBoundingClientRect();
+        const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        if (!inside) removePitchTooltip();
+      }}
+      onDoubleClick={(e) => {
+        onPlaybackRateChange?.(1);
+        updatePitchTooltip(e.currentTarget as HTMLDivElement, 1);
+      }}
     >
       <div className="relative w-full h-1 bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
         <div className="absolute top-0 h-full bg-[var(--text)] rounded-full" style={pitchPercent >= 50 ? { left: '50%', width: `${pitchPercent - 50}%` } : { left: `${pitchPercent}%`, width: `${50 - pitchPercent}%` }} />
         <div className="absolute left-1/2 -translate-x-1/2 w-px h-1 bg-[var(--text)]/60 -top-[11px]" />
         <div className="absolute left-1/2 -translate-x-1/2 w-px h-1 bg-[var(--text)]/60 -bottom-[11px]" />
-        <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ left: `${pitchPercent}%`, top: '50%', transform: 'translate(-50%, -50%)' }} />
+        {/* Knob center clamped to [7px, 73px] inside the 80px track so it never escapes the pill */}
+        <div
+          className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none"
+          style={{ left: `${7 + pitchPercent * 0.66}px`, top: '50%', transform: 'translate(-50%, -50%)' }}
+        />
       </div>
     </div>
   );
+
   const pitchFaderInner = onPlaybackRateChange ? (
-    <div className="relative flex items-center gap-1.5 shrink-0 mr-2 bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg px-1.5 py-0.5">
-      <Tooltip label="Speed adjust" position="top">
+    <div
+      data-pitch-trigger
+      className="relative flex items-center gap-1 shrink-0 mr-1 bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg pl-1 pr-2.5 py-0.5"
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onPlaybackRateChange(1);
+      }}
+    >
+      <Tooltip label="Reset (tap)" position="top" hideOnClick portal>
         <span
-          className="relative flex items-center justify-center font-mono text-[11px] text-[var(--text)] shrink-0 py-0.5 pl-[22px] pr-1 rounded cursor-pointer hover:text-[var(--text)] transition-colors active:scale-95"
+          className="relative flex items-center justify-center font-mono text-[10px] text-[var(--text)] shrink-0 h-6 pl-[19px] pr-0.5 min-[1152px]:pl-[20px] min-[1152px]:pr-1 rounded cursor-pointer hover:text-[var(--text)] transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             if (window.innerWidth >= 1152) {
@@ -604,11 +614,12 @@ export default function NowPlayingBanner({
             }
           }}
         >
-          <svg className="absolute left-1 w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-0.5 w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.153 8.188l-.72-3.236a2.493 2.493 0 00-4.867 0l-3.025 13.614a2 2 0 001.952 2.434h7.014a2 2 0 001.952-2.434l-.524-2.357m-4.935 1.791l9-13" />
             <circle cx="20" cy="5" r="1" fill="currentColor" />
           </svg>
-          <span className="w-[28px] text-center">{pitchDisplay}</span>
+          <span className={`hidden min-[1152px]:inline-block w-1 h-1 rounded-full bg-[var(--accent)] transition-opacity duration-200 ${playbackRate === 1 ? "opacity-0" : "opacity-100"}`} />
+          <span className="w-[22px] text-center tabular-nums min-[1152px]:hidden">{pitchDisplay}</span>
         </span>
       </Tooltip>
       {pitchHorizontal}
@@ -635,12 +646,12 @@ export default function NowPlayingBanner({
       {djMode && showPitchFader && onPlaybackRateChange && (
         <div
           data-pitch-fader
-          className="absolute left-1/2 -translate-x-1/2 px-2 py-2.5 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50 min-[1152px]:hidden"
-          style={{ bottom: "calc(100% + 8px)" }}
+          className="absolute left-1/2 -translate-x-1/2 px-1.5 py-2 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-lg shadow-2xl z-50 min-[1152px]:hidden"
+          style={{ bottom: "calc(100% + 6px)" }}
           onClick={(e) => e.stopPropagation()}
         >
           <div
-            className="relative w-5 h-24 cursor-pointer touch-none mx-auto"
+            className="relative w-4 h-28 cursor-pointer touch-none mx-auto"
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -664,16 +675,16 @@ export default function NowPlayingBanner({
             <div className="absolute left-1/2 -translate-x-1/2 w-1 h-full bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full">
               <div className="absolute left-0 w-full bg-[var(--text)] rounded-full" style={pitchPercent >= 50 ? { top: '50%', height: `${pitchPercent - 50}%` } : { top: `${pitchPercent}%`, height: `${50 - pitchPercent}%` }} />
             </div>
-            <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ top: `${pitchPercent}%`, left: '50%', transform: 'translate(-50%, -50%)' }} />
+            <div className="absolute w-3 h-3 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ top: `${pitchPercent}%`, left: '50%', transform: 'translate(-50%, -50%)' }} />
           </div>
-          <div className="flex items-center justify-center gap-2 mt-2">
+          <div className="flex items-center justify-center gap-1 mt-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); onPlaybackRateChange?.(Math.max(0.88, Math.round((playbackRate - 0.01) * 100) / 100)); }}
-              className={`w-6 h-6 flex items-center justify-center font-mono text-xs font-bold transition-colors cursor-pointer ${playbackRate < 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
+              className={`w-5 h-5 flex items-center justify-center font-mono text-[11px] font-bold transition-colors cursor-pointer ${playbackRate < 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
             >−</button>
             <button
               onClick={(e) => { e.stopPropagation(); onPlaybackRateChange?.(Math.min(1.12, Math.round((playbackRate + 0.01) * 100) / 100)); }}
-              className={`w-6 h-6 flex items-center justify-center font-mono text-xs font-bold transition-colors cursor-pointer ${playbackRate > 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
+              className={`w-5 h-5 flex items-center justify-center font-mono text-[11px] font-bold transition-colors cursor-pointer ${playbackRate > 1 ? "text-[var(--text)]" : "text-[var(--text-muted)]/40"}`}
             >+</button>
           </div>
         </div>
@@ -1042,8 +1053,8 @@ export default function NowPlayingBanner({
 
   const closeButton = (
     <div
-      className="absolute -top-[34px] right-2 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out"
-      style={{ pointerEvents: showClose ? "auto" : "none", visibility: showClose ? "visible" : "hidden" }}
+      className="absolute -top-[34px] right-2 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out group-hover:[transition-delay:0ms]"
+      style={{ transitionDelay: "800ms", pointerEvents: showClose ? "auto" : "none", visibility: showClose ? "visible" : "hidden" }}
     >
       {/* Hit area: bigger than visible button */}
       <button
@@ -1085,14 +1096,14 @@ export default function NowPlayingBanner({
       {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
-      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3 max-w-[1920px] mx-auto w-full" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
+      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3 max-w-[2560px] mx-auto w-full" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
         {/* LEFT: Album art + Track info */}
         <div className="flex items-center gap-2.5 min-w-0">
           {thumbUrl && (
             <Tooltip label="Watch on YouTube" position="top" align="start">
               <div
                 key={card.id}
-                className={`shrink-0 w-[60px] h-[60px] rounded-md overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art cursor-pointer transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
+                className={`shrink-0 w-[70px] h-[70px] rounded-md overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art cursor-pointer transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (card.youtubeUrl) window.open(card.youtubeUrl, "_blank", "noopener,noreferrer");
@@ -1135,9 +1146,9 @@ export default function NowPlayingBanner({
           {/* Row 1: info, heart, transport, shuffle, locate */}
           <div className="flex items-center gap-1.5">
             {infoButton("md")}
-            {likeButton("md")}
+            {likeButton("sm")}
             {hasPrev ? <Tooltip label="Previous (p)" position="top">{prevButton(32)}</Tooltip> : prevButton(32)}
-            <Tooltip label={isPlaying ? "Pause (space)" : "Play (space)"} position="top">{playPauseButton(38, 16)}</Tooltip>
+            <Tooltip label={isPlaying ? "Pause (space / k)" : "Play (space / k)"} position="top">{playPauseButton(38, 16)}</Tooltip>
             <Tooltip label="Next (n)" position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
             {locateButton("md")}

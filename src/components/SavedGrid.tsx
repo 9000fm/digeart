@@ -75,7 +75,8 @@ export default function SavedGrid({
   const filteredCards = activeFilter === "all" ? cards
     : activeFilter === "tracks" ? tracks
     : activeFilter === "samples" ? samples
-    : mixes;
+    : activeFilter === "mixes" ? mixes
+    : [];  // "deleted" → empty (trash tab shows recentlyRemoved list, not cards)
 
   useEffect(() => {
     const allCards = [...cards, ...recentlyRemoved.map(({ deletedAt: _, ...c }) => c)];
@@ -199,24 +200,9 @@ export default function SavedGrid({
       {/* Content */}
       {cards.length > 0 && activeFilter === "all" ? (
         <>
-          {tracks.length > 0 && (
-            <>
-              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Tracks ({tracks.length})</p>
-              {renderGrid(tracks)}
-            </>
-          )}
-          {mixes.length > 0 && (
-            <>
-              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Mixes ({mixes.length})</p>
-              {renderGrid(mixes)}
-            </>
-          )}
-          {samples.length > 0 && (
-            <>
-              <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider px-4 sm:px-[22px] pt-2 pb-0.5">Samples ({samples.length})</p>
-              {renderGrid(samples)}
-            </>
-          )}
+          {tracks.length > 0 && renderGrid(tracks)}
+          {mixes.length > 0 && renderGrid(mixes)}
+          {samples.length > 0 && renderGrid(samples)}
         </>
       ) : cards.length > 0 && filteredCards.length > 0 ? (
         renderGrid(filteredCards)
