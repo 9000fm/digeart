@@ -202,7 +202,7 @@ export default function NowPlayingBanner({
   }, []);
 
   // Mobile minimize state
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const expandedHeightRef = useRef(168);
 
@@ -356,7 +356,7 @@ export default function NowPlayingBanner({
   // Sync --player-height CSS variable for page padding
   useEffect(() => {
     if (isMobile && isMinimized) {
-      document.documentElement.style.setProperty('--player-height', '44px');
+      document.documentElement.style.setProperty('--player-height', '64px');
     } else {
       document.documentElement.style.removeProperty('--player-height');
     }
@@ -905,7 +905,7 @@ export default function NowPlayingBanner({
   );
 
   // Seek bar
-  const seekBar = (barRef: React.RefObject<HTMLDivElement | null>) => (
+  const seekBar = (barRef: React.RefObject<HTMLDivElement | null>, trackHeight = 4, thumbSize = 14) => (
     <div
       className="group/seek flex-1 py-3 px-2 cursor-pointer touch-none"
       onMouseMove={(e) => {
@@ -920,7 +920,8 @@ export default function NowPlayingBanner({
     >
       <div
         ref={barRef}
-        className="relative h-1 bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full"
+        className="relative bg-[color-mix(in_srgb,var(--text-muted)_50%,var(--border))] rounded-full"
+        style={{ height: trackHeight }}
       >
         {/* Hover preview fill */}
         {hoverPercent !== null && !isDragging && (
@@ -941,8 +942,8 @@ export default function NowPlayingBanner({
           className="seek-thumb absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-md pointer-events-none"
           style={{
             left: `${progressPercent}%`,
-            width: 14,
-            height: 14,
+            width: thumbSize,
+            height: thumbSize,
             transition: isDragging ? "none" : "left 200ms linear",
             willChange: "left",
           }}
@@ -974,12 +975,12 @@ export default function NowPlayingBanner({
 
   // Time labels — mobile
   const mobileElapsedLabel = (
-    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9 text-right">
+    <span className="shrink-0 font-mono text-sm text-[var(--text-muted)] tabular-nums w-10 text-right">
       {formatTime(audioProgress)}
     </span>
   );
   const mobileRemainingLabel = (
-    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9">
+    <span className="shrink-0 font-mono text-sm text-[var(--text-muted)] tabular-nums w-10">
       {hasDuration ? `-${formatTime(Math.max(0, audioDuration - audioProgress))}` : "--:--"}
     </span>
   );
@@ -1084,7 +1085,7 @@ export default function NowPlayingBanner({
       animate={{
         y: 0,
         opacity: 1,
-        ...(isMobile ? { height: isMinimized ? 44 : expandedHeightRef.current } : {}),
+        ...(isMobile ? { height: isMinimized ? 64 : expandedHeightRef.current } : {}),
       }}
       /* eslint-enable react-hooks/refs */
       exit={{ y: "100%", opacity: 0 }}
@@ -1175,29 +1176,48 @@ export default function NowPlayingBanner({
       {/* ===== MOBILE layout ===== */}
       <div className="h-full min-[1152px]:hidden">
         {isMinimized ? (
-          /* Minimized micro-strip: enlarge, art, heart, controls, slider, volume */
-          <div className="h-full flex items-center gap-2 px-3">
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsMinimized(false); }}
-              className="shrink-0 w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="18 15 12 9 6 15" />
-              </svg>
-            </button>
-            {thumbUrl && (
-              <div className="shrink-0 w-7 h-7 rounded overflow-hidden bg-[var(--bg)]">
-                <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+          /* Minimized Spotify-style bar: art + title/artist + heart + play/pause, progress at bottom */
+          <div
+            className="h-full flex flex-col cursor-pointer"
+            onClick={() => setIsMinimized(false)}
+          >
+            {/* Main row */}
+            <div className="flex-1 flex items-center gap-3 px-3">
+              {thumbUrl && (
+                <div className="shrink-0 w-11 h-11 rounded-md overflow-hidden bg-[var(--bg)] shadow-sm">
+                  <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold">
+                  {card.name}
+                </p>
+                <p className="font-mono text-xs text-[var(--text-secondary)] uppercase truncate leading-tight">
+                  {card.artist}
+                </p>
               </div>
-            )}
-            {likeButton("sm")}
-            {prevButton(18)}
-            {playPauseButton(22, 9)}
-            {nextButton(18)}
-            <div className="flex-1 min-w-[40px]">
-              {seekBar(miniBarRef)}
+              <div className="shrink-0 flex items-center gap-2.5" onClick={(e) => e.stopPropagation()}>
+                <div className="shrink-0">{eqBars}</div>
+                {likeButton("md")}
+                {playPauseButton(36, 14)}
+              </div>
             </div>
-            {mobileVolumeToggle()}
+            {/* Bottom progress bar — thin, clickable to seek */}
+            <div
+              className="w-full h-[3px] bg-[color-mix(in_srgb,var(--text-muted)_30%,var(--border))] cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!onSeek || !hasDuration) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                onSeek(ratio * audioDuration);
+              }}
+            >
+              <div
+                className="h-full bg-[var(--text)] pointer-events-none rounded-r-full"
+                style={{ width: `${progressPercent}%`, transition: "width 200ms linear" }}
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -1258,8 +1278,8 @@ export default function NowPlayingBanner({
 
             {/* Row 2: Transport controls — centered */}
             <div className="flex items-center justify-center gap-3">
-              {infoButton("sm")}
-              {likeButton("sm")}
+              {infoButton("md")}
+              {likeButton("md")}
               {prevButton(32)}
               {playPauseButton(40, 16)}
               {nextButton(32)}
@@ -1286,14 +1306,13 @@ export default function NowPlayingBanner({
                 </button>
               )}
               {queueButton}
-              {pitchFader}
               {mobileVolumeToggle()}
             </div>
 
             {/* Row 3: Seek bar */}
             <div className="flex items-center gap-1.5">
               {mobileElapsedLabel}
-              {seekBar(mobileProgressBarRef)}
+              {seekBar(mobileProgressBarRef, 6, 18)}
               {mobileRemainingLabel}
             </div>
           </div>
@@ -1377,7 +1396,6 @@ export default function NowPlayingBanner({
                   </button>
                 )}
                 {locateButton("sm")}
-                {pitchFader}
               </div>
               {/* Right: queue ··· volume + fullscreen */}
               <div className="flex items-center w-full relative z-10">

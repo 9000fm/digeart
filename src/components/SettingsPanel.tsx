@@ -102,11 +102,11 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                 </button>
               </div>
 
-              {/* DJ Mode toggle */}
+              {/* Speed toggle — desktop/tablet only */}
               {onToggleDjMode && (
-                <div className="flex items-center justify-between">
+                <div className="hidden min-[1152px]:flex items-center justify-between">
                   <span className="font-mono text-xs text-[var(--text)]">
-                    DJ Mode
+                    Speed Adjust
                   </span>
                   <button
                     onClick={onToggleDjMode}
