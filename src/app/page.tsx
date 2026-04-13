@@ -84,9 +84,11 @@ export default function Home() {
   });
   const [isMuted, setIsMuted] = useState(() => {
     if (typeof window !== "undefined") {
-      return !localStorage.getItem("digeart-onboarded");
+      const saved = localStorage.getItem("digeart-muted");
+      if (saved !== null) return saved === "1";
+      return false;
     }
-    return true;
+    return false;
   });
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
@@ -860,11 +862,13 @@ export default function Home() {
     if (newVolume > 0 && isMutedRef.current) {
       isMutedRef.current = false;
       setIsMuted(false);
+      localStorage.setItem("digeart-muted", "0");
       if (ytPlayerRef.current) try { ytPlayerRef.current.unMute(); } catch { /* ignore */ }
     }
     if (newVolume === 0 && !isMutedRef.current) {
       isMutedRef.current = true;
       setIsMuted(true);
+      localStorage.setItem("digeart-muted", "1");
       if (ytPlayerRef.current) try { ytPlayerRef.current.mute(); } catch { /* ignore */ }
     }
     // Throttled state + localStorage update (every 150ms instead of every pixel)
@@ -887,6 +891,7 @@ export default function Home() {
   const handleToggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
+      localStorage.setItem("digeart-muted", next ? "1" : "0");
       if (ytPlayerRef.current) {
         try {
           if (next) ytPlayerRef.current.mute();
@@ -1067,7 +1072,7 @@ export default function Home() {
         activeGenreLabels={activeGenreLabels}
         onGenreLabelsChange={setActiveGenreLabels}
         showAbout={showAbout}
-        onToggleAbout={() => setShowAbout((v) => !v)}
+        onSetAbout={setShowAbout}
         onRunTutorial={() => { setShowAbout(false); setShowQueue(false); setShowOnboarding(true); }}
         djMode={djMode}
         onToggleDjMode={isAuthenticated ? handleDjModeToggle : undefined}

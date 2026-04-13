@@ -768,22 +768,42 @@ export default function NowPlayingBanner({
     );
 
     return (
-      <div className="group/vol relative flex items-center gap-1.5">
-        {/* Speaker button: mute toggle (wide) or popup toggle (compact/narrow) */}
-        <Tooltip label={showVolumeFader ? "" : (isMuted ? "Unmute (m)" : "Volume (m)")} hideOnClick>
+      <div
+        className="group/vol relative flex items-center gap-1.5"
+        onMouseEnter={() => {
+          const sliderVisible = trackRef.current && getComputedStyle(trackRef.current).display !== "none";
+          if (!sliderVisible) {
+            if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
+            updateDragVolume(volume);
+            setShowVolumeFader(true);
+          }
+        }}
+        onMouseLeave={() => {
+          if (showVolumeFader && !isDraggingVolRef.current) {
+            if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
+            volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 800);
+          }
+        }}
+      >
+        {/* Speaker button: mute/unmute (hover opens fader, touch toggles fader) */}
+        <Tooltip label={showVolumeFader ? "" : (isMuted ? "Unmute (m)" : "Mute (m)")} hideOnClick>
           <button
             ref={volumeIconRef}
             data-volume-icon
             onClick={(e) => {
               e.stopPropagation();
-              const sliderVisible = trackRef.current && getComputedStyle(trackRef.current).display !== "none";
-              if (sliderVisible) {
-                onToggleMute?.();
-              } else {
-                isDraggingVolRef.current = false;
-                setIsDraggingVol(false);
-                updateDragVolume(volume);
-                setShowVolumeFader((prev) => !prev);
+              onToggleMute?.();
+            }}
+            onPointerDown={(e) => {
+              // Touch devices: tap toggles fader (no hover available)
+              if (e.pointerType === "touch") {
+                e.stopPropagation();
+                const sliderVisible = trackRef.current && getComputedStyle(trackRef.current).display !== "none";
+                if (!sliderVisible) {
+                  e.preventDefault();
+                  updateDragVolume(volume);
+                  setShowVolumeFader((prev) => !prev);
+                }
               }
             }}
             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95"
@@ -823,13 +843,27 @@ export default function NowPlayingBanner({
           </div>
         </div>
         {/* Vertical fader popup — narrow screens only */}
+        <AnimatePresence>
         {showVolumeFader && (
-          <div
+          <motion.div
             ref={volumeFaderRef}
             data-volume-fader
+            initial={{ scaleY: 0, opacity: 0 }}
+            animate={{ scaleY: 1, opacity: 1 }}
+            exit={{ scaleY: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
             className="absolute left-1/2 -translate-x-1/2 px-3 py-3 bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl z-50"
-            style={{ bottom: "calc(100% + 8px)" }}
+            style={{ bottom: "calc(100% + 8px)", transformOrigin: "bottom center" }}
             onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => {
+              if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
+            }}
+            onMouseLeave={() => {
+              if (!isDraggingVolRef.current) {
+                if (volumeIdleTimer.current) clearTimeout(volumeIdleTimer.current);
+                volumeIdleTimer.current = setTimeout(() => setShowVolumeFader(false), 800);
+              }
+            }}
           >
             <div
               ref={faderRef}
@@ -871,8 +905,9 @@ export default function NowPlayingBanner({
               </div>
               <div className="absolute w-3.5 h-3.5 rounded-full bg-[var(--bg)] border-2 border-[var(--text)] shadow-sm pointer-events-none" style={{ bottom: `${effectiveVolume}%`, left: '50%', transform: 'translate(-50%, 50%)', transition: isDraggingVol ? 'none' : 'bottom 150ms cubic-bezier(0.4,0,0.2,1)' }} />
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -963,24 +998,24 @@ export default function NowPlayingBanner({
 
   // Time labels — desktop
   const elapsedLabel = (
-    <span className="shrink-0 font-mono text-xs text-[var(--text-muted)] tabular-nums w-9 text-right">
+    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9 text-right">
       {formatTime(audioProgress)}
     </span>
   );
   const remainingLabel = (
-    <span className="shrink-0 font-mono text-xs text-[var(--text-muted)] tabular-nums w-9">
+    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9">
       {hasDuration ? `-${formatTime(Math.max(0, audioDuration - audioProgress))}` : "--:--"}
     </span>
   );
 
   // Time labels — mobile
   const mobileElapsedLabel = (
-    <span className="shrink-0 font-mono text-sm text-[var(--text-muted)] tabular-nums w-10 text-right">
+    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9 text-right">
       {formatTime(audioProgress)}
     </span>
   );
   const mobileRemainingLabel = (
-    <span className="shrink-0 font-mono text-sm text-[var(--text-muted)] tabular-nums w-10">
+    <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)] tabular-nums w-9">
       {hasDuration ? `-${formatTime(Math.max(0, audioDuration - audioProgress))}` : "--:--"}
     </span>
   );
@@ -1097,7 +1132,7 @@ export default function NowPlayingBanner({
       {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
-      <div className="h-full hidden min-[1152px]:grid items-center pl-3 pr-3 gap-3 max-w-[2560px] mx-auto w-full" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
+      <div className="h-full hidden min-[1152px]:grid items-center pl-2.5 pr-1.5 gap-1.5 max-w-[2560px] mx-auto w-full" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
         {/* LEFT: Album art + Track info */}
         <div className="flex items-center gap-2.5 min-w-0">
           {thumbUrl && (
@@ -1131,7 +1166,7 @@ export default function NowPlayingBanner({
                 <p className="font-mono text-[14px] text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
                   {card.name}
                 </p>
-                <p className="font-mono text-[12px] text-[var(--text-secondary)] uppercase truncate leading-tight">
+                <p className="font-mono text-[11px] text-[var(--text-secondary)] uppercase truncate leading-tight">
                   {card.artist}
                 </p>
               </>
@@ -1156,7 +1191,7 @@ export default function NowPlayingBanner({
             {pitchFader}
           </div>
           {/* Row 2: Seek bar */}
-          <div className="w-full flex items-center gap-1.5 px-4">
+          <div className="w-full flex items-center gap-1 px-1">
             {elapsedLabel}
             {seekBar(progressBarRef)}
             {remainingLabel}
@@ -1227,9 +1262,9 @@ export default function NowPlayingBanner({
             <div className="flex items-center gap-2.5 min-w-0">
               <button
                 onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
-                className="shrink-0 w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
+                className="shrink-0 w-8 h-8 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
@@ -1325,9 +1360,9 @@ export default function NowPlayingBanner({
               <div className="flex items-center gap-2 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
-                  className="shrink-0 w-6 h-6 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
+                  className="shrink-0 w-7 h-7 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
                 >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </button>

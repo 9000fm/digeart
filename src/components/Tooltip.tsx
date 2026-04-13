@@ -118,7 +118,7 @@ export default function Tooltip({ label, children, position = "top", align = "ce
   return (
     <div ref={wrapRef} className="relative" onMouseEnter={onEnter} onMouseLeave={onLeave} onClickCapture={onClickCapture}>
       {children}
-      {!portal && (
+      {!portal && label && (
         <div
           ref={tipRef}
           style={translateStyle}

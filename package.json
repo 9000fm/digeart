@@ -1,6 +1,6 @@
 {
   "name": "digeart",
-  "version": "1.9.0-beta",
+  "version": "1.9.2-beta",
   "private": true,
   "description": "Music discovery for diggers.",
   "scripts": {
