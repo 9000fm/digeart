@@ -1,4 +1,7 @@
-export type Locale = "es" | "en";
+export type Locale = "es" | "en" | "fr" | "ja" | "ru";
+
+const LOCALES: Locale[] = ["en", "es", "fr", "ja", "ru"];
+export { LOCALES };
 
 export const translations: Record<Locale, Record<string, string>> = {
   es: {
@@ -153,7 +156,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "settings.theme": "Theme",
     "settings.speedAdjust": "Speed Adjust",
     "settings.tutorial": "Tutorial",
-    "settings.about": "About",
+    "settings.about": "Info",
     "settings.language": "Language",
     "settings.signInToUnlock": "Sign in to unlock",
     "settings.on": "On",
@@ -171,7 +174,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.saveTracksSync": "Save tracks & sync across devices",
     "auth.theme": "Theme",
     "auth.settings": "Settings",
-    "auth.about": "About",
+    "auth.about": "Info",
 
     // Player
     "player.unavailable": "Unavailable · skipping…",
@@ -280,5 +283,425 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Misc
     "misc.noMatchingGenres": "No matching genres",
     "misc.clearAll": "Clear all",
+  },
+  fr: {
+    // Navigation
+    "nav.forYou": "Pour toi",
+    "nav.mixes": "Mixes",
+    "nav.samples": "Samples",
+    "nav.saved": "Sauvegardés",
+
+    // Settings
+    "settings.title": "RÉGLAGES",
+    "settings.theme": "Thème",
+    "settings.speedAdjust": "Vitesse",
+    "settings.tutorial": "Tutorial",
+    "settings.about": "Info",
+    "settings.language": "Langue",
+    "settings.signInToUnlock": "Connecte-toi pour débloquer",
+    "settings.on": "On",
+    "settings.off": "Off",
+    "settings.run": "Lancer",
+    "settings.view": "Voir",
+    "settings.dark": "Dark",
+    "settings.light": "Light",
+
+    // Auth
+    "auth.signIn": "Se connecter",
+    "auth.signInWithGoogle": "Se connecter avec Google",
+    "auth.signOut": "Se déconnecter",
+    "auth.savedTracks": "Tracks sauvegardés",
+    "auth.saveTracksSync": "Sauvegarde tes tracks et synchronise entre appareils",
+    "auth.theme": "Thème",
+    "auth.settings": "Réglages",
+    "auth.about": "Info",
+
+    // Player
+    "player.unavailable": "Indisponible · passage…",
+    "player.watchOnYoutube": "Voir sur YouTube",
+    "player.closePlayer": "Fermer le lecteur",
+    "player.play": "Lecture (space / k)",
+    "player.pause": "Pause (space / k)",
+    "player.next": "Suivant (n)",
+    "player.previous": "Précédent (p)",
+    "player.shuffleOn": "Shuffle on (s)",
+    "player.shuffleOff": "Shuffle off (s)",
+    "player.mute": "Muet (m)",
+    "player.unmute": "Son activé (m)",
+    "player.locate": "Localiser (l)",
+    "player.fullscreen": "Plein écran (f)",
+    "player.queue": "Queue (q)",
+    "player.reset": "Reset (tap)",
+
+    // Queue
+    "queue.title": "Queue",
+    "queue.close": "Fermer la queue",
+    "queue.empty": "Queue vide",
+    "queue.nowPlaying": "En lecture",
+    "queue.upNext": "Suivant",
+    "queue.previouslyPlayed": "Déjà joué",
+
+    // Cards
+    "card.save": "Sauvegarder",
+    "card.saved": "Sauvegardé !",
+    "card.unlike": "Retirer",
+    "card.loginToSave": "Connecte-toi pour sauvegarder",
+
+    // Saved
+    "saved.signInToSave": "Connecte-toi pour sauvegarder des tracks",
+    "saved.noSavedYet": "Pas encore de tracks sauvegardés",
+    "saved.all": "Tout",
+    "saved.tracks": "Tracks",
+    "saved.mixes": "Mixes",
+    "saved.samples": "Samples",
+    "saved.noSavedFilter": "Pas encore de {filter} sauvegardés",
+    "saved.recentlyRemoved": "Supprimés récemment",
+    "saved.play": "Lecture",
+    "saved.restore": "Restaurer",
+    "saved.deletePermanently": "Supprimer définitivement",
+    "saved.clearAll": "Tout effacer",
+    "saved.discoverMore": "Va dans {tab} pour en découvrir",
+
+    // Toast
+    "toast.removed": "Supprimé",
+    "toast.undo": "Annuler",
+
+    // Tutorial
+    "tutorial.clickToPlay": "Clique pour écouter",
+    "tutorial.clickToPlayDesc": "Clique sur n'importe quelle carte pour écouter.",
+    "tutorial.thePlayer": "Le lecteur",
+    "tutorial.thePlayerDesc": "Play, pause, localiser, volume, shuffle — tous les contrôles sont ici.",
+    "tutorial.browseYourWay": "Explore à ta façon",
+    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes & Sauvegardés — chaque tab affiche une musique différente.",
+    "tutorial.filters": "Filtres",
+    "tutorial.filtersDesc": "Filtres par genre et année bientôt disponibles.",
+    "tutorial.yourMenu": "Ton menu",
+    "tutorial.yourMenuDesc": "Thème, info, réglages et plus — tout dans ton menu profil.",
+    "tutorial.yourMenuDescMobile": "Réglages, info et tracks sauvegardés — tout dans ton menu profil.",
+    "tutorial.skipTitle": "Passer le tutorial ?",
+    "tutorial.skipDesc": "Tu peux le relancer depuis les Réglages.",
+    "tutorial.continue": "Continuer",
+    "tutorial.skip": "Passer",
+    "tutorial.done": "Terminé",
+
+    // Welcome
+    "welcome.tagline": "La musique à découvrir",
+    "welcome.signInPrompt": "Connecte-toi pour sauvegarder tes trouvailles.",
+    "welcome.skip": "Passer pour l'instant",
+
+    // About
+    "about.tagline": "Musique selecte pour diggers. Sélection 100% humaine.",
+    "about.tags": "Tags",
+    "about.trending": "En tendance",
+    "about.hiddenGems": "Pépites cachées",
+    "about.addedRecently": "Ajoutés récemment",
+    "about.shortcuts": "Raccourcis",
+    "about.tabs": "Tabs",
+    "about.electronic": "Électro underground selecte",
+    "about.djSets": "DJ sets & live sets",
+    "about.worldFunk": "World, funk, jazz, ambient & raretés",
+    "about.yourLiked": "Tes tracks favoris",
+    "about.legal": "Tous les tracks sont la propriété de leurs propriétaires et ayants droit respectifs. Cette plateforme ne revendique la propriété d'aucun contenu.",
+    "about.projectPrefix": "",
+    "about.projectSuffix": "· 2026",
+    "about.shortcutPlayPause": "Lecture / Pause",
+    "about.shortcutNext": "Track suivant",
+    "about.shortcutPrev": "Track précédent",
+    "about.shortcutShuffle": "Shuffle on/off",
+    "about.shortcutMute": "Muet / Son",
+    "about.shortcutLocate": "Localiser le track",
+    "about.shortcutQueue": "Afficher la queue",
+    "about.shortcutTab": "Changer de tab",
+    "about.shortcutPanel": "Afficher ce panneau",
+
+    // Search
+    "search.comingSoon": "Bientôt disponible",
+
+    // Maintenance
+    "maintenance.backSoon": "On revient vite",
+
+    // Misc
+    "misc.noMatchingGenres": "Aucun genre correspondant",
+    "misc.clearAll": "Tout effacer",
+  },
+  ja: {
+    // Navigation
+    "nav.forYou": "おすすめ",
+    "nav.mixes": "Mixes",
+    "nav.samples": "Samples",
+    "nav.saved": "保存済み",
+
+    // Settings
+    "settings.title": "設定",
+    "settings.theme": "テーマ",
+    "settings.speedAdjust": "再生速度",
+    "settings.tutorial": "Tutorial",
+    "settings.about": "Info",
+    "settings.language": "言語",
+    "settings.signInToUnlock": "ログインして解除",
+    "settings.on": "On",
+    "settings.off": "Off",
+    "settings.run": "実行",
+    "settings.view": "表示",
+    "settings.dark": "Dark",
+    "settings.light": "Light",
+
+    // Auth
+    "auth.signIn": "ログイン",
+    "auth.signInWithGoogle": "Googleでログイン",
+    "auth.signOut": "ログアウト",
+    "auth.savedTracks": "保存したトラック",
+    "auth.saveTracksSync": "トラックを保存してデバイス間で同期",
+    "auth.theme": "テーマ",
+    "auth.settings": "設定",
+    "auth.about": "Info",
+
+    // Player
+    "player.unavailable": "再生不可 · スキップ中…",
+    "player.watchOnYoutube": "YouTubeで見る",
+    "player.closePlayer": "プレイヤーを閉じる",
+    "player.play": "再生 (space / k)",
+    "player.pause": "一時停止 (space / k)",
+    "player.next": "次へ (n)",
+    "player.previous": "前へ (p)",
+    "player.shuffleOn": "Shuffle on (s)",
+    "player.shuffleOff": "Shuffle off (s)",
+    "player.mute": "ミュート (m)",
+    "player.unmute": "ミュート解除 (m)",
+    "player.locate": "トラックを探す (l)",
+    "player.fullscreen": "フルスクリーン (f)",
+    "player.queue": "Queue (q)",
+    "player.reset": "リセット (tap)",
+
+    // Queue
+    "queue.title": "Queue",
+    "queue.close": "Queueを閉じる",
+    "queue.empty": "Queueなし",
+    "queue.nowPlaying": "再生中",
+    "queue.upNext": "次に再生",
+    "queue.previouslyPlayed": "再生済み",
+
+    // Cards
+    "card.save": "保存",
+    "card.saved": "保存済み!",
+    "card.unlike": "削除",
+    "card.loginToSave": "ログインして保存",
+
+    // Saved
+    "saved.signInToSave": "ログインしてトラックを保存",
+    "saved.noSavedYet": "保存したトラックはまだない",
+    "saved.all": "すべて",
+    "saved.tracks": "Tracks",
+    "saved.mixes": "Mixes",
+    "saved.samples": "Samples",
+    "saved.noSavedFilter": "保存した{filter}はまだない",
+    "saved.recentlyRemoved": "最近削除したもの",
+    "saved.play": "再生",
+    "saved.restore": "復元",
+    "saved.deletePermanently": "完全に削除",
+    "saved.clearAll": "すべてクリア",
+    "saved.discoverMore": "{tab}で新しい音楽を見つけよう",
+
+    // Toast
+    "toast.removed": "削除済み",
+    "toast.undo": "元に戻す",
+
+    // Tutorial
+    "tutorial.clickToPlay": "クリックして再生",
+    "tutorial.clickToPlayDesc": "カードをクリックして聴き始めよう。",
+    "tutorial.thePlayer": "プレイヤー",
+    "tutorial.thePlayerDesc": "再生、一時停止、トラック探索、音量、shuffle — すべてここに。",
+    "tutorial.browseYourWay": "自分のスタイルで探索",
+    "tutorial.browseYourWayDesc": "Tracks、Samples、Mixes、保存済み — 各タブで違う音楽が見つかる。",
+    "tutorial.filters": "フィルター",
+    "tutorial.filtersDesc": "ジャンル・年代フィルターは近日公開。",
+    "tutorial.yourMenu": "メニュー",
+    "tutorial.yourMenuDesc": "テーマ、info、設定など — すべてプロフィールメニューに。",
+    "tutorial.yourMenuDescMobile": "設定、info、保存したトラック — すべてプロフィールメニューに。",
+    "tutorial.skipTitle": "Tutorialをスキップ？",
+    "tutorial.skipDesc": "設定からいつでも再開できる。",
+    "tutorial.continue": "続ける",
+    "tutorial.skip": "スキップ",
+    "tutorial.done": "完了",
+
+    // Welcome
+    "welcome.tagline": "ディガーのための音楽発見",
+    "welcome.signInPrompt": "ログインしてお気に入りを保存しよう。",
+    "welcome.skip": "今はスキップ",
+
+    // About
+    "about.tagline": "ディガーのための音楽発見。すべて人の手で選曲。",
+    "about.tags": "Tags",
+    "about.trending": "トレンド",
+    "about.hiddenGems": "隠れた名曲",
+    "about.addedRecently": "最近追加",
+    "about.shortcuts": "ショートカット",
+    "about.tabs": "Tabs",
+    "about.electronic": "アンダーグラウンドの電子音楽",
+    "about.djSets": "DJ sets & live sets",
+    "about.worldFunk": "ワールド、ファンク、ジャズ、ambient、レア音源",
+    "about.yourLiked": "お気に入りのトラック",
+    "about.legal": "すべてのトラックは各権利者の所有物です。本プラットフォームはコンテンツの所有権を主張しません。",
+    "about.projectPrefix": "",
+    "about.projectSuffix": "· 2026",
+    "about.shortcutPlayPause": "再生 / 一時停止",
+    "about.shortcutNext": "次のトラック",
+    "about.shortcutPrev": "前のトラック",
+    "about.shortcutShuffle": "Shuffle 切替",
+    "about.shortcutMute": "ミュート 切替",
+    "about.shortcutLocate": "トラックを探す",
+    "about.shortcutQueue": "Queue 切替",
+    "about.shortcutTab": "タブ切替",
+    "about.shortcutPanel": "パネル切替",
+
+    // Search
+    "search.comingSoon": "近日公開",
+
+    // Maintenance
+    "maintenance.backSoon": "すぐ戻ります",
+
+    // Misc
+    "misc.noMatchingGenres": "一致するジャンルなし",
+    "misc.clearAll": "すべてクリア",
+  },
+  ru: {
+    // Navigation
+    "nav.forYou": "Для тебя",
+    "nav.mixes": "Mixes",
+    "nav.samples": "Samples",
+    "nav.saved": "Сохранённые",
+
+    // Settings
+    "settings.title": "НАСТРОЙКИ",
+    "settings.theme": "Тема",
+    "settings.speedAdjust": "Скорость",
+    "settings.tutorial": "Tutorial",
+    "settings.about": "Info",
+    "settings.language": "Язык",
+    "settings.signInToUnlock": "Войди, чтобы разблокировать",
+    "settings.on": "Вкл",
+    "settings.off": "Выкл",
+    "settings.run": "Запуск",
+    "settings.view": "Открыть",
+    "settings.dark": "Dark",
+    "settings.light": "Light",
+
+    // Auth
+    "auth.signIn": "Войти",
+    "auth.signInWithGoogle": "Войти через Google",
+    "auth.signOut": "Выйти",
+    "auth.savedTracks": "Сохранённые треки",
+    "auth.saveTracksSync": "Сохраняй треки и синхронизируй между устройствами",
+    "auth.theme": "Тема",
+    "auth.settings": "Настройки",
+    "auth.about": "Info",
+
+    // Player
+    "player.unavailable": "Недоступно · пропуск…",
+    "player.watchOnYoutube": "Смотреть на YouTube",
+    "player.closePlayer": "Закрыть плеер",
+    "player.play": "Воспроизвести (space / k)",
+    "player.pause": "Пауза (space / k)",
+    "player.next": "Следующий (n)",
+    "player.previous": "Предыдущий (p)",
+    "player.shuffleOn": "Shuffle on (s)",
+    "player.shuffleOff": "Shuffle off (s)",
+    "player.mute": "Без звука (m)",
+    "player.unmute": "Включить звук (m)",
+    "player.locate": "Найти трек (l)",
+    "player.fullscreen": "Полный экран (f)",
+    "player.queue": "Queue (q)",
+    "player.reset": "Сброс (tap)",
+
+    // Queue
+    "queue.title": "Queue",
+    "queue.close": "Закрыть queue",
+    "queue.empty": "Queue пусто",
+    "queue.nowPlaying": "Сейчас играет",
+    "queue.upNext": "Далее",
+    "queue.previouslyPlayed": "Уже играло",
+
+    // Cards
+    "card.save": "Сохранить",
+    "card.saved": "Сохранено!",
+    "card.unlike": "Убрать",
+    "card.loginToSave": "Войди, чтобы сохранить",
+
+    // Saved
+    "saved.signInToSave": "Войди, чтобы сохранять треки",
+    "saved.noSavedYet": "Пока нет сохранённых треков",
+    "saved.all": "Все",
+    "saved.tracks": "Tracks",
+    "saved.mixes": "Mixes",
+    "saved.samples": "Samples",
+    "saved.noSavedFilter": "Пока нет сохранённых {filter}",
+    "saved.recentlyRemoved": "Недавно удалённые",
+    "saved.play": "Играть",
+    "saved.restore": "Восстановить",
+    "saved.deletePermanently": "Удалить навсегда",
+    "saved.clearAll": "Очистить всё",
+    "saved.discoverMore": "Перейди в {tab}, чтобы найти ещё",
+
+    // Toast
+    "toast.removed": "Удалено",
+    "toast.undo": "Отменить",
+
+    // Tutorial
+    "tutorial.clickToPlay": "Нажми, чтобы слушать",
+    "tutorial.clickToPlayDesc": "Нажми на любую карточку, чтобы начать слушать.",
+    "tutorial.thePlayer": "Плеер",
+    "tutorial.thePlayerDesc": "Воспроизведение, пауза, поиск, громкость, shuffle — всё здесь.",
+    "tutorial.browseYourWay": "Исследуй по-своему",
+    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes и Сохранённые — каждый tab показывает разную музыку.",
+    "tutorial.filters": "Фильтры",
+    "tutorial.filtersDesc": "Фильтры по жанру и году скоро появятся.",
+    "tutorial.yourMenu": "Твоё меню",
+    "tutorial.yourMenuDesc": "Тема, info, настройки и другое — всё в меню профиля.",
+    "tutorial.yourMenuDescMobile": "Настройки, info и сохранённые треки — всё в меню профиля.",
+    "tutorial.skipTitle": "Пропустить tutorial?",
+    "tutorial.skipDesc": "Можно перезапустить из Настроек.",
+    "tutorial.continue": "Продолжить",
+    "tutorial.skip": "Пропустить",
+    "tutorial.done": "Готово",
+
+    // Welcome
+    "welcome.tagline": "Музыка для диггеров",
+    "welcome.signInPrompt": "Войди, чтобы сохранять находки.",
+    "welcome.skip": "Пропустить",
+
+    // About
+    "about.tagline": "Музыка для диггеров. Всё отобрано вручную.",
+    "about.tags": "Tags",
+    "about.trending": "В тренде",
+    "about.hiddenGems": "Скрытые жемчужины",
+    "about.addedRecently": "Недавно добавленные",
+    "about.shortcuts": "Горячие клавиши",
+    "about.tabs": "Tabs",
+    "about.electronic": "Андеграунд электроника",
+    "about.djSets": "DJ sets & live sets",
+    "about.worldFunk": "World, funk, jazz, ambient и редкие находки",
+    "about.yourLiked": "Твои любимые треки",
+    "about.legal": "Все треки являются собственностью их владельцев и правообладателей. Платформа не претендует на права на какой-либо контент.",
+    "about.projectPrefix": "",
+    "about.projectSuffix": "· 2026",
+    "about.shortcutPlayPause": "Воспроизведение / Пауза",
+    "about.shortcutNext": "Следующий трек",
+    "about.shortcutPrev": "Предыдущий трек",
+    "about.shortcutShuffle": "Shuffle вкл/выкл",
+    "about.shortcutMute": "Звук вкл/выкл",
+    "about.shortcutLocate": "Найти трек",
+    "about.shortcutQueue": "Показать queue",
+    "about.shortcutTab": "Сменить tab",
+    "about.shortcutPanel": "Показать панель",
+
+    // Search
+    "search.comingSoon": "Скоро",
+
+    // Maintenance
+    "maintenance.backSoon": "Скоро вернёмся",
+
+    // Misc
+    "misc.noMatchingGenres": "Нет подходящих жанров",
+    "misc.clearAll": "Очистить всё",
   },
 };

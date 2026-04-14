@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useTheme } from "./ThemeProvider";
 import { useTranslation } from "@/components/LanguageProvider";
+import { LOCALES } from "@/lib/i18n";
 
 interface AuthButtonProps {
   onGoToSaved?: () => void;
@@ -64,7 +65,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
   );
 
   const langRow = (
-    <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setLocale(locale === "es" ? "en" : "es"); }}>
+    <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]); }}>
       <span className="flex items-center gap-2.5">
         <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />

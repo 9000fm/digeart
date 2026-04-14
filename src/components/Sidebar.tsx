@@ -45,10 +45,12 @@ const BANNER_PHRASES = [
 
 const SEPARATOR_ICONS = ["✦", "◇", "⬥", "✧", "◆", "⏣", "✦"];
 
-const BANNER_TEXT = BANNER_PHRASES.map((phrase, i) => {
+const BANNER_SINGLE = BANNER_PHRASES.map((phrase, i) => {
   const icon = SEPARATOR_ICONS[i % SEPARATOR_ICONS.length];
   return `${phrase}     ${icon}     `;
 }).join("");
+// Repeat enough to fill any viewport width (~6000px per repeat)
+const BANNER_TEXT = BANNER_SINGLE.repeat(4);
 
 const GENRE_PRESETS = [
   { label: "All", genres: ["electronic", "house", "techno"] },
@@ -329,9 +331,6 @@ export default function Sidebar({
       >
         <div className="marquee-track inline-flex whitespace-nowrap">
           <span className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
-            {BANNER_TEXT}
-          </span>
-          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
             {BANNER_TEXT}
           </span>
           <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
@@ -861,7 +860,7 @@ export default function Sidebar({
       </AnimatePresence>
 
       {/* Settings Panel */}
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} onOpenInfo={() => { setAboutSource("gear"); const rect = gearRef.current?.getBoundingClientRect(); if (rect) setGearAnchor({ left: rect.right + 12, bottom: "calc(var(--player-height) + 16px)" }); setShowAbout(true); setSettingsOpen(false); }} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} onOpenInfo={() => { setAboutSource("gear"); const rect = gearRef.current?.getBoundingClientRect(); if (rect) { const playerEl = document.querySelector(".player-banner"); const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16; setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` }); } setShowAbout(true); setSettingsOpen(false); }} />
     </>
   );
 }

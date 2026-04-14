@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "@/components/LanguageProvider";
+import { LOCALES } from "@/lib/i18n";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -107,16 +108,16 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               </div>
 
               {/* Language toggle — always visible */}
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => setLocale(locale === "en" ? "es" : "en")}>
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length])}>
                 <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
                   {t("settings.language")}
                 </span>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setLocale(locale === "en" ? "es" : "en"); }}
+                  onClick={(e) => { e.stopPropagation(); setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]); }}
                   style={{ fontSize: 9 }}
                   className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                 >
-                  {locale === "es" ? "ES" : "EN"}
+                  {locale.toUpperCase()}
                 </button>
               </div>
 

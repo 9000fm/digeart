@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { translations, type Locale } from "@/lib/i18n";
+import { translations, LOCALES, type Locale } from "@/lib/i18n";
 
 interface LanguageContextValue {
   locale: Locale;
@@ -22,8 +22,13 @@ export function useTranslation() {
 function getDefaultLocale(): Locale {
   if (typeof window === "undefined") return "en";
   const saved = localStorage.getItem("digeart-lang");
-  if (saved === "es" || saved === "en") return saved;
-  return navigator.language.startsWith("es") ? "es" : "en";
+  if (saved && LOCALES.includes(saved as Locale)) return saved as Locale;
+  const lang = navigator.language.toLowerCase();
+  if (lang.startsWith("es")) return "es";
+  if (lang.startsWith("fr")) return "fr";
+  if (lang.startsWith("ja")) return "ja";
+  if (lang.startsWith("ru")) return "ru";
+  return "en";
 }
 
 export default function LanguageProvider({ children }: { children: ReactNode }) {
