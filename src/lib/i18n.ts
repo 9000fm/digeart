@@ -110,7 +110,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Ahora no",
 
     // About
-    "about.tagline": "Música selecta para diggers. Todo seleccionado a mano.",
+    "about.tagline": "Digeart es un proyecto personal dedicado a encontrar y compartir música para oídos curiosos. Todo seleccionado a mano.",
     "about.tags": "Tags",
     "about.trending": "Lo más escuchado",
     "about.hiddenGems": "Rarezas",
@@ -130,9 +130,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutShuffle": "Shuffle on/off",
     "about.shortcutMute": "Silenciar / Activar",
     "about.shortcutLocate": "Localizar track",
-    "about.shortcutQueue": "Mostrar queue",
-    "about.shortcutTab": "Cambiar tab",
-    "about.shortcutPanel": "Mostrar este panel",
+    "about.shortcutQueue": "Cola de reproducción",
+    "about.shortcutTab": "Ir a tab",
+    "about.shortcutPanel": "Mostrar info",
 
     // Search
     "search.comingSoon": "Próximamente",
@@ -250,7 +250,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Not now",
 
     // About
-    "about.tagline": "Music discovery for diggers. All human-selected.",
+    "about.tagline": "Digeart is a personal project dedicated to finding and sharing music for curious ears. All hand-selected.",
     "about.tags": "Tags",
     "about.trending": "Most played",
     "about.hiddenGems": "Rarities",
@@ -270,9 +270,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutShuffle": "Toggle shuffle",
     "about.shortcutMute": "Mute / Unmute",
     "about.shortcutLocate": "Locate track",
-    "about.shortcutQueue": "Toggle queue",
-    "about.shortcutTab": "Switch tab",
-    "about.shortcutPanel": "Toggle this panel",
+    "about.shortcutQueue": "Playback queue",
+    "about.shortcutTab": "Go to tab",
+    "about.shortcutPanel": "Show info",
 
     // Search
     "search.comingSoon": "Coming soon",
@@ -390,7 +390,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Pas maintenant",
 
     // About
-    "about.tagline": "Musique selecte pour diggers. Sélection 100% humaine.",
+    "about.tagline": "Digeart est un projet personnel dédié à trouver et partager de la musique pour les oreilles curieuses. Tout sélectionné à la main.",
     "about.tags": "Tags",
     "about.trending": "Les plus écoutés",
     "about.hiddenGems": "Raretés",
@@ -410,9 +410,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutShuffle": "Shuffle on/off",
     "about.shortcutMute": "Muet / Son",
     "about.shortcutLocate": "Localiser le track",
-    "about.shortcutQueue": "Afficher la queue",
-    "about.shortcutTab": "Changer de tab",
-    "about.shortcutPanel": "Afficher ce panneau",
+    "about.shortcutQueue": "File de lecture",
+    "about.shortcutTab": "Aller au tab",
+    "about.shortcutPanel": "Afficher info",
 
     // Search
     "search.comingSoon": "Bientôt disponible",
@@ -530,7 +530,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "今はいい",
 
     // About
-    "about.tagline": "ディガーのための音楽発見。すべて人の手で選曲。",
+    "about.tagline": "Digeart は好奇心ある耳のために音楽を見つけ、共有する個人プロジェクト。すべて手作業で厳選。",
     "about.tags": "Tags",
     "about.trending": "最も再生された",
     "about.hiddenGems": "レア曲",
@@ -550,9 +550,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutShuffle": "Shuffle 切替",
     "about.shortcutMute": "ミュート 切替",
     "about.shortcutLocate": "トラックを探す",
-    "about.shortcutQueue": "Queue 切替",
-    "about.shortcutTab": "タブ切替",
-    "about.shortcutPanel": "パネル切替",
+    "about.shortcutQueue": "再生キュー",
+    "about.shortcutTab": "タブ移動",
+    "about.shortcutPanel": "情報表示",
 
     // Search
     "search.comingSoon": "近日公開",
@@ -670,7 +670,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Не сейчас",
 
     // About
-    "about.tagline": "Музыка для диггеров. Всё отобрано вручную.",
+    "about.tagline": "Digeart — личный проект, посвящённый поиску и распространению музыки для любопытных ушей. Всё отобрано вручную.",
     "about.tags": "Tags",
     "about.trending": "Самые слушаемые",
     "about.hiddenGems": "Редкости",
@@ -690,9 +690,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutShuffle": "Shuffle вкл/выкл",
     "about.shortcutMute": "Звук вкл/выкл",
     "about.shortcutLocate": "Найти трек",
-    "about.shortcutQueue": "Показать queue",
-    "about.shortcutTab": "Сменить tab",
-    "about.shortcutPanel": "Показать панель",
+    "about.shortcutQueue": "Очередь воспроизведения",
+    "about.shortcutTab": "Перейти к табу",
+    "about.shortcutPanel": "Показать info",
 
     // Search
     "search.comingSoon": "Скоро",

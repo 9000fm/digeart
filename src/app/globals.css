@@ -164,9 +164,9 @@ body {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Superself text shimmer on hover */
+/* Superself text shimmer — automatic periodic */
 @keyframes text-shimmer {
-  0% { background-position: 100% 50%; }
+  0%, 85% { background-position: 100% 50%; }
   100% { background-position: -100% 50%; }
 }
 
@@ -181,11 +181,7 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-.group-hover\/superself:hover .superself-shimmer,
-.superself-link:hover .superself-shimmer {
-  animation: text-shimmer 1.2s ease-in-out;
+  animation: text-shimmer 8s ease-in-out infinite;
 }
 
 /* Maintenance screen animations */

@@ -727,7 +727,7 @@ export default function Sidebar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[290px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[330px] max-h-[calc(100vh-120px)] overflow-y-auto"
             style={aboutSource === "gear" && gearAnchor ? {
               left: gearAnchor.left,
               bottom: gearAnchor.bottom,
@@ -777,13 +777,13 @@ export default function Sidebar({
               <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tabs")}</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
                 {[
-                  [t("nav.forYou"), "1", t("about.electronic")],
-                  [t("nav.mixes"), "2", t("about.djSets")],
-                  [t("nav.samples"), "3", t("about.worldFunk")],
-                  [t("nav.saved"), "4", t("about.yourLiked")],
-                ].map(([tab, key, desc]) => (
+                  [t("nav.forYou"), t("about.electronic")],
+                  [t("nav.mixes"), t("about.djSets")],
+                  [t("nav.samples"), t("about.worldFunk")],
+                  [t("nav.saved"), t("about.yourLiked")],
+                ].map(([tab, desc]) => (
                   <Fragment key={tab}>
-                    <span className="font-mono text-[9px] text-[var(--text-secondary)] font-bold shrink-0">{tab} <kbd className="font-mono text-[8px] text-[var(--text-muted)] font-bold">({key})</kbd></span>
+                    <span className="font-mono text-[9px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
                     <span className="font-mono text-[9px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
