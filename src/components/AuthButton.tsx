@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useTheme } from "./ThemeProvider";
 import { useTranslation } from "@/components/LanguageProvider";
@@ -68,6 +69,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
   );
 
   const LANG_LABELS: Record<string, string> = { es: "Español", en: "English", fr: "Français", ja: "日本語", ru: "Русский" };
+  const LANG_CODES: Record<string, string> = { es: "ES", en: "EN", fr: "FR", ja: "JP", ru: "RU" };
 
   const langRow = (
     <div className="relative">
@@ -81,24 +83,34 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
           {t("settings.language")}
         </span>
         <span className="font-mono font-bold text-[var(--text)]" style={{ fontSize: 10 }}>
-          {locale.toUpperCase()}
+          {LANG_CODES[locale]}
         </span>
       </div>
-      {langOpen && (
-        <div className="bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg mx-3 mb-1 py-1 overflow-hidden">
-          {LOCALES.map((loc) => (
-            <button
-              key={loc}
-              onClick={(e) => { e.stopPropagation(); setLocale(loc); setLangOpen(false); }}
-              className={`w-full flex items-center justify-between px-3 py-1.5 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
-              style={{ fontSize: 10 }}
-            >
-              <span>{LANG_LABELS[loc]}</span>
-              <span className="uppercase">{loc}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {langOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg mx-3 mb-1 py-1">
+              {LOCALES.map((loc) => (
+                <button
+                  key={loc}
+                  onClick={(e) => { e.stopPropagation(); setLocale(loc); setLangOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3 py-1.5 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
+                  style={{ fontSize: 10 }}
+                >
+                  <span>{LANG_LABELS[loc]}</span>
+                  <span>{LANG_CODES[loc]}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
