@@ -18,6 +18,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
   const { t, locale, setLocale } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1152;
 
   useEffect(() => {
     if (!open) return;
@@ -131,38 +132,40 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
               </div>
             </div>
 
-            {/* Menu items — GitHub style order */}
-            <div className="py-1">
-              {themeRow}
-              {langRow}
-              {onOpenSettings && (
-                <button
-                  onClick={() => { onOpenSettings(); setOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-                  style={{ fontSize: 11 }}
-                >
-                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  {t("auth.settings")}
-                </button>
-              )}
-              {onOpenInfo && (
-                <button
-                  onClick={() => { onOpenInfo(); setOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-                  style={{ fontSize: 11 }}
-                >
-                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-                  </svg>
-                  {t("auth.about")}
-                </button>
-              )}
-            </div>
+            {/* Menu items — adaptive: full on tablet/mobile, minimal on desktop */}
+            {!isDesktop && (
+              <div className="py-1">
+                {themeRow}
+                {langRow}
+                {onOpenSettings && (
+                  <button
+                    onClick={() => { onOpenSettings(); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                    style={{ fontSize: 11 }}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {t("auth.settings")}
+                  </button>
+                )}
+                {onOpenInfo && (
+                  <button
+                    onClick={() => { onOpenInfo(); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                    style={{ fontSize: 11 }}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+                    </svg>
+                    {t("auth.about")}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Saved tracks */}
             {onGoToSaved && (
@@ -224,25 +227,27 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-60 bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl z-[70] py-2 overflow-hidden">
-          {/* Theme + About for non-auth users */}
-          <div className="py-1">
-            {themeRow}
-            {langRow}
-            {onOpenInfo && (
-              <button
-                onClick={() => { onOpenInfo(); setOpen(false); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-                style={{ fontSize: 11 }}
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="16" x2="12" y2="12" />
-                  <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-                </svg>
-                {t("auth.about")}
-              </button>
-            )}
-          </div>
+          {/* Non-auth: full on tablet/mobile, minimal on desktop */}
+          {!isDesktop && (
+            <div className="py-1">
+              {themeRow}
+              {langRow}
+              {onOpenInfo && (
+                <button
+                  onClick={() => { onOpenInfo(); setOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  style={{ fontSize: 11 }}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+                  </svg>
+                  {t("auth.about")}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Sign in */}
           <div className="border-t border-[var(--border)] pt-2 px-4 pb-1">
