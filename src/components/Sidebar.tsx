@@ -255,6 +255,7 @@ export default function Sidebar({
       const target = e.target as Node;
       if (aboutRef.current?.contains(target)) return;
       if (mobileSheetRef.current?.contains(target)) return;
+      if (aboutIconRef.current?.contains(target)) return;
       setShowAbout(false);
     };
     const handleKey = (e: KeyboardEvent) => {
@@ -514,6 +515,7 @@ export default function Sidebar({
         {/* Info button */}
         <div className="relative group/info">
           <button
+            ref={aboutIconRef}
             onClick={() => {
               setAboutSource("gear");
               const rect = gearRef.current?.getBoundingClientRect();
@@ -727,7 +729,7 @@ export default function Sidebar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[330px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[280px] max-h-[calc(100vh-120px)] overflow-y-auto"
             style={aboutSource === "gear" && gearAnchor ? {
               left: gearAnchor.left,
               bottom: gearAnchor.bottom,
@@ -737,7 +739,7 @@ export default function Sidebar({
             }}
           >
             <p className="font-[family-name:var(--font-display)] text-lg text-[var(--text)]">digeart</p>
-            <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">{t("about.tagline")}</p>
+            <p className="font-mono text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
 
             <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
               <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tags")}</p>
@@ -790,7 +792,7 @@ export default function Sidebar({
               </div>
             </div>
 
-            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[9px] text-[var(--text-muted)] leading-snug">
+            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[9px] text-[var(--text-muted)] leading-snug text-justify">
               {t("about.legal")}
             </p>
 
@@ -849,7 +851,7 @@ export default function Sidebar({
               </button>
 
               <p className="font-[family-name:var(--font-display)] text-2xl text-[var(--text)]">digeart</p>
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">{t("about.tagline")}</p>
+              <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
 
               {/* Tag legend */}
               <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">

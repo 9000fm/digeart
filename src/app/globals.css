@@ -164,24 +164,30 @@ body {
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Superself text shimmer — automatic periodic */
-@keyframes text-shimmer {
-  0%, 85% { background-position: 100% 50%; }
-  100% { background-position: -100% 50%; }
+/* Superself text shimmer — alternating direction, varying speed */
+@keyframes text-shimmer-slow {
+  0%, 60% { background-position: 0% center; }
+  100% { background-position: 100% center; }
+}
+
+@keyframes text-shimmer-fast {
+  0%, 70% { background-position: 100% center; }
+  100% { background-position: 0% center; }
 }
 
 .superself-shimmer {
   background: linear-gradient(
     90deg,
     currentColor 40%,
-    var(--accent, #888) 50%,
+    var(--text) 50%,
     currentColor 60%
   );
-  background-size: 200% 100%;
+  background-size: 400% 100%;
+  background-position: 0% center;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: text-shimmer 8s ease-in-out infinite;
+  animation: text-shimmer-slow 5s ease-in-out infinite, text-shimmer-fast 7s ease-in-out 2.5s infinite;
 }
 
 /* Maintenance screen animations */
