@@ -399,7 +399,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
                   height: sBottom - sTop,
                   borderRadius: r,
                   boxShadow: isDark
-                    ? "0 0 0 9999px rgba(0,0,0,0.85), 0 0 0 2px rgba(255,255,255,0.1), 0 0 24px 4px rgba(255,255,255,0.05)"
+                    ? "0 0 0 9999px rgba(0,0,0,0.85), inset 0 0 0 2px rgba(255,255,255,0.2), 0 0 24px 4px rgba(255,255,255,0.05)"
                     : "0 0 0 9999px rgba(0,0,0,0.6)",
                 }}
               />
