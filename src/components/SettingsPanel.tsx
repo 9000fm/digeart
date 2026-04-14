@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,8 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
   const { data: session } = useSession();
   const { t, locale, setLocale } = useTranslation();
   const isAuthenticated = !!session?.user;
+  const [langOpen, setLangOpen] = useState(false);
+  const LANG_LABELS: Record<string, string> = { es: "Español", en: "English", fr: "Français", ja: "日本語", ru: "Русский" };
 
   // Close on Escape
   useEffect(() => {
@@ -107,18 +109,35 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                 </button>
               </div>
 
-              {/* Language toggle — always visible */}
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length])}>
-                <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
-                  {t("settings.language")}
-                </span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]); }}
-                  style={{ fontSize: 9 }}
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
-                >
-                  {locale.toUpperCase()}
-                </button>
+              {/* Language picker — always visible */}
+              <div>
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => setLangOpen((v) => !v)}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                    {t("settings.language")}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLangOpen((v) => !v); }}
+                    style={{ fontSize: 9 }}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                  >
+                    {locale.toUpperCase()}
+                  </button>
+                </div>
+                {langOpen && (
+                  <div className="mt-1.5 bg-[var(--bg)] border border-[var(--border)]/50 rounded-lg py-1 overflow-hidden">
+                    {LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => { setLocale(loc); setLangOpen(false); }}
+                        className={`w-full flex items-center justify-between px-3 py-1 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
+                        style={{ fontSize: 10 }}
+                      >
+                        <span>{LANG_LABELS[loc]}</span>
+                        <span className="uppercase">{loc}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* About — always visible */}

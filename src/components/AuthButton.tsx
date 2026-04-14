@@ -18,6 +18,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
   const { theme, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1152;
 
@@ -66,19 +67,38 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
     </div>
   );
 
+  const LANG_LABELS: Record<string, string> = { es: "Español", en: "English", fr: "Français", ja: "日本語", ru: "Русский" };
+
   const langRow = (
-    <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]); }}>
-      <span className="flex items-center gap-2.5">
-        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-        </svg>
-        {t("settings.language")}
-      </span>
-      <span className="font-mono font-bold text-[var(--text)]" style={{ fontSize: 10 }}>
-        {locale.toUpperCase()}
-      </span>
+    <div className="relative">
+      <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setLangOpen((v) => !v); }}>
+        <span className="flex items-center gap-2.5">
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+          </svg>
+          {t("settings.language")}
+        </span>
+        <span className="font-mono font-bold text-[var(--text)]" style={{ fontSize: 10 }}>
+          {locale.toUpperCase()}
+        </span>
+      </div>
+      {langOpen && (
+        <div className="bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg mx-3 mb-1 py-1 overflow-hidden">
+          {LOCALES.map((loc) => (
+            <button
+              key={loc}
+              onClick={(e) => { e.stopPropagation(); setLocale(loc); setLangOpen(false); }}
+              className={`w-full flex items-center justify-between px-3 py-1.5 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
+              style={{ fontSize: 10 }}
+            >
+              <span>{LANG_LABELS[loc]}</span>
+              <span className="uppercase">{loc}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 
