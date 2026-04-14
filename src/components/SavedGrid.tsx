@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MusicCard from "./MusicCard";
 import MaintenanceScreen from "./MaintenanceScreen";
+import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 
 type SavedFilterType = "all" | "tracks" | "samples" | "mixes" | "deleted";
@@ -59,6 +60,7 @@ export default function SavedGrid({
   onClearAllRemoved,
   onFilterChange,
 }: SavedGridProps) {
+  const { t } = useTranslation();
   const [removedOpen, setRemovedOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SavedFilterType>("all");
 
@@ -108,7 +110,7 @@ export default function SavedGrid({
         <svg className="w-12 h-12 text-[var(--text-muted)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
         </svg>
-        <p className="font-mono text-sm text-[var(--text-muted)] uppercase">Sign in to save tracks</p>
+        <p className="font-mono text-sm text-[var(--text-muted)] uppercase">{t("saved.signInToSave")}</p>
       </div>
     );
   }
@@ -121,7 +123,7 @@ export default function SavedGrid({
         <svg className="w-12 h-12 text-[var(--text-muted)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
         </svg>
-        <p className="font-mono text-sm text-[var(--text-muted)] uppercase">No saved tracks yet</p>
+        <p className="font-mono text-sm text-[var(--text-muted)] uppercase">{t("saved.noSavedYet")}</p>
       </div>
     );
   }
@@ -155,10 +157,10 @@ export default function SavedGrid({
   );
 
   const filterTabs: { key: SavedFilterType; label: string; count: number }[] = [
-    { key: "all", label: "All", count: cards.length },
-    { key: "tracks", label: "Tracks", count: tracks.length },
-    { key: "mixes", label: "Mixes", count: mixes.length },
-    { key: "samples", label: "Samples", count: samples.length },
+    { key: "all", label: t("saved.all"), count: cards.length },
+    { key: "tracks", label: t("saved.tracks"), count: tracks.length },
+    { key: "mixes", label: t("saved.mixes"), count: mixes.length },
+    { key: "samples", label: t("saved.samples"), count: samples.length },
   ];
 
   return (
@@ -224,10 +226,10 @@ export default function SavedGrid({
             </svg>
           )}
           <p className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-            No saved {activeFilter} yet
+            {t("saved.noSavedFilter", { filter: activeFilter })}
           </p>
           <p className="font-mono text-[10px] text-[var(--text-muted)] mt-2">
-            Head to <span className="font-bold text-[var(--text-secondary)]">{activeFilter === "tracks" ? "For You" : activeFilter === "samples" ? "Samples" : "Mixes"}</span> to discover some
+            {t("saved.discoverMore", { tab: activeFilter === "tracks" ? t("nav.forYou") : activeFilter === "samples" ? t("saved.samples") : t("saved.mixes") })}
           </p>
         </div>
       ) : null}
@@ -247,7 +249,7 @@ export default function SavedGrid({
               <polyline points="6 9 12 15 18 9" />
             </svg>
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
-              Recently removed ({recentlyRemoved.length})
+              {t("saved.recentlyRemoved")} ({recentlyRemoved.length})
             </span>
           </button>
 
@@ -292,7 +294,7 @@ export default function SavedGrid({
                         <button
                           onClick={() => onPlay(card.id)}
                           className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--text)]/10 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                          title="Play"
+                          title={t("saved.play")}
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                         </button>
@@ -300,7 +302,7 @@ export default function SavedGrid({
                         <button
                           onClick={() => onRestoreRemoved?.(card.id)}
                           className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--text)]/10 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                          title="Restore"
+                          title={t("saved.restore")}
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                         </button>
@@ -308,7 +310,7 @@ export default function SavedGrid({
                         <button
                           onClick={() => onHardDelete?.(card.id)}
                           className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-colors"
-                          title="Delete permanently"
+                          title={t("saved.deletePermanently")}
                         >
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                         </button>
@@ -321,7 +323,7 @@ export default function SavedGrid({
                       onClick={onClearAllRemoved}
                       className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10"
                     >
-                      Clear all
+                      {t("saved.clearAll")}
                     </button>
                   </div>
                 </div>

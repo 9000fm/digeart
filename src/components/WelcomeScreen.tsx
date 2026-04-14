@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signIn } from "next-auth/react";
+import { useTranslation } from "./LanguageProvider";
 
 interface WelcomeScreenProps {
   show: boolean;
@@ -10,6 +11,7 @@ interface WelcomeScreenProps {
 }
 
 export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (show) {
       document.body.style.overflow = "hidden";
@@ -44,7 +46,7 @@ export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-[family-name:var(--font-display)] text-5xl text-white mb-3" style={{ textShadow: "0 0 40px rgba(255,255,255,0.3)" }}>digeart</p>
-            <p className="font-mono text-xs text-white/50 mb-8">Music discovery for diggers</p>
+            <p className="font-mono text-xs text-white/50 mb-8">{t("welcome.tagline")}</p>
 
             {/* Gem divider */}
             <div className="flex items-center justify-center gap-3 mb-8">
@@ -59,7 +61,7 @@ export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
 
             {/* Sign in section */}
             <p className="font-mono text-xs text-white/40 mb-4">
-              Sign in to save your finds.
+              {t("welcome.signInPrompt")}
             </p>
 
             <button
@@ -72,7 +74,7 @@ export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              Sign in with Google
+              {t("auth.signInWithGoogle")}
             </button>
 
             {/* Skip */}
@@ -81,7 +83,7 @@ export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
               style={{ marginTop: "2.5rem" }}
               className="font-mono text-[10px] text-white/30 hover:text-white/60 transition-colors uppercase tracking-wider cursor-pointer"
             >
-              Skip for now
+              {t("welcome.skip")}
             </button>
 
             {/* Version */}

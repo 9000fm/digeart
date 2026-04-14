@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
+import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 
 function formatViewCount(count: number): string {
@@ -86,6 +87,8 @@ export default function NowPlayingBanner({
   playbackRate = 1,
   onPlaybackRateChange,
 }: NowPlayingBannerProps) {
+  const { t } = useTranslation();
+
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const [dragPercent, setDragPercent] = useState<number | null>(null);
@@ -430,14 +433,14 @@ export default function NowPlayingBanner({
 
   // Like/Heart button
   const likeButton = (size: "sm" | "md" = "md") => onToggleLike ? (
-    <Tooltip label={isAuthenticated ? (isLiked ? "Saved!" : "Save") : "Log in to save"} position="top">
+    <Tooltip label={isAuthenticated ? (isLiked ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
       <HeartLikeButton
         isLiked={isLiked}
         trackId={card.id}
         onToggle={() => onToggleLike()}
         beforeToggle={isAuthenticated ? undefined : () => false}
         size={size}
-        ariaLabel={isAuthenticated ? (isLiked ? "Unlike" : "Save") : "Log in to save"}
+        ariaLabel={isAuthenticated ? (isLiked ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
         className={`${isLiked ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
       />
     </Tooltip>
@@ -451,7 +454,7 @@ export default function NowPlayingBanner({
     return () => document.removeEventListener("locate-triggered", handler);
   }, []);
   const locateButton = (size: "sm" | "md" = "md") => onLocate ? (
-    <Tooltip label="Locate (l)" position="top" hideOnClick>
+    <Tooltip label={t("player.locate")} position="top" hideOnClick>
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -493,7 +496,7 @@ export default function NowPlayingBanner({
     }
   }, []);
   const fullscreenButton = (
-    <Tooltip label="Fullscreen (f)" position="top" hideOnClick>
+    <Tooltip label={t("player.fullscreen")} position="top" hideOnClick>
       <button
         onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
         className="shrink-0 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-95"
@@ -518,7 +521,7 @@ export default function NowPlayingBanner({
   );
 
   const queueButton = onToggleQueue ? (
-    <Tooltip label="Queue (q)" position="top" hideOnClick>
+    <Tooltip label={t("player.queue")} position="top" hideOnClick>
       <button
         data-queue-btn
         onClick={(e) => { e.stopPropagation(); onToggleQueue(); }}
@@ -602,7 +605,7 @@ export default function NowPlayingBanner({
         onPlaybackRateChange(1);
       }}
     >
-      <Tooltip label="Reset (tap)" position="top" hideOnClick portal>
+      <Tooltip label={t("player.reset")} position="top" hideOnClick portal>
         <span
           className="relative flex items-center justify-center font-mono text-[10px] text-[var(--text)] shrink-0 h-6 pl-[19px] pr-0.5 min-[1152px]:pl-[20px] min-[1152px]:pr-1 rounded cursor-pointer hover:text-[var(--text)] transition-colors"
           onClick={(e) => {
@@ -721,7 +724,7 @@ export default function NowPlayingBanner({
 
   // Shuffle button
   const autoPlayButton = onToggleAutoPlay ? (
-    <Tooltip label={autoPlay ? "Shuffle on (s)" : "Shuffle off (s)"} position="top">
+    <Tooltip label={autoPlay ? t("player.shuffleOn") : t("player.shuffleOff")} position="top">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -786,7 +789,7 @@ export default function NowPlayingBanner({
         }}
       >
         {/* Speaker button: mute/unmute (hover opens fader, touch toggles fader) */}
-        <Tooltip label={showVolumeFader ? "" : (isMuted ? "Unmute (m)" : "Mute (m)")} hideOnClick>
+        <Tooltip label={showVolumeFader ? "" : (isMuted ? t("player.unmute") : t("player.mute"))} hideOnClick>
           <button
             ref={volumeIconRef}
             data-volume-icon
@@ -1096,7 +1099,7 @@ export default function NowPlayingBanner({
       <button
         onClick={handleCloseClick}
         className="w-8 h-8 flex items-center justify-center cursor-pointer"
-        aria-label="Close player"
+        aria-label={t("player.closePlayer")}
       >
         {/* Visible button: smaller, centered inside hit area */}
         <span
@@ -1136,7 +1139,7 @@ export default function NowPlayingBanner({
         {/* LEFT: Album art + Track info */}
         <div className="flex items-center gap-2.5 min-w-0">
           {thumbUrl && (
-            <Tooltip label="Watch on YouTube" position="top" align="start">
+            <Tooltip label={t("player.watchOnYoutube")} position="top" align="start">
               <div
                 key={card.id}
                 className={`shrink-0 w-[70px] h-[70px] rounded-md overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art cursor-pointer transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
@@ -1159,7 +1162,7 @@ export default function NowPlayingBanner({
           <div className="min-w-0 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
             {isUnavailable ? (
               <p className="font-mono text-sm text-[var(--text-muted)] uppercase truncate leading-tight">
-                Unavailable &middot; skipping&hellip;
+                {t("player.unavailable")}
               </p>
             ) : (
               <>
@@ -1183,9 +1186,9 @@ export default function NowPlayingBanner({
           <div className="flex items-center gap-1.5">
             {infoButton("md")}
             {likeButton("sm")}
-            {hasPrev ? <Tooltip label="Previous (p)" position="top">{prevButton(32)}</Tooltip> : prevButton(32)}
-            <Tooltip label={isPlaying ? "Pause (space / k)" : "Play (space / k)"} position="top">{playPauseButton(38, 16)}</Tooltip>
-            <Tooltip label="Next (n)" position="top">{nextButton(32)}</Tooltip>
+            {hasPrev ? <Tooltip label={t("player.previous")} position="top">{prevButton(32)}</Tooltip> : prevButton(32)}
+            <Tooltip label={isPlaying ? t("player.pause") : t("player.play")} position="top">{playPauseButton(38, 16)}</Tooltip>
+            <Tooltip label={t("player.next")} position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
             {locateButton("md")}
             {pitchFader}
@@ -1293,7 +1296,7 @@ export default function NowPlayingBanner({
               <div className="flex-1 min-w-0 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
                 {isUnavailable ? (
                   <p className="font-mono text-sm text-[var(--text-muted)] uppercase truncate leading-tight">
-                    Unavailable &middot; skipping&hellip;
+                    {t("player.unavailable")}
                   </p>
                 ) : (
                   <>
@@ -1384,7 +1387,7 @@ export default function NowPlayingBanner({
                 <div className="min-w-0 flex-1 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
                   {isUnavailable ? (
                     <p className="font-mono text-xs text-[var(--text-muted)] uppercase truncate leading-tight">
-                      Unavailable &middot; skipping&hellip;
+                      {t("player.unavailable")}
                     </p>
                   ) : (
                     <>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useTheme } from "./ThemeProvider";
+import { useTranslation } from "@/components/LanguageProvider";
 
 interface AuthButtonProps {
   onGoToSaved?: () => void;
@@ -13,6 +14,7 @@ interface AuthButtonProps {
 export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: AuthButtonProps) {
   const { data: session, status } = useSession();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,7 +55,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
           </svg>
         )}
-        Theme
+        {t("auth.theme")}
       </span>
       <div className={`w-7 h-4 rounded-full relative transition-colors duration-200 ${theme === "dark" ? "bg-[var(--text)]" : "bg-[var(--text-secondary)]"}`}>
         <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 ${theme === "dark" ? "left-3.5 bg-[var(--bg)]" : "left-0.5 bg-[var(--bg)]"}`} />
@@ -125,7 +127,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                     <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
                     <circle cx="12" cy="12" r="3" />
                   </svg>
-                  Settings
+                  {t("auth.settings")}
                 </button>
               )}
               {onOpenInfo && (
@@ -139,7 +141,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                     <line x1="12" y1="16" x2="12" y2="12" />
                     <circle cx="12" cy="8" r="0.5" fill="currentColor" />
                   </svg>
-                  About
+                  {t("auth.about")}
                 </button>
               )}
             </div>
@@ -155,7 +157,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                   <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
                   </svg>
-                  Saved tracks
+                  {t("auth.savedTracks")}
                 </button>
               </div>
             )}
@@ -172,7 +174,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
-                Sign out
+                {t("auth.signOut")}
               </button>
             </div>
           </div>
@@ -198,7 +200,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
           </svg>
         </button>
         <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/avatar:opacity-100 transition-opacity duration-150 z-50 hidden lg:block">
-          Sign in
+          {t("auth.signIn")}
         </div>
       </div>
 
@@ -218,7 +220,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                   <line x1="12" y1="16" x2="12" y2="12" />
                   <circle cx="12" cy="8" r="0.5" fill="currentColor" />
                 </svg>
-                About
+                {t("auth.about")}
               </button>
             )}
           </div>
@@ -235,10 +237,10 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              Sign in with Google
+              {t("auth.signInWithGoogle")}
             </button>
             <p className="font-mono text-[var(--text-muted)] text-center mt-2" style={{ fontSize: 9 }}>
-              Save tracks & sync across devices
+              {t("auth.saveTracksSync")}
             </p>
           </div>
         </div>

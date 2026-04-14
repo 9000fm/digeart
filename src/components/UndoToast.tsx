@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/components/LanguageProvider";
 
 export interface UndoItem {
   id: number;
@@ -22,6 +23,7 @@ function UndoToastItem({ item, onUndo, duration }: {
   onUndo: (item: UndoItem) => void;
   duration: number;
 }) {
+  const { t } = useTranslation();
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ function UndoToastItem({ item, onUndo, duration }: {
       <div className="flex items-center gap-2.5 px-3.5 py-2 bg-[var(--bg-alt)]/90 backdrop-blur-xl border border-[var(--border)]/50 rounded-lg shadow-2xl overflow-hidden">
         <div className="flex flex-col min-w-0">
           <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--text-muted)] leading-tight">
-            Removed
+            {t("toast.removed")}
           </span>
           <span className="font-mono text-[11px] text-[var(--text)] truncate max-w-[160px] sm:max-w-[200px] leading-tight">
             {item.trackName}
@@ -58,7 +60,7 @@ function UndoToastItem({ item, onUndo, duration }: {
           onClick={(e) => { e.stopPropagation(); onUndo(item); }}
           className="shrink-0 px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-[var(--text)] bg-[var(--text)]/10 hover:bg-[var(--text)]/20 rounded-md transition-colors cursor-pointer"
         >
-          Undo
+          {t("toast.undo")}
         </button>
       </div>
       <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--text)]/5 rounded-b-lg overflow-hidden">

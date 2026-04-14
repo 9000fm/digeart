@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface SettingsPanelProps {
 export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial, djMode, onToggleDjMode, onOpenInfo }: SettingsPanelProps) {
   const { theme, toggleTheme } = useTheme();
   const { data: session } = useSession();
+  const { t, locale, setLocale } = useTranslation();
   const isAuthenticated = !!session?.user;
 
   // Close on Escape
@@ -76,7 +78,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
           >
             <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
               <h2 className="font-mono text-[9px] font-bold text-[var(--text)] uppercase tracking-widest">
-                Settings
+                {t("settings.title")}
               </h2>
               <button
                 onClick={onClose}
@@ -93,14 +95,28 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Theme toggle — always visible */}
               <div className="flex items-center justify-between cursor-pointer" onClick={toggleTheme}>
                 <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
-                  Theme
+                  {t("settings.theme")}
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
                   style={{ fontSize: 9 }}
                   className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                 >
-                  {theme === "dark" ? "☾ Dark" : "☀ Light"}
+                  {theme === "dark" ? `☾ ${t("settings.dark")}` : `☀ ${t("settings.light")}`}
+                </button>
+              </div>
+
+              {/* Language toggle — always visible */}
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setLocale(locale === "en" ? "es" : "en")}>
+                <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                  {t("settings.language")}
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLocale(locale === "en" ? "es" : "en"); }}
+                  style={{ fontSize: 9 }}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                >
+                  {locale === "es" ? "ES" : "EN"}
                 </button>
               </div>
 
@@ -108,14 +124,14 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {onOpenInfo && (
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
                   <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
-                    About
+                    {t("settings.about")}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenInfo(); onClose(); }}
                     style={{ fontSize: 9 }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                   >
-                    View
+                    {t("settings.view")}
                   </button>
                 </div>
               )}
@@ -124,7 +140,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {onToggleDjMode && (
                 <div className={`hidden min-[1152px]:flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
                   <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
-                    Speed Adjust
+                    {t("settings.speedAdjust")}
                   </span>
                   <button
                     onClick={onToggleDjMode}
@@ -135,7 +151,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                         : "bg-[var(--bg-alt)] text-[var(--text)] border-[var(--border)] hover:border-[var(--text-muted)]"
                     }`}
                   >
-                    {djMode ? "On" : "Off"}
+                    {djMode ? t("settings.on") : t("settings.off")}
                   </button>
                 </div>
               )}
@@ -144,14 +160,14 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {onRunTutorial && (
                 <div className={`flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
                   <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
-                    Tutorial
+                    {t("settings.tutorial")}
                   </span>
                   <button
                     onClick={() => { onRunTutorial(); onClose(); }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                     style={{ fontSize: 9 }}
                   >
-                    Run
+                    {t("settings.run")}
                   </button>
                 </div>
               )}
@@ -159,7 +175,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Sign in CTA for non-auth */}
               {!isAuthenticated && (
                 <p className="font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/30" style={{ fontSize: 9 }}>
-                  Sign in to unlock
+                  {t("settings.signInToUnlock")}
                 </p>
               )}
             </div>

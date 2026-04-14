@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "./LanguageProvider";
 
 export default function MaintenanceScreen() {
+  const { t } = useTranslation();
   const [dotCount, setDotCount] = useState(0);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function MaintenanceScreen() {
 
       {/* Message with cycling dots */}
       <p className="font-mono text-sm text-[var(--text)] font-bold tracking-wider">
-        We&apos;ll be right back<span className="inline-block w-[2em] text-left">{".".repeat(dotCount)}</span>
+        {t("maintenance.backSoon")}<span className="inline-block w-[2em] text-left">{".".repeat(dotCount)}</span>
       </p>
     </div>
   );

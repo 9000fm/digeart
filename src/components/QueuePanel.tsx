@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } f
 import { motion, AnimatePresence } from "framer-motion";
 import HeartLikeButton from "./HeartLikeButton";
 import { useTheme } from "./ThemeProvider";
+import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 
 interface QueuePanelProps {
@@ -103,6 +104,7 @@ export default function QueuePanel({
   likedIds,
   onToggleLike,
 }: QueuePanelProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -215,13 +217,13 @@ export default function QueuePanel({
         return (
           <Fragment key={row.id}>
             {showPrevHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1 relative z-[1]">Previously played</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1 relative z-[1]">{t("queue.previouslyPlayed")}</p>
             )}
             {showCurrentHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">Now playing</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">{t("queue.nowPlaying")}</p>
             )}
             {showNextHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">Up next</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">{t("queue.upNext")}</p>
             )}
             <motion.div layout transition={layoutAnim}>
               <div style={{ opacity }}>
@@ -242,7 +244,7 @@ export default function QueuePanel({
 
       {queue.length === 0 && (
         <div className="flex items-center justify-center py-8">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">No queue</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t("queue.empty")}</p>
         </div>
       )}
     </div>
@@ -277,7 +279,7 @@ export default function QueuePanel({
                 <div className="w-8 h-1 rounded-full bg-[var(--text-muted)]/30" />
               </div>
               <div className="px-1 pb-2">
-                <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold px-4 py-2">Queue</p>
+                <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold px-4 py-2">{t("queue.title")}</p>
                 {content}
               </div>
             </motion.div>
@@ -303,8 +305,8 @@ export default function QueuePanel({
         >
           <div className="px-1 py-2">
             <div className="flex items-center justify-between px-4 py-1.5">
-              <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold">Queue</p>
-              <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text)]/50 hover:bg-[var(--text)]/10 hover:text-[var(--text)] active:scale-90 transition-all duration-75 cursor-pointer" aria-label="Close queue">
+              <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold">{t("queue.title")}</p>
+              <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text)]/50 hover:bg-[var(--text)]/10 hover:text-[var(--text)] active:scale-90 transition-all duration-75 cursor-pointer" aria-label={t("queue.close")}>
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "@/components/LanguageProvider";
 
 interface OnboardingStep {
   target: string;
@@ -8,61 +9,65 @@ interface OnboardingStep {
   description: string;
 }
 
-const STEPS: OnboardingStep[] = [
-  {
-    target: "[data-card-id]",
-    title: "Click to play",
-    description: "Click any card to start listening. Press Space to pause.",
-  },
-  {
-    target: ".player-banner",
-    title: "The player",
-    description: "Play, pause, locate, volume, shuffle \u2014 all controls live here.",
-  },
-  {
-    target: "aside nav",
-    title: "Browse your way",
-    description: "Tracks, Samples, Mixes & Saved \u2014 each tab surfaces different music.",
-  },
-  {
-    target: "header [data-genre-filter]",
-    title: "Filters",
-    description: "Genre & year filters coming soon.",
-  },
-  {
-    target: "[data-auth-desktop]",
-    title: "Your menu",
-    description: "Theme, about, settings, and more \u2014 all inside your profile menu.",
-  },
-];
+function getSteps(t: (key: string) => string): OnboardingStep[] {
+  return [
+    {
+      target: "[data-card-id]",
+      title: t("tutorial.clickToPlay"),
+      description: t("tutorial.clickToPlayDesc"),
+    },
+    {
+      target: ".player-banner",
+      title: t("tutorial.thePlayer"),
+      description: t("tutorial.thePlayerDesc"),
+    },
+    {
+      target: "aside nav",
+      title: t("tutorial.browseYourWay"),
+      description: t("tutorial.browseYourWayDesc"),
+    },
+    {
+      target: "header [data-genre-filter]",
+      title: t("tutorial.filters"),
+      description: t("tutorial.filtersDesc"),
+    },
+    {
+      target: "[data-auth-desktop]",
+      title: t("tutorial.yourMenu"),
+      description: t("tutorial.yourMenuDesc"),
+    },
+  ];
+}
 
-const MOBILE_STEPS: OnboardingStep[] = [
-  {
-    target: "[data-card-id]",
-    title: "Click to play",
-    description: "Click any card to start listening. Press Space to pause.",
-  },
-  {
-    target: ".player-banner",
-    title: "The player",
-    description: "Play, pause, locate, volume, shuffle \u2014 all controls live here.",
-  },
-  {
-    target: "[data-mobile-nav]",
-    title: "Browse your way",
-    description: "Tracks, Samples, Mixes & Saved \u2014 each tab surfaces different music.",
-  },
-  {
-    target: "[data-genre-filter]",
-    title: "Filters",
-    description: "Genre & year filters coming soon.",
-  },
-  {
-    target: "[data-auth-button]",
-    title: "Your menu",
-    description: "Settings, about, and saved tracks \u2014 all inside your profile menu.",
-  },
-];
+function getMobileSteps(t: (key: string) => string): OnboardingStep[] {
+  return [
+    {
+      target: "[data-card-id]",
+      title: t("tutorial.clickToPlay"),
+      description: t("tutorial.clickToPlayDesc"),
+    },
+    {
+      target: ".player-banner",
+      title: t("tutorial.thePlayer"),
+      description: t("tutorial.thePlayerDesc"),
+    },
+    {
+      target: "[data-mobile-nav]",
+      title: t("tutorial.browseYourWay"),
+      description: t("tutorial.browseYourWayDesc"),
+    },
+    {
+      target: "[data-genre-filter]",
+      title: t("tutorial.filters"),
+      description: t("tutorial.filtersDesc"),
+    },
+    {
+      target: "[data-auth-button]",
+      title: t("tutorial.yourMenu"),
+      description: t("tutorial.yourMenuDescMobile"),
+    },
+  ];
+}
 
 interface OnboardingOverlayProps {
   show: boolean;
@@ -71,6 +76,7 @@ interface OnboardingOverlayProps {
 }
 
 export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: OnboardingOverlayProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<DOMRect | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -81,7 +87,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   // Skip "Info" and "Settings" steps on mobile — targets only exist in desktop sidebar
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1152;
   const isDark = typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark";
-  const steps = isMobile ? MOBILE_STEPS : STEPS;
+  const steps = isMobile ? getMobileSteps(t) : getSteps(t);
 
   // Is this the player step? (index 1 in full steps)
   const isPlayerStep = steps[step]?.target === ".player-banner";
@@ -452,7 +458,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
               className={`${isLast ? "h-7 px-3" : "w-7 h-7"} flex items-center justify-center ${btnBase}`}
               style={{ fontSize: isLast ? 11 : 12 }}
             >
-              {isLast ? "Done" : ">"}
+              {isLast ? t("tutorial.done") : ">"}
             </button>
           </div>
         </div>
@@ -466,20 +472,20 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
             className="relative bg-[var(--bg-alt)]/95 backdrop-blur-xl border border-[var(--border)]/50 rounded-xl shadow-2xl px-5 py-4 max-w-[260px] w-full text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="font-mono text-[13px] text-[var(--text)] font-bold uppercase">Skip tutorial?</p>
-            <p className="font-mono text-xs text-[var(--text-muted)] mt-1.5">You can restart it anytime from Settings.</p>
+            <p className="font-mono text-[13px] text-[var(--text)] font-bold uppercase">{t("tutorial.skipTitle")}</p>
+            <p className="font-mono text-xs text-[var(--text-muted)] mt-1.5">{t("tutorial.skipDesc")}</p>
             <div className="flex gap-2 mt-4">
               <button
                 onClick={handleCancelSkip}
                 className={`flex-1 py-1.5 ${btnBase} font-medium text-[var(--text)]`}
               >
-                Continue
+                {t("tutorial.continue")}
               </button>
               <button
                 onClick={handleConfirmSkip}
                 className={`flex-1 py-1.5 ${btnBase} font-medium text-[var(--text-muted)]`}
               >
-                Skip
+                {t("tutorial.skip")}
               </button>
             </div>
           </div>

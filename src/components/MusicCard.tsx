@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Using <img> instead of next/image — YouTube serves optimized thumbnails already
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
+import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 
 interface MusicCardProps {
@@ -52,6 +53,7 @@ export default memo(function MusicCard({
   viewContext = "default",
   isAuthenticated = true,
 }: MusicCardProps) {
+  const { t } = useTranslation();
   const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -151,9 +153,9 @@ export default memo(function MusicCard({
         if (tags.length === 0) return null;
         return (
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end min-[1152px]:opacity-0 min-[1152px]:group-hover:opacity-100 transition-opacity duration-200">
-            {tags.map((t) => (
-              <span key={t.label} className={`px-2.5 py-1 ${t.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-md shadow-sm`}>
-                {t.label}
+            {tags.map((tag) => (
+              <span key={tag.label} className={`px-2.5 py-1 ${tag.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-md shadow-sm`}>
+                {tag.label}
               </span>
             ))}
           </div>
@@ -212,14 +214,14 @@ export default memo(function MusicCard({
         )}
 
         {/* Like button */}
-        <Tooltip label={isAuthenticated ? (saved ? "Saved!" : "Save") : "Log in to save"} position="top">
+        <Tooltip label={isAuthenticated ? (saved ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
           <HeartLikeButton
             isLiked={saved}
             trackId={card.id}
             onToggle={handleHeartClick}
             size="md"
             disabled={!isAuthenticated}
-            ariaLabel={isAuthenticated ? (saved ? "Unlike" : "Save") : "Log in to save"}
+            ariaLabel={isAuthenticated ? (saved ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
             lottieVariant="light"
             className={`rounded-full bg-black/70 text-white hover:bg-black/90 ${
               saved

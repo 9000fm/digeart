@@ -3,6 +3,7 @@ import { Space_Mono, Big_Shoulders } from "next/font/google";
 import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import ThemeProvider from "@/components/ThemeProvider";
+import LanguageProvider from "@/components/LanguageProvider";
 import "./globals.css";
 
 const spaceMono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"] });
@@ -40,7 +41,9 @@ export default function RootLayout({
       <body className={`${spaceMono.className} ${displayFont.variable} ${bigShoulders.variable} antialiased`}>
         <SessionProvider>
           <ThemeProvider>
-            {children}
+            <LanguageProvider>
+              {children}
+            </LanguageProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>
