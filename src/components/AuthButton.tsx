@@ -55,13 +55,9 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
         )}
         Theme
       </span>
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
-        style={{ fontSize: 11 }}
-      >
-        {theme === "dark" ? "☾ Dark" : "☀ Light"}
-      </button>
+      <div className={`w-7 h-4 rounded-full relative transition-colors duration-200 ${theme === "dark" ? "bg-[var(--text)]" : "bg-[var(--text-secondary)]"}`}>
+        <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 ${theme === "dark" ? "left-3.5 bg-[var(--bg)]" : "left-0.5 bg-[var(--bg)]"}`} />
+      </div>
     </div>
   );
 

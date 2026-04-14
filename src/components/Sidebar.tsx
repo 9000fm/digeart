@@ -191,6 +191,8 @@ export default function Sidebar({
   const [showAboutLocal, setShowAboutLocal] = useState(false);
   const showAbout = showAboutProp !== undefined ? showAboutProp : showAboutLocal;
   const setShowAbout = onSetAbout ?? setShowAboutLocal;
+  const [aboutSource, setAboutSource] = useState<"dropdown" | "gear">("dropdown");
+  const [gearAnchor, setGearAnchor] = useState<{ left: number; bottom: string } | null>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -471,7 +473,7 @@ export default function Sidebar({
         </div>
 
         <div data-auth-desktop className="shrink-0 mr-1">
-          <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-desktop]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setShowAbout(!showAbout); setSettingsOpen(false); }} />
+          <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-desktop]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setAboutSource("dropdown"); setShowAbout(!showAbout); setSettingsOpen(false); }} />
         </div>
       </header>
 
@@ -694,8 +696,14 @@ export default function Sidebar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="hidden min-[1152px]:block fixed right-3 z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[290px] max-h-[calc(100vh-120px)] overflow-y-auto"
-            style={{ top: "calc(var(--banner-height) + var(--header-height) + 8px)" }}
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[290px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            style={aboutSource === "gear" && gearAnchor ? {
+              left: gearAnchor.left,
+              bottom: gearAnchor.bottom,
+            } : {
+              right: 12,
+              top: "calc(var(--banner-height) + var(--header-height) + 8px)",
+            }}
           >
             <p className="font-[family-name:var(--font-display)] text-lg text-[var(--text)]">digeart</p>
             <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">Music discovery for diggers. All human-selected.</p>
@@ -853,7 +861,7 @@ export default function Sidebar({
       </AnimatePresence>
 
       {/* Settings Panel */}
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} onOpenInfo={() => { setShowAbout(true); setSettingsOpen(false); }} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} onOpenInfo={() => { setAboutSource("gear"); const rect = gearRef.current?.getBoundingClientRect(); if (rect) setGearAnchor({ left: rect.right + 12, bottom: "calc(var(--player-height) + 16px)" }); setShowAbout(true); setSettingsOpen(false); }} />
     </>
   );
 }
