@@ -542,7 +542,7 @@ export default function Sidebar({
         >
           digeart
         </span>
-        <div data-genre-filter className="flex-1 relative">
+        <div data-genre-filter className="flex-1 min-w-0 relative overflow-hidden">
           {/* Mobile genre pills */}
           <div className="flex items-center absolute left-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
             {activeGenreLabels.map((label) => (
