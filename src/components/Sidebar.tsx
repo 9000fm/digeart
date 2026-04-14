@@ -532,6 +532,7 @@ export default function Sidebar({
 
       {/* ===== MOBILE: Fixed header bar ===== */}
       <header
+        data-mobile-header
         className="flex min-[1152px]:hidden fixed left-0 right-0 z-50 h-[var(--header-height-mobile)] bg-[var(--bg)] border-b border-[var(--border)]/30 items-center px-3 gap-3"
         style={{ top: "var(--banner-height)" }}
       >

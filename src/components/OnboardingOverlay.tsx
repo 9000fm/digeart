@@ -57,7 +57,7 @@ function getMobileSteps(t: (key: string) => string): OnboardingStep[] {
       description: t("tutorial.browseYourWayDesc"),
     },
     {
-      target: "[data-genre-filter]",
+      target: "[data-mobile-header] [data-genre-filter]",
       title: t("tutorial.filters"),
       description: t("tutorial.filtersDesc"),
     },
