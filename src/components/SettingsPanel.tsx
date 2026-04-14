@@ -23,6 +23,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
   const { t, locale, setLocale } = useTranslation();
   const isAuthenticated = !!session?.user;
   const [langOpen, setLangOpen] = useState(false);
+  const handleClose = () => { setLangOpen(false); onClose(); };
   const LANG_LABELS: Record<string, string> = { es: "Español", en: "English", fr: "Français", ja: "日本語", ru: "Русский" };
   const LANG_CODES: Record<string, string> = { es: "ES", en: "EN", fr: "FR", ja: "JP", ru: "RU" };
 
@@ -30,7 +31,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -48,7 +49,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[70]"
-            onClick={onClose}
+            onClick={handleClose}
           />
 
           {/* Floating card — anchored to gear icon */}
@@ -85,7 +86,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                 {t("settings.title")}
               </h2>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
               >
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
