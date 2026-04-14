@@ -26,10 +26,10 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setLangOpen(false); }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") { setOpen(false); setLangOpen(false); }
     };
     const timer = setTimeout(() => {
       window.addEventListener("mousedown", handleClick);
@@ -135,7 +135,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
       <div ref={ref} className="relative flex items-center gap-1">
         <div className="relative group/avatar flex items-center">
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => { setOpen((v) => !v); setLangOpen(false); }}
             className={`shrink-0 flex items-center gap-0.5 h-12 px-2 rounded-xl cursor-pointer transition-all duration-200 hover:bg-[var(--bg-alt)] ${open ? "bg-[var(--bg-alt)]" : ""}`}
           >
             {avatar}
