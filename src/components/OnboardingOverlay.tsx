@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
 
 interface OnboardingStep {
@@ -87,7 +87,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   // Skip "Info" and "Settings" steps on mobile — targets only exist in desktop sidebar
   const isMobile = typeof window !== "undefined" && window.innerWidth < 1152;
   const isDark = typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "dark";
-  const steps = isMobile ? getMobileSteps(t) : getSteps(t);
+  const steps = useMemo(() => isMobile ? getMobileSteps(t) : getSteps(t), [isMobile, t]);
 
   // Is this the player step? (index 1 in full steps)
   const isPlayerStep = steps[step]?.target === ".player-banner";
@@ -96,12 +96,12 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   useEffect(() => {
     if (!show || !ready || !onPlayRandom) return;
     if (steps[step]?.target !== ".player-banner") return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!document.querySelector(".player-banner")) {
         onPlayRandom();
       }
     }, 200);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [show, ready, step, steps, onPlayRandom]);
 
   const updateSpotlight = useCallback(() => {
@@ -172,20 +172,20 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   // Player step: wait for animation to settle before showing spotlight (single entrance, no blink)
   useEffect(() => {
     if (!show || !ready || !isPlayerStep) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       updateSpotlight();
       setTimeout(() => setSpotlightVisible(true), 60);
     }, 800);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [show, ready, isPlayerStep, updateSpotlight]);
 
   // After step changes, wait for spotlight to reposition then fade card in (skip player step)
   useEffect(() => {
     if (!show || !ready || isPlayerStep) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSpotlightVisible(true);
     }, 120);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [show, ready, step, isPlayerStep]);
 
   // On tutorial start: scroll to top, then lock body scroll, then mark ready
@@ -197,7 +197,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
     setStep(0);
     setShowConfirm(false);
     window.scrollTo({ top: 0, behavior: "instant" });
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = "hidden";
       document.documentElement.style.overflow = "hidden";
@@ -205,7 +205,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
       setReady(true);
     }, 100);
     return () => {
-      clearTimeout(t);
+      clearTimeout(timer);
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
       document.documentElement.style.paddingRight = "";
@@ -478,12 +478,14 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
               <button
                 onClick={handleCancelSkip}
                 className={`flex-1 py-1.5 ${btnBase} font-medium text-[var(--text)]`}
+                style={{ fontSize: 12 }}
               >
                 {t("tutorial.continue")}
               </button>
               <button
                 onClick={handleConfirmSkip}
                 className={`flex-1 py-1.5 ${btnBase} font-medium text-[var(--text-muted)]`}
+                style={{ fontSize: 12 }}
               >
                 {t("tutorial.skip")}
               </button>

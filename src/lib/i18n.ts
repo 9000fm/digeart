@@ -13,7 +13,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Settings
     "settings.title": "AJUSTES",
-    "settings.theme": "Tema",
+    "settings.theme": "Apariencia",
     "settings.speedAdjust": "Velocidad",
     "settings.tutorial": "Tutorial",
     "settings.about": "Info",
@@ -32,7 +32,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.signOut": "Cerrar sesión",
     "auth.savedTracks": "Tracks guardados",
     "auth.saveTracksSync": "Guarda tracks y sincroniza entre dispositivos",
-    "auth.theme": "Tema",
+    "auth.theme": "Apariencia",
     "auth.settings": "Ajustes",
     "auth.about": "Info",
 
@@ -92,11 +92,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.thePlayer": "El reproductor",
     "tutorial.thePlayerDesc": "Play, pausa, localizar, volumen, shuffle — todos los controles aquí.",
     "tutorial.browseYourWay": "Explora a tu manera",
-    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes y Guardados — cada tab muestra música diferente.",
+    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes y Guardados — descubre música en distintos formatos.",
     "tutorial.filters": "Filtros",
-    "tutorial.filtersDesc": "Filtros por género y año próximamente.",
+    "tutorial.filtersDesc": "Filtros por género y año (próximamente).",
     "tutorial.yourMenu": "Tu menú",
-    "tutorial.yourMenuDesc": "Tema, acerca de, ajustes y más — todo en tu menú de perfil.",
+    "tutorial.yourMenuDesc": "Apariencia, info, ajustes y más — todo en tu menú de perfil.",
     "tutorial.yourMenuDescMobile": "Ajustes, acerca de y tracks guardados — todo en tu menú de perfil.",
     "tutorial.skipTitle": "¿Saltar tutorial?",
     "tutorial.skipDesc": "Puedes reiniciarlo desde Ajustes.",
@@ -153,7 +153,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Settings
     "settings.title": "SETTINGS",
-    "settings.theme": "Theme",
+    "settings.theme": "Appearance",
     "settings.speedAdjust": "Speed Adjust",
     "settings.tutorial": "Tutorial",
     "settings.about": "Info",
@@ -172,7 +172,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.signOut": "Sign out",
     "auth.savedTracks": "Saved tracks",
     "auth.saveTracksSync": "Save tracks & sync across devices",
-    "auth.theme": "Theme",
+    "auth.theme": "Appearance",
     "auth.settings": "Settings",
     "auth.about": "Info",
 
@@ -293,7 +293,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Settings
     "settings.title": "RÉGLAGES",
-    "settings.theme": "Thème",
+    "settings.theme": "Apparence",
     "settings.speedAdjust": "Vitesse",
     "settings.tutorial": "Tutorial",
     "settings.about": "Info",
@@ -312,7 +312,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.signOut": "Se déconnecter",
     "auth.savedTracks": "Tracks sauvegardés",
     "auth.saveTracksSync": "Sauvegarde tes tracks et synchronise entre appareils",
-    "auth.theme": "Thème",
+    "auth.theme": "Apparence",
     "auth.settings": "Réglages",
     "auth.about": "Info",
 
@@ -433,7 +433,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Settings
     "settings.title": "設定",
-    "settings.theme": "テーマ",
+    "settings.theme": "外観",
     "settings.speedAdjust": "再生速度",
     "settings.tutorial": "Tutorial",
     "settings.about": "Info",
@@ -452,7 +452,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.signOut": "ログアウト",
     "auth.savedTracks": "保存したトラック",
     "auth.saveTracksSync": "トラックを保存してデバイス間で同期",
-    "auth.theme": "テーマ",
+    "auth.theme": "外観",
     "auth.settings": "設定",
     "auth.about": "Info",
 
@@ -573,7 +573,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Settings
     "settings.title": "НАСТРОЙКИ",
-    "settings.theme": "Тема",
+    "settings.theme": "Оформление",
     "settings.speedAdjust": "Скорость",
     "settings.tutorial": "Tutorial",
     "settings.about": "Info",
@@ -592,7 +592,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "auth.signOut": "Выйти",
     "auth.savedTracks": "Сохранённые треки",
     "auth.saveTracksSync": "Сохраняй треки и синхронизируй между устройствами",
-    "auth.theme": "Тема",
+    "auth.theme": "Оформление",
     "auth.settings": "Настройки",
     "auth.about": "Info",
 

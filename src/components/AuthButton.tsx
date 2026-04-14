@@ -10,9 +10,10 @@ interface AuthButtonProps {
   onGoToSaved?: () => void;
   onOpenSettings?: () => void;
   onOpenInfo?: () => void;
+  onRunTutorial?: () => void;
 }
 
-export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: AuthButtonProps) {
+export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, onRunTutorial }: AuthButtonProps) {
   const { data: session, status } = useSession();
   const { theme, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useTranslation();
@@ -149,6 +150,19 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                       <circle cx="12" cy="8" r="0.5" fill="currentColor" />
                     </svg>
                     {t("auth.about")}
+                  </button>
+                )}
+                {onRunTutorial && (
+                  <button
+                    onClick={() => { onRunTutorial(); setOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                    style={{ fontSize: 11 }}
+                  >
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+                    </svg>
+                    {t("settings.tutorial")}
                   </button>
                 )}
               </div>

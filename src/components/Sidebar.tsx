@@ -657,7 +657,7 @@ export default function Sidebar({
           )}
         </div>
         <div data-auth-button className="shrink-0">
-          <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-button]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setShowAbout(!showAbout); setSettingsOpen(false); }} />
+          <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-button]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setShowAbout(!showAbout); setSettingsOpen(false); }} onRunTutorial={onRunTutorial} />
         </div>
       </header>
 
