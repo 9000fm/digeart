@@ -155,8 +155,10 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   useEffect(() => {
     if (!show || !ready) return;
     const timer = setTimeout(updateSpotlight, 80);
+    // Re-measure periodically to handle layout changes (player appearing, etc.)
+    const interval = setInterval(updateSpotlight, 500);
     window.addEventListener("resize", updateSpotlight);
-    return () => { clearTimeout(timer); window.removeEventListener("resize", updateSpotlight); };
+    return () => { clearTimeout(timer); clearInterval(interval); window.removeEventListener("resize", updateSpotlight); };
   }, [show, ready, updateSpotlight]);
 
   // Watch player element for size changes (minimize/expand on mobile)
