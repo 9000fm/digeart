@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
+import { useSession } from "next-auth/react";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -11,10 +12,13 @@ interface SettingsPanelProps {
   onRunTutorial?: () => void;
   djMode?: boolean;
   onToggleDjMode?: () => void;
+  onOpenInfo?: () => void;
 }
 
-export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial, djMode, onToggleDjMode }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial, djMode, onToggleDjMode, onOpenInfo }: SettingsPanelProps) {
   const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
 
   // Close on Escape
   useEffect(() => {
@@ -71,7 +75,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             className="bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
-              <h2 className="font-mono text-[10px] font-bold text-[var(--text)] uppercase tracking-widest">
+              <h2 className="font-mono text-[9px] font-bold text-[var(--text)] uppercase tracking-widest">
                 Settings
               </h2>
               <button
@@ -85,32 +89,47 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               </button>
             </div>
 
-            <div className="px-4 py-3 space-y-3">
-              {/* Theme toggle */}
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-[var(--text)]">
+            <div className="px-4 py-3 space-y-2.5">
+              {/* Theme toggle — always visible */}
+              <div className="flex items-center justify-between cursor-pointer" onClick={toggleTheme}>
+                <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
                   Theme
                 </span>
                 <button
-                  onClick={toggleTheme}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-xs text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                  onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
+                  style={{ fontSize: 9 }}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                 >
-                  <span className="text-base">
-                    {theme === "light" ? "☀" : "☾"}
-                  </span>
-                  {theme === "light" ? "Light" : "Dark"}
+                  {theme === "dark" ? "☾ Dark" : "☀ Light"}
                 </button>
               </div>
 
-              {/* Speed toggle — desktop/tablet only */}
+              {/* About — always visible */}
+              {onOpenInfo && (
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                    About
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onOpenInfo(); onClose(); }}
+                    style={{ fontSize: 9 }}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                  >
+                    View
+                  </button>
+                </div>
+              )}
+
+              {/* Speed toggle — auth only, desktop/tablet */}
               {onToggleDjMode && (
-                <div className="hidden min-[1152px]:flex items-center justify-between">
-                  <span className="font-mono text-xs text-[var(--text)]">
+                <div className={`hidden min-[1152px]:flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
                     Speed Adjust
                   </span>
                   <button
                     onClick={onToggleDjMode}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs active:scale-95 transition-all duration-100 ${
+                    style={{ fontSize: 9 }}
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border font-mono active:scale-95 transition-all duration-100 ${
                       djMode
                         ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]"
                         : "bg-[var(--bg-alt)] text-[var(--text)] border-[var(--border)] hover:border-[var(--text-muted)]"
@@ -121,19 +140,27 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                 </div>
               )}
 
-              {/* Tutorial */}
+              {/* Tutorial — auth only */}
               {onRunTutorial && (
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-[var(--text)]">
+                <div className={`flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
                     Tutorial
                   </span>
                   <button
                     onClick={() => { onRunTutorial(); onClose(); }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-xs text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+                    style={{ fontSize: 9 }}
                   >
                     Run
                   </button>
                 </div>
+              )}
+
+              {/* Sign in CTA for non-auth */}
+              {!isAuthenticated && (
+                <p className="font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/30" style={{ fontSize: 9 }}>
+                  Sign in to unlock
+                </p>
               )}
             </div>
 

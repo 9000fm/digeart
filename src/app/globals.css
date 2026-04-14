@@ -19,11 +19,11 @@ html {
 }
 
 :root {
-  --sidebar-width: 80px;
-  --banner-height: 36px;
-  --header-height: 68px;
-  --header-height-mobile: 72px;
-  --nav-height-mobile: 64px;
+  --sidebar-width: 52px;
+  --banner-height: 28px;
+  --header-height: 60px;
+  --header-height-mobile: 64px;
+  --nav-height-mobile: 52px;
   --player-height: 148px;
 
   /* Light theme (default) */
@@ -139,7 +139,7 @@ body {
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(-33.333%);
   }
 }
 
@@ -189,6 +189,9 @@ body {
 /* Coming soon dots animation */
 .dots-animated::after {
   content: '';
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
   animation: dots-cycle 1.5s steps(4, end) infinite;
 }
 @keyframes dots-cycle {

@@ -17,7 +17,7 @@ const STEPS: OnboardingStep[] = [
   {
     target: ".player-banner",
     title: "The player",
-    description: "Play, pause, locate, volume, shuffle \u2014 controls live here. Try N for next, P for previous.",
+    description: "Play, pause, locate, volume, shuffle \u2014 all controls live here.",
   },
   {
     target: "aside nav",
@@ -25,19 +25,14 @@ const STEPS: OnboardingStep[] = [
     description: "Tracks, Samples, Mixes & Saved \u2014 each tab surfaces different music.",
   },
   {
-    target: "header input[type='text']",
-    title: "Filter by genre",
-    description: "Type to find genres \u2014 from Detroit techno to dub.",
+    target: "header [data-genre-filter]",
+    title: "Filters",
+    description: "Genre & year filters coming soon.",
   },
   {
-    target: ".group\\/about button",
-    title: "Info",
-    description: "Press (i) or ? for keyboard shortcuts, tab guides, and help.",
-  },
-  {
-    target: ".group\\/gear button",
-    title: "Settings",
-    description: "Theme, playback preferences, and restart this tutorial.",
+    target: "[data-auth-desktop]",
+    title: "Your menu",
+    description: "Theme, about, settings, and more \u2014 all inside your profile menu.",
   },
 ];
 
@@ -50,7 +45,7 @@ const MOBILE_STEPS: OnboardingStep[] = [
   {
     target: ".player-banner",
     title: "The player",
-    description: "Play, pause, locate, volume, shuffle \u2014 controls live here. Try N for next, P for previous.",
+    description: "Play, pause, locate, volume, shuffle \u2014 all controls live here.",
   },
   {
     target: "[data-mobile-nav]",
@@ -59,8 +54,8 @@ const MOBILE_STEPS: OnboardingStep[] = [
   },
   {
     target: "[data-genre-filter]",
-    title: "Filter by genre",
-    description: "Type to find genres \u2014 from Detroit techno to dub.",
+    title: "Filters",
+    description: "Genre & year filters coming soon.",
   },
   {
     target: "[data-auth-button]",
@@ -337,7 +332,7 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
     : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 10002 };
 
   // Canonical button style (matches SettingsPanel)
-  const btnBase = "px-3 py-1.5 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-xs text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100";
+  const btnBase = "px-3 py-1.5 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100";
 
   return (
     <>
@@ -448,16 +443,16 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
               onClick={handlePrev}
               disabled={isFirst}
               className={`w-7 h-7 flex items-center justify-center ${btnBase} disabled:opacity-20 disabled:pointer-events-none`}
+              style={{ fontSize: 12 }}
             >
-              <span className="font-mono text-sm">&lt;</span>
+              &lt;
             </button>
             <button
               onClick={handleNext}
-              className={`${isLast ? "h-7 px-3 font-mono text-[11px]" : "w-7 h-7"} flex items-center justify-center ${btnBase}`}
+              className={`${isLast ? "h-7 px-3" : "w-7 h-7"} flex items-center justify-center ${btnBase}`}
+              style={{ fontSize: isLast ? 11 : 12 }}
             >
-              {isLast ? "Done" : (
-                <span className="font-mono text-sm">&gt;</span>
-              )}
+              {isLast ? "Done" : ">"}
             </button>
           </div>
         </div>

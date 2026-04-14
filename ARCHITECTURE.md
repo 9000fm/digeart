@@ -354,11 +354,31 @@ Always use `var(--*)` for colors. Hardcoded hex only for: YouTube thumbnail over
 ### 7.2 Layout Variables
 
 ```
---sidebar-width: 80px
---banner-height: 36px
---header-height: 68px / 72px (mobile)
---player-height: 148px (desktop) / 96px / 90px (mobile)
+--sidebar-width: 52px
+--banner-height: 28px
+--header-height: 60px (desktop)
+--header-height-mobile: 64px
+--nav-height-mobile: 52px
+--player-height: 148px (mobile default) / 96px (≥500px) / 90px (≥1152px)
 ```
+
+### 7.3 About Panel Behavior
+
+- **Desktop (≥1152px):** Popover, `fixed right-3`, positioned below header. No backdrop.
+- **Tablet/Mobile (<1152px):** Bottom sheet sliding up from bottom with backdrop blur. Swipe-down and X to close.
+- On resize, About and Settings auto-close to prevent positioning bugs.
+
+### 7.4 User Dropdown
+
+Unified dropdown from AuthButton (all layouts). Contains: Theme toggle, Settings, About, Saved tracks, Sign out. Non-auth users see: Theme, About, Sign in.
+
+### 7.5 Known Tailwind v4 Bug
+
+`text-[Npx]` combined with `text-[var(--color)]` on the same element causes font-size to be overridden. Tailwind v4 can't distinguish color from font-size for CSS variable values — both use the `text-` prefix.
+
+**Workaround:** Use inline `style={{ fontSize: N }}` when both arbitrary font-size and CSS variable colors are needed on the same element. This is documented in BRAND.md under UI Sizing.
+
+**Long-term fix:** Register CSS variables as `@theme` colors in Tailwind v4 config, then use `text-secondary` instead of `text-[var(--text-secondary)]`.
 
 ---
 

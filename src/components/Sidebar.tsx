@@ -34,15 +34,14 @@ const SEARCH_PHRASES = [
 ];
 
 const BANNER_PHRASES = [
-  "DIGEART — MUSIC DISCOVERY",
+  "DIGEART — MÚSICA SELECTA",
   "RARE GROOVES",
-  "TRUST YOUR EARS",
-  "HIDDEN GEMS DAILY",
-  "DIG DEEPER",
-  "STRAIGHT FROM THE SOURCE",
-  "HUMAN SELECTED",
   "RARE FINDS",
   "MUSIC FOR DIGGERS",
+  "UNDERGROUND ONLY",
+  "VINYL CUTS",
+  "SIN FILTRO",
+  "WAX ONLY",
 ];
 
 const SEPARATOR_ICONS = ["✦", "◇", "⬥", "✧", "◆", "⏣", "✦"];
@@ -238,6 +237,13 @@ export default function Sidebar({
     }
   }, [showAbout]);
 
+  // Close panels on resize to avoid positioning bugs
+  useEffect(() => {
+    const onResize = () => { setShowAbout(false); setSettingsOpen(false); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   // Close About on outside click or Escape
   useEffect(() => {
     if (!showAbout) return;
@@ -320,10 +326,13 @@ export default function Sidebar({
         className="fixed top-0 left-0 right-0 z-[60] h-[var(--banner-height)] marquee-aurora overflow-hidden flex items-center"
       >
         <div className="marquee-track inline-flex whitespace-nowrap">
-          <span className="font-[family-name:var(--font-banner)] text-[13px] font-medium uppercase tracking-[0.3em] shrink-0 px-2">
+          <span className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
             {BANNER_TEXT}
           </span>
-          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[13px] font-medium uppercase tracking-[0.3em] shrink-0 px-2">
+          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
+            {BANNER_TEXT}
+          </span>
+          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
             {BANNER_TEXT}
           </span>
         </div>
@@ -331,10 +340,10 @@ export default function Sidebar({
 
       {/* ===== DESKTOP: Fixed header bar ===== */}
       <header
-        className="hidden min-[1152px]:flex fixed left-0 right-0 z-50 h-[var(--header-height)] bg-[var(--bg)]/80 backdrop-blur-md backdrop-saturate-150 border-b border-[var(--border)]/50 items-center px-4 gap-5"
+        className="hidden min-[1152px]:flex fixed left-0 right-0 z-50 h-[var(--header-height)] bg-[var(--bg)]/80 backdrop-blur-md backdrop-saturate-150 border-b border-[var(--border)]/50 items-center px-2 gap-3"
         style={{ top: "var(--banner-height)" }}
       >
-        <div className="shrink-0 min-w-[var(--sidebar-width)] flex justify-start pl-[5px]">
+        <div className="shrink-0 flex justify-start">
           <span
             className="font-[family-name:var(--font-display)] text-5xl text-[var(--text)] select-none mr-1.5 cursor-pointer"
             onClick={() => { onViewChange("home"); onTagFiltersChange([]); window.scrollTo({ top: 0, behavior: "smooth" }); }}
@@ -344,18 +353,7 @@ export default function Sidebar({
         </div>
 
         <div className="flex-1">
-          <div className="relative" ref={tagDropdownRef}>
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
+          <div data-genre-filter className="relative" ref={tagDropdownRef}>
             {/* Genre pills (left) + input + tag pills (right) layered inside */}
             <div className="flex items-center absolute left-12 top-1/2 -translate-y-1/2 z-10 gap-1">
               {activeGenreLabels.map((label) => (
@@ -394,7 +392,7 @@ export default function Sidebar({
                 ) : null;
               })}
             </div>
-            <div className="w-full pl-12 pr-10 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none">
+            <div className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none">
               Coming soon<span className="dots-animated" />
             </div>
             {/* Genre search dropdown — hide already-selected genres */}
@@ -421,7 +419,7 @@ export default function Sidebar({
                 <p className="font-mono text-xs text-[var(--text-muted)] uppercase text-center">No matching genres</p>
               </div>
             )}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="21" x2="4" y2="14" />
                 <line x1="4" y1="10" x2="4" y2="3" />
@@ -472,7 +470,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        <div className="shrink-0 mr-1">
+        <div data-auth-desktop className="shrink-0 mr-1">
           <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-desktop]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setShowAbout(!showAbout); setSettingsOpen(false); }} />
         </div>
       </header>
@@ -485,7 +483,7 @@ export default function Sidebar({
           height: "calc(100vh - var(--banner-height) - var(--header-height))",
         }}
       >
-        <nav className="flex flex-col items-center flex-1 gap-8">
+        <nav className="flex flex-col items-center flex-1 gap-9">
           {NAV_ITEMS.map((item, i) => {
             const isActive = activeView === item.key;
             return (
@@ -493,7 +491,7 @@ export default function Sidebar({
               <div className="relative group/nav">
                 <button
                   onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className={`w-12 h-12 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 ${
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 [&_svg]:w-6 [&_svg]:h-6 ${
                     isActive
                       ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
                       : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
@@ -520,9 +518,9 @@ export default function Sidebar({
               setSettingsOpen(true);
               setShowAbout(false);
             }}
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-all duration-200"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-all duration-200"
           >
-            <GearIcon className="w-7 h-7" />
+            <GearIcon className="w-5 h-5" />
           </button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/gear:opacity-100 transition-opacity duration-150 z-50">
             Settings
@@ -533,7 +531,7 @@ export default function Sidebar({
 
       {/* ===== MOBILE: Fixed header bar ===== */}
       <header
-        className="flex min-[1152px]:hidden fixed left-0 right-0 z-50 h-[72px] bg-[var(--bg)] border-b border-[var(--border)]/30 items-center px-3 gap-3"
+        className="flex min-[1152px]:hidden fixed left-0 right-0 z-50 h-[var(--header-height-mobile)] bg-[var(--bg)] border-b border-[var(--border)]/30 items-center px-3 gap-3"
         style={{ top: "var(--banner-height)" }}
       >
         <span
@@ -543,17 +541,6 @@ export default function Sidebar({
           digeart
         </span>
         <div data-genre-filter className="flex-1 relative">
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-secondary)]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
           {/* Mobile genre pills */}
           <div className="flex items-center absolute left-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
             {activeGenreLabels.map((label) => (
@@ -592,7 +579,7 @@ export default function Sidebar({
               ) : null;
             })}
           </div>
-          <div className="w-full pl-8 pr-8 py-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-xs text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none">
+          <div className="w-full pl-8 pr-4 py-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-xs text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none whitespace-nowrap overflow-hidden">
             Coming soon<span className="dots-animated" />
           </div>
           {/* Mobile genre search dropdown */}
@@ -619,7 +606,7 @@ export default function Sidebar({
               <p className="font-mono text-[10px] text-[var(--text-muted)] uppercase text-center">No matching genres</p>
             </div>
           )}
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="21" x2="4" y2="14" />
               <line x1="4" y1="10" x2="4" y2="3" />
@@ -676,7 +663,7 @@ export default function Sidebar({
       {/* ===== MOBILE: Nav icons below header ===== */}
       <div
         data-mobile-nav
-        className="flex min-[1152px]:hidden fixed left-0 right-0 z-40 h-16 bg-[var(--bg)] border-b border-[var(--border)] items-center justify-evenly px-0"
+        className="grid grid-cols-4 place-items-center min-[1152px]:hidden fixed left-0 right-0 z-40 h-[var(--nav-height-mobile)] bg-[var(--bg)] border-b border-[var(--border)] px-[10%]"
         style={{ top: "calc(var(--banner-height) + var(--header-height-mobile))" }}
       >
         {NAV_ITEMS.map((item, i) => {
@@ -685,7 +672,7 @@ export default function Sidebar({
             <Fragment key={item.key}>
               <button
                 onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className={`w-12 h-12 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 ${
+                className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
                   isActive
                     ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
                     : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
@@ -698,7 +685,85 @@ export default function Sidebar({
         })}
       </div>
 
-      {/* Mobile/Tablet About overlay — renders outside aside so it's visible on <lg */}
+      {/* Desktop About popover — anchored top-right near avatar */}
+      <AnimatePresence>
+        {showAbout && (
+          <motion.div
+            key="about-popover"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="hidden min-[1152px]:block fixed right-3 z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[290px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            style={{ top: "calc(var(--banner-height) + var(--header-height) + 8px)" }}
+          >
+            <p className="font-[family-name:var(--font-display)] text-lg text-[var(--text)]">digeart</p>
+            <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">Music discovery for diggers. All human-selected.</p>
+
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
+              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">Tags</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">Hot</span></span>
+                <span className="font-mono text-[9px] text-[var(--text-muted)]">Trending picks</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-pink-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">Rare</span></span>
+                <span className="font-mono text-[9px] text-[var(--text-muted)]">Hidden gems</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">New</span></span>
+                <span className="font-mono text-[9px] text-[var(--text-muted)]">Added recently</span>
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
+              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">Shortcuts</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+                {[
+                  ["Space / K", "Play / Pause"],
+                  ["N / \u2192", "Next track"],
+                  ["P / \u2190", "Previous track"],
+                  ["S", "Toggle shuffle"],
+                  ["M", "Mute / Unmute"],
+                  ["L", "Locate track"],
+                  ["Q", "Toggle queue"],
+                  ["1\u20134", "Switch tab"],
+                  ["?", "Toggle this panel"],
+                ].map(([key, desc]) => (
+                  <Fragment key={key}>
+                    <kbd className="font-mono text-[var(--text)] bg-[var(--border)]/20 px-0.5 rounded text-center min-w-[14px]" style={{ fontSize: 9 }}>{key}</kbd>
+                    <span className="font-mono text-[9px] text-[var(--text-muted)]">{desc}</span>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
+              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">Tabs</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+                {[
+                  ["For You", "1", "Electronic cuts from the underground"],
+                  ["Mixes", "2", "DJ sets & live sets"],
+                  ["Samples", "3", "World, funk, jazz, ambient & rare finds"],
+                  ["Saved", "4", "Your liked tracks"],
+                ].map(([tab, key, desc]) => (
+                  <Fragment key={tab}>
+                    <span className="font-mono text-[9px] text-[var(--text-secondary)] font-bold shrink-0">{tab} <kbd className="font-mono text-[8px] text-[var(--text-muted)] font-bold">({key})</kbd></span>
+                    <span className="font-mono text-[9px] text-[var(--text-muted)]">{desc}</span>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[9px] text-[var(--text-muted)] leading-snug">
+              All tracks are property of their respective owners and rights holders. This platform does not claim ownership of any content.
+            </p>
+
+            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[var(--border)]/30">
+              <span className="font-mono text-[9px] text-[var(--text-muted)] flex items-center gap-1"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>a <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors">superself</a> project</span>
+              <span className="font-mono text-[8px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile/Tablet About overlay */}
       <AnimatePresence>
         {showAbout && (
           <>
@@ -727,7 +792,7 @@ export default function Sidebar({
                 setShowAbout(false);
               }
             }}
-            className="min-[1152px]:hidden fixed bottom-0 left-0 right-0 max-h-[80vh] overflow-y-auto bg-[var(--bg)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl px-5 py-4 z-[71] relative"
+            className="min-[1152px]:hidden fixed bottom-0 left-0 right-0 max-h-[80vh] overflow-y-auto bg-[var(--bg)] border-t border-[var(--border)] rounded-t-2xl shadow-2xl px-5 py-4 z-[71]"
             style={{ touchAction: "pan-y" }}
             >
               {/* Drag handle */}
@@ -736,10 +801,10 @@ export default function Sidebar({
               {/* Close button */}
               <button
                 onClick={() => setShowAbout(false)}
-                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--bg-alt)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                className="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center rounded-[9px] bg-[var(--bg-alt)] border border-[var(--border)]/40 text-[var(--text)]/70 shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-all duration-150 active:scale-[0.92]"
                 aria-label="Close"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
@@ -788,7 +853,7 @@ export default function Sidebar({
       </AnimatePresence>
 
       {/* Settings Panel */}
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} anchorRect={settingsAnchor} onRunTutorial={onRunTutorial} djMode={djMode} onToggleDjMode={onToggleDjMode} onOpenInfo={() => { setShowAbout(true); setSettingsOpen(false); }} />
     </>
   );
 }

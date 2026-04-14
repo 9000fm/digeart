@@ -38,25 +38,31 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
   if (status === "loading") return null;
 
   const themeRow = (
-    <button
-      onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
-      className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-    >
-      {theme === "dark" ? (
-        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="5" />
-          <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-          <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-        </svg>
-      ) : (
-        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-        </svg>
-      )}
-      {theme === "dark" ? "Light mode" : "Dark mode"}
-    </button>
+    <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); toggleTheme(); }}>
+      <span className="flex items-center gap-2.5">
+        {theme === "dark" ? (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        ) : (
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        )}
+        Theme
+      </span>
+      <button
+        onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
+        style={{ fontSize: 11 }}
+      >
+        {theme === "dark" ? "☾ Dark" : "☀ Light"}
+      </button>
+    </div>
   );
 
   // ─── Logged-in state ───
@@ -94,7 +100,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
         </div>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl z-[70] py-2 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 w-52 bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl z-[70] py-2 overflow-hidden">
             {/* User info */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
               {session.user.image ? (
@@ -110,26 +116,29 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
               </div>
             </div>
 
-            {/* Menu items */}
+            {/* Menu items — GitHub style order */}
             <div className="py-1">
-              {onGoToSaved && (
+              {themeRow}
+              {onOpenSettings && (
                 <button
-                  onClick={() => { onGoToSaved(); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  onClick={() => { onOpenSettings(); setOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  style={{ fontSize: 11 }}
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
+                    <circle cx="12" cy="12" r="3" />
                   </svg>
-                  Saved tracks
+                  Settings
                 </button>
               )}
-              {themeRow}
               {onOpenInfo && (
                 <button
                   onClick={() => { onOpenInfo(); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  style={{ fontSize: 11 }}
                 >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="16" x2="12" y2="12" />
                     <circle cx="12" cy="8" r="0.5" fill="currentColor" />
@@ -137,27 +146,32 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
                   About
                 </button>
               )}
-              {onOpenSettings && (
-                <button
-                  onClick={() => { onOpenSettings(); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                  Settings
-                </button>
-              )}
             </div>
+
+            {/* Saved tracks */}
+            {onGoToSaved && (
+              <div className="border-t border-[var(--border)] pt-1">
+                <button
+                  onClick={() => { onGoToSaved(); setOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  style={{ fontSize: 11 }}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                  </svg>
+                  Saved tracks
+                </button>
+              </div>
+            )}
 
             {/* Sign out */}
             <div className="border-t border-[var(--border)] pt-1">
               <button
                 onClick={() => { signOut(); setOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                style={{ fontSize: 11 }}
               >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
@@ -200,7 +214,8 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
             {onOpenInfo && (
               <button
                 onClick={() => { onOpenInfo(); setOpen(false); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                style={{ fontSize: 11 }}
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -226,7 +241,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
               </svg>
               Sign in with Google
             </button>
-            <p className="font-mono text-[10px] text-[var(--text-muted)] text-center mt-2">
+            <p className="font-mono text-[var(--text-muted)] text-center mt-2" style={{ fontSize: 9 }}>
               Save tracks & sync across devices
             </p>
           </div>

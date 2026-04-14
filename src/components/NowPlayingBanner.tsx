@@ -1239,7 +1239,7 @@ export default function NowPlayingBanner({
             </div>
             {/* Bottom progress bar — thin, clickable to seek */}
             <div
-              className="w-full h-[3px] bg-[color-mix(in_srgb,var(--text-muted)_30%,var(--border))] cursor-pointer"
+              className="w-full h-[5px] bg-[color-mix(in_srgb,var(--text-muted)_30%,var(--border))] cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 if (!onSeek || !hasDuration) return;
@@ -1347,7 +1347,7 @@ export default function NowPlayingBanner({
             {/* Row 3: Seek bar */}
             <div className="flex items-center gap-1.5">
               {mobileElapsedLabel}
-              {seekBar(mobileProgressBarRef, 6, 18)}
+              {seekBar(mobileProgressBarRef)}
               {mobileRemainingLabel}
             </div>
           </div>
