@@ -14,7 +14,7 @@ interface AuthButtonProps {
 export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: AuthButtonProps) {
   const { data: session, status } = useSession();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -60,6 +60,22 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
       <div className={`w-7 h-4 rounded-full relative transition-colors duration-200 ${theme === "dark" ? "bg-[var(--text)]" : "bg-[var(--text-secondary)]"}`}>
         <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 ${theme === "dark" ? "left-3.5 bg-[var(--bg)]" : "left-0.5 bg-[var(--bg)]"}`} />
       </div>
+    </div>
+  );
+
+  const langRow = (
+    <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setLocale(locale === "es" ? "en" : "es"); }}>
+      <span className="flex items-center gap-2.5">
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+        </svg>
+        {t("settings.language")}
+      </span>
+      <span className="font-mono font-bold text-[var(--text)]" style={{ fontSize: 10 }}>
+        {locale.toUpperCase()}
+      </span>
     </div>
   );
 
@@ -117,6 +133,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
             {/* Menu items — GitHub style order */}
             <div className="py-1">
               {themeRow}
+              {langRow}
               {onOpenSettings && (
                 <button
                   onClick={() => { onOpenSettings(); setOpen(false); }}
@@ -209,6 +226,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
           {/* Theme + About for non-auth users */}
           <div className="py-1">
             {themeRow}
+            {langRow}
             {onOpenInfo && (
               <button
                 onClick={() => { onOpenInfo(); setOpen(false); }}
@@ -229,7 +247,8 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo }: 
           <div className="border-t border-[var(--border)] pt-2 px-4 pb-1">
             <button
               onClick={() => { signIn("google"); setOpen(false); }}
-              className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-[var(--border)]/50 hover:bg-[var(--border)] text-[var(--text)] rounded-lg font-mono text-xs font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-[var(--border)]/50 hover:bg-[var(--border)] text-[var(--text)] rounded-lg font-mono font-medium transition-colors"
+              style={{ fontSize: 11 }}
             >
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
