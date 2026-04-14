@@ -68,7 +68,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.loginToSave": "Inicia sesión para guardar",
 
     // Saved
-    "saved.signInToSave": "Inicia sesión para guardar tracks",
+    "saved.signInToSave": "Inicia sesión para guardar",
     "saved.noSavedYet": "Aún no hay tracks guardados",
     "saved.all": "Todo",
     "saved.tracks": "Tracks",
@@ -105,16 +105,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Listo",
 
     // Welcome
-    "welcome.tagline": "Música por descubrir",
-    "welcome.signInPrompt": "Inicia sesión para guardar tus hallazgos.",
-    "welcome.skip": "Saltar por ahora",
+    "welcome.tagline": "Encuentra música nueva",
+    "welcome.signInPrompt": "¿Te gustó? guárdalo.",
+    "welcome.skip": "Ahora no",
 
     // About
     "about.tagline": "Música selecta para diggers. Todo seleccionado a mano.",
     "about.tags": "Tags",
-    "about.trending": "En tendencia",
-    "about.hiddenGems": "Joyas ocultas",
-    "about.addedRecently": "Agregados recientemente",
+    "about.trending": "Lo más escuchado",
+    "about.hiddenGems": "Rarezas",
+    "about.addedRecently": "Novedades",
     "about.shortcuts": "Atajos",
     "about.tabs": "Tabs",
     "about.electronic": "Electrónica underground selecta",
@@ -208,7 +208,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.loginToSave": "Log in to save",
 
     // Saved
-    "saved.signInToSave": "Sign in to save tracks",
+    "saved.signInToSave": "Sign in to save",
     "saved.noSavedYet": "No saved tracks yet",
     "saved.all": "All",
     "saved.tracks": "Tracks",
@@ -246,15 +246,15 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Music discovery for diggers",
-    "welcome.signInPrompt": "Sign in to save your finds.",
-    "welcome.skip": "Skip for now",
+    "welcome.signInPrompt": "Like it? Save it.",
+    "welcome.skip": "Not now",
 
     // About
     "about.tagline": "Music discovery for diggers. All human-selected.",
     "about.tags": "Tags",
-    "about.trending": "Trending picks",
-    "about.hiddenGems": "Hidden gems",
-    "about.addedRecently": "Added recently",
+    "about.trending": "Most played",
+    "about.hiddenGems": "Rarities",
+    "about.addedRecently": "New arrivals",
     "about.shortcuts": "Shortcuts",
     "about.tabs": "Tabs",
     "about.electronic": "Electronic cuts from the underground",
@@ -348,7 +348,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.loginToSave": "Connecte-toi pour sauvegarder",
 
     // Saved
-    "saved.signInToSave": "Connecte-toi pour sauvegarder des tracks",
+    "saved.signInToSave": "Connecte-toi pour sauvegarder",
     "saved.noSavedYet": "Pas encore de tracks sauvegardés",
     "saved.all": "Tout",
     "saved.tracks": "Tracks",
@@ -385,16 +385,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Terminé",
 
     // Welcome
-    "welcome.tagline": "La musique à découvrir",
-    "welcome.signInPrompt": "Connecte-toi pour sauvegarder tes trouvailles.",
-    "welcome.skip": "Passer pour l'instant",
+    "welcome.tagline": "Découvre de la nouvelle musique",
+    "welcome.signInPrompt": "Tu aimes ? Sauvegarde.",
+    "welcome.skip": "Pas maintenant",
 
     // About
     "about.tagline": "Musique selecte pour diggers. Sélection 100% humaine.",
     "about.tags": "Tags",
-    "about.trending": "En tendance",
-    "about.hiddenGems": "Pépites cachées",
-    "about.addedRecently": "Ajoutés récemment",
+    "about.trending": "Les plus écoutés",
+    "about.hiddenGems": "Raretés",
+    "about.addedRecently": "Nouveautés",
     "about.shortcuts": "Raccourcis",
     "about.tabs": "Tabs",
     "about.electronic": "Électro underground selecte",
@@ -488,7 +488,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.loginToSave": "ログインして保存",
 
     // Saved
-    "saved.signInToSave": "ログインしてトラックを保存",
+    "saved.signInToSave": "ログインして保存",
     "saved.noSavedYet": "保存したトラックはまだない",
     "saved.all": "すべて",
     "saved.tracks": "Tracks",
@@ -525,16 +525,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "完了",
 
     // Welcome
-    "welcome.tagline": "ディガーのための音楽発見",
-    "welcome.signInPrompt": "ログインしてお気に入りを保存しよう。",
-    "welcome.skip": "今はスキップ",
+    "welcome.tagline": "新しい音楽を見つけよう",
+    "welcome.signInPrompt": "気に入った？保存しよう。",
+    "welcome.skip": "今はいい",
 
     // About
     "about.tagline": "ディガーのための音楽発見。すべて人の手で選曲。",
     "about.tags": "Tags",
-    "about.trending": "トレンド",
-    "about.hiddenGems": "隠れた名曲",
-    "about.addedRecently": "最近追加",
+    "about.trending": "最も再生された",
+    "about.hiddenGems": "レア曲",
+    "about.addedRecently": "新着",
     "about.shortcuts": "ショートカット",
     "about.tabs": "Tabs",
     "about.electronic": "アンダーグラウンドの電子音楽",
@@ -628,7 +628,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.loginToSave": "Войди, чтобы сохранить",
 
     // Saved
-    "saved.signInToSave": "Войди, чтобы сохранять треки",
+    "saved.signInToSave": "Войди, чтобы сохранять",
     "saved.noSavedYet": "Пока нет сохранённых треков",
     "saved.all": "Все",
     "saved.tracks": "Tracks",
@@ -665,16 +665,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Готово",
 
     // Welcome
-    "welcome.tagline": "Музыка для диггеров",
-    "welcome.signInPrompt": "Войди, чтобы сохранять находки.",
-    "welcome.skip": "Пропустить",
+    "welcome.tagline": "Открой новую музыку",
+    "welcome.signInPrompt": "Понравилось? Сохрани.",
+    "welcome.skip": "Не сейчас",
 
     // About
     "about.tagline": "Музыка для диггеров. Всё отобрано вручную.",
     "about.tags": "Tags",
-    "about.trending": "В тренде",
-    "about.hiddenGems": "Скрытые жемчужины",
-    "about.addedRecently": "Недавно добавленные",
+    "about.trending": "Самые слушаемые",
+    "about.hiddenGems": "Редкости",
+    "about.addedRecently": "Новинки",
     "about.shortcuts": "Горячие клавиши",
     "about.tabs": "Tabs",
     "about.electronic": "Андеграунд электроника",

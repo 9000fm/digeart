@@ -19,7 +19,7 @@ html {
 }
 
 :root {
-  --sidebar-width: 52px;
+  --sidebar-width: 60px;
   --banner-height: 28px;
   --header-height: 60px;
   --header-height-mobile: 64px;
@@ -162,6 +162,30 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Superself text shimmer on hover */
+@keyframes text-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+.superself-shimmer {
+  background: linear-gradient(
+    90deg,
+    currentColor 40%,
+    var(--accent, #888) 50%,
+    currentColor 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.group-hover\/superself:hover .superself-shimmer,
+.superself-link:hover .superself-shimmer {
+  animation: text-shimmer 1.2s ease-in-out;
 }
 
 /* Maintenance screen animations */

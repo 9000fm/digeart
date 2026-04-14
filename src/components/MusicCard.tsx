@@ -7,6 +7,7 @@ import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
+import { useVideoDescription } from "@/hooks/useVideoDescription";
 
 interface MusicCardProps {
   card: CardData;
@@ -57,6 +58,7 @@ export default memo(function MusicCard({
   const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card.videoId, card.description);
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,16 +202,22 @@ export default memo(function MusicCard({
         {/* Info button — authenticated only */}
         {isAuthenticated && (
           <button
-            onClick={(e) => { e.stopPropagation(); setShowInfo((v) => !v); }}
+            onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-black/70 text-white/70 hover:bg-black/90 hover:text-white ${
               showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100"
             }`}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-            </svg>
+            {loadingDesc ? (
+              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+              </svg>
+            )}
           </button>
         )}
 
@@ -257,8 +265,14 @@ export default memo(function MusicCard({
                 <span className="font-mono text-[10px] text-white/50">{formatDate(card.publishedAt)}</span>
               )}
             </div>
-            {card.description && (
-              <p className="font-mono text-[10px] text-white/40 mt-2 leading-relaxed line-clamp-4">{card.description}</p>
+            {loadingDesc && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <svg className="w-3 h-3 animate-spin text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                <span className="font-mono text-[9px] text-white/30">Loading...</span>
+              </div>
+            )}
+            {!loadingDesc && cardDescription && (
+              <p className="font-mono text-[10px] text-white/40 mt-2 leading-relaxed line-clamp-4">{cardDescription}</p>
             )}
           </motion.div>
         )}

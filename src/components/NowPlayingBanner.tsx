@@ -7,6 +7,7 @@ import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
+import { useVideoDescription } from "@/hooks/useVideoDescription";
 
 function formatViewCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -211,6 +212,7 @@ export default function NowPlayingBanner({
 
   // Info popover
   const [showInfo, setShowInfo] = useState(false);
+  const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card?.videoId, card?.description);
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const infoButtonRef = useRef<HTMLButtonElement>(null);
@@ -705,7 +707,7 @@ export default function NowPlayingBanner({
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         setInfoAnchor({ left: rect.left + rect.width / 2, top: rect.top });
         setShowInfo((v) => {
-          if (!v) startInfoDismissTimer();
+          if (!v) { startInfoDismissTimer(); fetchDescription(); }
           else cancelInfoDismissTimer();
           return !v;
         });
@@ -714,11 +716,17 @@ export default function NowPlayingBanner({
         size === "sm" ? "w-6 h-6" : "w-8 h-8 2xl:w-10 2xl:h-10"
       } ${showInfo ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
     >
-      <svg className={size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-      </svg>
+      {loadingDesc ? (
+        <svg className={`${size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} animate-spin`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+          <path d="M12 2a10 10 0 0 1 10 10" />
+        </svg>
+      ) : (
+        <svg className={size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+        </svg>
+      )}
     </button>
   ) : null;
 
@@ -1479,8 +1487,14 @@ export default function NowPlayingBanner({
                 <span className="font-mono text-[10px] text-white/50">{formatDate(card.publishedAt)}</span>
               )}
             </div>
-            {card.description && (
-              <p className="font-mono text-[10px] text-white/40 mt-2 leading-relaxed line-clamp-4">{card.description}</p>
+            {loadingDesc && (
+              <div className="flex items-center gap-1.5 mt-2">
+                <svg className="w-3 h-3 animate-spin text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                <span className="font-mono text-[9px] text-white/30">Loading...</span>
+              </div>
+            )}
+            {!loadingDesc && cardDescription && (
+              <p className="font-mono text-[10px] text-white/40 mt-2 leading-relaxed line-clamp-4">{cardDescription}</p>
             )}
           </motion.div>
         )}

@@ -24,6 +24,7 @@ import QueuePanel from "@/components/QueuePanel";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import type { ViewType } from "@/components/Sidebar";
 import type { CardData } from "@/lib/types";
+import { stripCardForStorage, hydrateCardDefaults } from "@/lib/youtube";
 
 /* ── YouTube IFrame API types ── */
 interface YTPlayer {
@@ -223,9 +224,9 @@ export default function Home() {
         for (const row of data || []) {
           if (row.deleted_at === null) {
             ids.add(row.video_id);
-            activeCards.push(row.card_data as CardData);
+            activeCards.push(hydrateCardDefaults(row.card_data as Partial<CardData>));
           } else {
-            removed.push({ ...(row.card_data as CardData), deletedAt: row.deleted_at });
+            removed.push({ ...hydrateCardDefaults(row.card_data as Partial<CardData>), deletedAt: row.deleted_at });
           }
         }
         setLikedIds(ids);
@@ -732,7 +733,7 @@ export default function Home() {
       supabase
         .from("likes")
         .upsert(
-          { user_email: email, video_id: id, card_data: card, deleted_at: null },
+          { user_email: email, video_id: id, card_data: stripCardForStorage(card), deleted_at: null },
           { onConflict: "user_email,video_id" }
         )
         .then(({ error }) => {

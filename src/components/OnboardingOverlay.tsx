@@ -96,12 +96,13 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   useEffect(() => {
     if (!show || !ready || !onPlayRandom) return;
     if (steps[step]?.target !== ".player-banner") return;
-    const timer = setTimeout(() => {
-      if (!document.querySelector(".player-banner")) {
-        onPlayRandom();
-      }
-    }, 200);
-    return () => clearTimeout(timer);
+    const timer1 = setTimeout(() => {
+      if (!document.querySelector(".player-banner")) onPlayRandom();
+    }, 500);
+    const timer2 = setTimeout(() => {
+      if (!document.querySelector(".player-banner")) onPlayRandom();
+    }, 2000);
+    return () => { clearTimeout(timer1); clearTimeout(timer2); };
   }, [show, ready, step, steps, onPlayRandom]);
 
   const updateSpotlight = useCallback(() => {

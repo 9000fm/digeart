@@ -152,9 +152,9 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                 </AnimatePresence>
               </div>
 
-              {/* About — always visible */}
+              {/* About — mobile/tablet only (desktop has sidebar info button) */}
               {onOpenInfo && (
-                <div className="flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
+                <div className="min-[1152px]:hidden flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
                   <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
                     {t("settings.about")}
                   </span>

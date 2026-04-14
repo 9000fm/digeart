@@ -478,13 +478,13 @@ export default function Sidebar({
 
       {/* ===== DESKTOP: Sidebar below header ===== */}
       <aside
-        className="hidden min-[1152px]:flex fixed left-0 z-40 w-[var(--sidebar-width)] bg-[var(--bg)] border-r border-[var(--border)] text-[var(--text)] flex-col items-center py-4"
+        className="hidden min-[1152px]:flex fixed left-0 z-40 w-[var(--sidebar-width)] bg-[var(--bg)] border-r border-[var(--border)] text-[var(--text)] flex-col items-center py-5"
         style={{
           top: "calc(var(--banner-height) + var(--header-height))",
           height: "calc(100vh - var(--banner-height) - var(--header-height))",
         }}
       >
-        <nav className="flex flex-col items-center flex-1 gap-9">
+        <nav className="flex flex-col items-center flex-1 gap-10">
           {NAV_ITEMS.map((item, i) => {
             const isActive = activeView === item.key;
             return (
@@ -492,7 +492,7 @@ export default function Sidebar({
               <div className="relative group/nav">
                 <button
                   onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 [&_svg]:w-6 [&_svg]:h-6 ${
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
                     isActive
                       ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
                       : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
@@ -509,8 +509,39 @@ export default function Sidebar({
             );
           })}
         </nav>
-        {/* Settings gear — Pinterest style */}
+        {/* Bottom icons — Info + Settings */}
         <div className="flex flex-col items-center gap-4">
+        {/* Info button */}
+        <div className="relative group/info">
+          <button
+            onClick={() => {
+              setAboutSource("gear");
+              const rect = gearRef.current?.getBoundingClientRect();
+              if (rect) {
+                const playerEl = document.querySelector(".player-banner");
+                const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
+                setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+              }
+              setShowAbout(!showAbout);
+              setSettingsOpen(false);
+            }}
+            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 ${
+              showAbout
+                ? "text-[var(--text)] bg-[var(--accent)]/12"
+                : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+            }`}
+          >
+            <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+            </svg>
+          </button>
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-50">
+            {t("settings.about")}
+          </div>
+        </div>
+        {/* Settings gear */}
         <div className="relative group/gear">
           <button
             ref={gearRef}
@@ -519,9 +550,9 @@ export default function Sidebar({
               setSettingsOpen(true);
               setShowAbout(false);
             }}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-all duration-200"
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-all duration-200"
           >
-            <GearIcon className="w-5 h-5" />
+            <GearIcon className="w-[22px] h-[22px]" />
           </button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/gear:opacity-100 transition-opacity duration-150 z-50">
             {t("auth.settings")}
@@ -764,7 +795,7 @@ export default function Sidebar({
             </p>
 
             <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <span className="font-mono text-[9px] text-[var(--text-muted)] flex items-center gap-1"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors">superself</a> {t("about.projectSuffix")}</span>
+              <span className="font-mono text-[9px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
               <span className="font-mono text-[8px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
             </div>
           </motion.div>
@@ -838,13 +869,13 @@ export default function Sidebar({
                 <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">{t("about.tabs")}</p>
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   {[
-                    [t("nav.forYou"), "1", t("about.electronic")],
-                    [t("nav.samples"), "2", t("about.worldFunk")],
-                    [t("nav.mixes"), "3", t("about.djSets")],
-                    [t("nav.saved"), "4", t("about.yourLiked")],
-                  ].map(([tab, key, desc]) => (
+                    [t("nav.forYou"), t("about.electronic")],
+                    [t("nav.samples"), t("about.worldFunk")],
+                    [t("nav.mixes"), t("about.djSets")],
+                    [t("nav.saved"), t("about.yourLiked")],
+                  ].map(([tab, desc]) => (
                     <Fragment key={tab}>
-                      <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab} <kbd className="font-mono text-[9px] text-[var(--text-muted)] font-bold">({key})</kbd></span>
+                      <span className="font-mono text-[10px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
                       <span className="font-mono text-[10px] text-[var(--text-muted)]">{desc}</span>
                     </Fragment>
                   ))}
@@ -852,7 +883,7 @@ export default function Sidebar({
               </div>
 
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]/50">
-                <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1"><svg className="w-4 h-4 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors">superself</a> {t("about.projectSuffix")}</span>
+                <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-4 h-4 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
                 <span className="font-mono text-[9px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
               </div>
             </motion.div>
