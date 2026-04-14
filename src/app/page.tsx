@@ -320,14 +320,19 @@ export default function Home() {
       return;
     }
     ytPlayerRef.current!.loadVideoById(videoId);
+    try { ytPlayerRef.current!.playVideo(); } catch { /* ignore */ }
     startYTProgressPoller();
-    // Safari fallback: if playback hasn't started after 1s, retry playVideo()
+    // Retry playVideo() at 300ms and 1s for slow-loading / Safari
     setTimeout(() => {
       try {
         const p = ytPlayerRef.current;
-        if (p && p.getPlayerState() !== 1) {
-          p.playVideo();
-        }
+        if (p && p.getPlayerState() !== 1) p.playVideo();
+      } catch { /* ignore */ }
+    }, 300);
+    setTimeout(() => {
+      try {
+        const p = ytPlayerRef.current;
+        if (p && p.getPlayerState() !== 1) p.playVideo();
       } catch { /* ignore */ }
     }, 1000);
   }, [startYTProgressPoller]);
@@ -451,7 +456,8 @@ export default function Home() {
   // Internal play handler (simplified — no history/forward stack)
   const handlePlayInternal = useCallback((card: CardData) => {
     setPlayingId(card.id);
-    setIsPlaying(true);
+    // Don't set isPlaying=true here — wait for YouTube state 1 (playing)
+    // This prevents EQ animating while video is still loading/cued
     setAudioProgress(0);
     setAudioDuration(card.duration || 0);
     setNowPlayingCard(card);
