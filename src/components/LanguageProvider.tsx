@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useSyncExternalStore, type ReactNode } from "react";
 import { translations, LOCALES, type Locale } from "@/lib/i18n";
 
 interface LanguageContextValue {
@@ -19,8 +19,13 @@ export function useTranslation() {
   return useContext(LanguageContext);
 }
 
-function getDefaultLocale(): Locale {
-  if (typeof window === "undefined") return "en";
+// Subscribe to localStorage changes (cross-tab sync)
+function subscribeToStorage(cb: () => void) {
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
+}
+
+function getStoredLocale(): Locale {
   const saved = localStorage.getItem("digeart-lang");
   if (saved && LOCALES.includes(saved as Locale)) return saved as Locale;
   const lang = navigator.language.toLowerCase();
@@ -31,8 +36,14 @@ function getDefaultLocale(): Locale {
   return "en";
 }
 
+function getServerLocale(): Locale {
+  return "en";
+}
+
 export default function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(getDefaultLocale);
+  // useSyncExternalStore: server returns "en", client reads localStorage — no hydration mismatch
+  const initialLocale = useSyncExternalStore(subscribeToStorage, getStoredLocale, getServerLocale);
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
