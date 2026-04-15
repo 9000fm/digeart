@@ -199,27 +199,25 @@ export default memo(function MusicCard({
 
       {/* Action buttons — bottom right */}
       <div className="absolute bottom-2 right-2 z-20 hidden sm:flex items-center gap-1.5">
-        {/* Info button — authenticated only */}
-        {isAuthenticated && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-black/70 text-white/70 hover:bg-black/90 hover:text-white ${
-              showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100"
-            }`}
-          >
-            {loadingDesc ? (
-              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-              </svg>
-            )}
-          </button>
-        )}
+        {/* Info button — available to all users */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-black/70 text-white/70 hover:bg-black/90 hover:text-white ${
+            showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {loadingDesc ? (
+            <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+              <path d="M12 2a10 10 0 0 1 10 10" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+            </svg>
+          )}
+        </button>
 
         {/* Like button */}
         <Tooltip label={isAuthenticated ? (saved ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
@@ -280,10 +278,10 @@ export default memo(function MusicCard({
 
       {/* Track info — bottom (desktop hover) */}
       <div className="absolute bottom-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-          <p className="font-mono text-sm text-white uppercase truncate leading-tight font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+          <p className="font-mono text-xs text-white uppercase truncate leading-tight font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             {card.name}
           </p>
-          <p className="font-mono text-[10px] text-zinc-300 uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+          <p className="font-mono text-[9px] text-zinc-300 uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             {card.artist}
           </p>
         </div>
