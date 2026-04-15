@@ -729,7 +729,7 @@ export default function Sidebar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[280px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[320px] max-h-[calc(100vh-120px)] overflow-y-auto"
             style={aboutSource === "gear" && gearAnchor ? {
               left: gearAnchor.left,
               bottom: gearAnchor.bottom,
@@ -738,23 +738,23 @@ export default function Sidebar({
               top: "calc(var(--banner-height) + var(--header-height) + 8px)",
             }}
           >
-            <p className="font-[family-name:var(--font-display)] text-lg text-[var(--text)]">digeart</p>
-            <p className="font-mono text-[9px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
+            <p className="font-[family-name:var(--font-display)] text-3xl text-[var(--text)]">digeart</p>
+            <p className="font-mono text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
 
             <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tags")}</p>
+              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tags")}</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">Hot</span></span>
-                <span className="font-mono text-[9px] text-[var(--text-muted)]">{t("about.trending")}</span>
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-pink-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">Rare</span></span>
-                <span className="font-mono text-[9px] text-[var(--text-muted)]">{t("about.hiddenGems")}</span>
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500" /><span className="font-mono text-[9px] text-[var(--text-muted)] font-bold tracking-wider">New</span></span>
-                <span className="font-mono text-[9px] text-[var(--text-muted)]">{t("about.addedRecently")}</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">Hot</span></span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.trending")}</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-pink-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">Rare</span></span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.hiddenGems")}</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">New</span></span>
+                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.addedRecently")}</span>
               </div>
             </div>
 
             <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.shortcuts")}</p>
+              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.shortcuts")}</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
                 {[
                   ["Space / K", t("about.shortcutPlayPause")],
@@ -768,15 +768,15 @@ export default function Sidebar({
                   ["?", t("about.shortcutPanel")],
                 ].map(([key, desc]) => (
                   <Fragment key={key}>
-                    <kbd className="font-mono text-[var(--text)] bg-[var(--border)]/20 px-0.5 rounded text-center min-w-[14px]" style={{ fontSize: 9 }}>{key}</kbd>
-                    <span className="font-mono text-[9px] text-[var(--text-muted)]">{desc}</span>
+                    <kbd className="font-mono text-[var(--text)] bg-[var(--border)]/20 px-0.5 rounded text-center min-w-[14px]" style={{ fontSize: 11 }}>{key}</kbd>
+                    <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
               </div>
             </div>
 
             <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[8px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tabs")}</p>
+              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tabs")}</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
                 {[
                   [t("nav.forYou"), t("about.electronic")],
@@ -785,20 +785,20 @@ export default function Sidebar({
                   [t("nav.saved"), t("about.yourLiked")],
                 ].map(([tab, desc]) => (
                   <Fragment key={tab}>
-                    <span className="font-mono text-[9px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
-                    <span className="font-mono text-[9px] text-[var(--text-muted)]">{desc}</span>
+                    <span className="font-mono text-[11px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
+                    <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
               </div>
             </div>
 
-            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[9px] text-[var(--text-muted)] leading-snug text-justify">
+            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[11px] text-[var(--text-muted)] leading-snug text-justify">
               {t("about.legal")}
             </p>
 
             <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <span className="font-mono text-[9px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
-              <span className="font-mono text-[8px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
             </div>
           </motion.div>
         )}
