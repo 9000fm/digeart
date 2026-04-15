@@ -28,7 +28,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Iniciar sesión",
-    "auth.signInWithGoogle": "Iniciar sesión con Google",
+    "auth.signInWithGoogle": "Entrar con Google",
     "auth.signOut": "Cerrar sesión",
     "auth.savedTracks": "Tracks guardados",
     "auth.saveTracksSync": "Guarda tracks y sincroniza entre dispositivos",
@@ -106,7 +106,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Encuentra música nueva",
-    "welcome.signInPrompt": "¿Te gustó? guárdalo.",
+    "welcome.signInPrompt": "Inicia sesión para empezar",
     "welcome.skip": "Ahora no",
 
     // About
@@ -168,7 +168,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Sign in",
-    "auth.signInWithGoogle": "Sign in with Google",
+    "auth.signInWithGoogle": "Enter with Google",
     "auth.signOut": "Sign out",
     "auth.savedTracks": "Saved tracks",
     "auth.saveTracksSync": "Save tracks & sync across devices",
