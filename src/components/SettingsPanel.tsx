@@ -142,8 +142,8 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                             className={`w-full flex items-center justify-between px-3 py-1 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
                             style={{ fontSize: 12 }}
                           >
-                            <span>{LANG_LABELS[loc]}</span>
-                            <span>{LANG_CODES[loc]}</span>
+                            <span style={{ fontFamily: "system-ui, sans-serif" }}>{LANG_LABELS[loc]}</span>
+                            <span className="font-mono font-bold">{LANG_CODES[loc]}</span>
                           </button>
                         ))}
                       </div>
