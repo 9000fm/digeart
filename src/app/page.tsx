@@ -360,8 +360,9 @@ export default function Home() {
           try { event.target.setPlaybackRate(playbackRateRef.current); } catch { /* ignore */ }
         }
       } else if (event.data === 2) {
-        // PAUSED
-        // Don't set isPlaying to false here — we control it ourselves
+        // PAUSED — sync UI (handles background tab throttling + user pause)
+        setIsPlaying(false);
+        stopYTProgressPoller();
       }
     };
   }, [stopYTProgressPoller, startYTProgressPoller]);

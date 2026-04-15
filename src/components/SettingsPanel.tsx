@@ -99,12 +99,12 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             <div className="px-4 py-3 space-y-2.5">
               {/* Theme toggle — always visible */}
               <div className="flex items-center justify-between cursor-pointer" onClick={toggleTheme}>
-                <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
                   {t("settings.theme")}
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
-                  style={{ fontSize: 9 }}
+                  style={{ fontSize: 12 }}
                   className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                 >
                   {theme === "dark" ? `☾ ${t("settings.dark")}` : `☀ ${t("settings.light")}`}
@@ -114,12 +114,12 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Language picker — always visible */}
               <div>
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => setLangOpen((v) => !v)}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
                     {t("settings.language")}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); setLangOpen((v) => !v); }}
-                    style={{ fontSize: 9 }}
+                    style={{ fontSize: 12 }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                   >
                     {LANG_CODES[locale]}
@@ -140,7 +140,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                             key={loc}
                             onClick={() => { setLocale(loc); setLangOpen(false); }}
                             className={`w-full flex items-center justify-between px-3 py-1 font-mono transition-colors ${locale === loc ? "text-[var(--text)] font-bold bg-[var(--border)]/30" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/20"}`}
-                            style={{ fontSize: 10 }}
+                            style={{ fontSize: 12 }}
                           >
                             <span>{LANG_LABELS[loc]}</span>
                             <span>{LANG_CODES[loc]}</span>
@@ -155,12 +155,12 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* About — mobile/tablet only (desktop has sidebar info button) */}
               {onOpenInfo && (
                 <div className="min-[1152px]:hidden flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
                     {t("settings.about")}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenInfo(); onClose(); }}
-                    style={{ fontSize: 9 }}
+                    style={{ fontSize: 12 }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
                   >
                     {t("settings.view")}
@@ -171,12 +171,12 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Speed toggle — auth only, desktop/tablet */}
               {onToggleDjMode && (
                 <div className={`hidden min-[1152px]:flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
                     {t("settings.speedAdjust")}
                   </span>
                   <button
                     onClick={onToggleDjMode}
-                    style={{ fontSize: 9 }}
+                    style={{ fontSize: 12 }}
                     className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border font-mono active:scale-95 transition-all duration-100 ${
                       djMode
                         ? "bg-[var(--text)] text-[var(--bg)] border-[var(--text)]"
@@ -191,13 +191,13 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Tutorial — auth only */}
               {onRunTutorial && (
                 <div className={`flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 11 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
                     {t("settings.tutorial")}
                   </span>
                   <button
                     onClick={() => { onRunTutorial(); onClose(); }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-alt)] border border-[var(--border)] font-mono text-[var(--text)] hover:border-[var(--text-muted)] active:scale-95 transition-all duration-100"
-                    style={{ fontSize: 9 }}
+                    style={{ fontSize: 12 }}
                   >
                     {t("settings.run")}
                   </button>
@@ -206,7 +206,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
 
               {/* Sign in CTA for non-auth */}
               {!isAuthenticated && (
-                <p className="font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/30" style={{ fontSize: 9 }}>
+                <p className="font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/30" style={{ fontSize: 12 }}>
                   {t("settings.signInToUnlock")}
                 </p>
               )}
