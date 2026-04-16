@@ -435,7 +435,7 @@ export default function NowPlayingBanner({
 
   // Like/Heart button
   const likeButton = (size: "sm" | "md" = "md") => onToggleLike ? (
-    <Tooltip label={isAuthenticated ? (isLiked ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
+    <Tooltip label={isAuthenticated ? (isLiked ? t("player.unlike") : t("player.like")) : t("card.loginToSave")} position="top">
       <HeartLikeButton
         isLiked={isLiked}
         trackId={card.id}
@@ -740,8 +740,8 @@ export default function NowPlayingBanner({
         }}
         className={`relative shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 ease-out active:scale-95 ${
           autoPlay
-            ? "text-[var(--text)]"
-            : "text-[var(--text-muted)] hover:text-[var(--text)]"
+            ? "text-[var(--text)] opacity-100"
+            : "text-[var(--text-muted)] opacity-[0.33] hover:opacity-60 hover:text-[var(--text)]"
         }`}
       >
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={autoPlay ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

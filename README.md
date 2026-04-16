@@ -11,7 +11,7 @@ Deep cuts from curated underground channels. All human-selected.
 - Curated underground channels
 - Samples, mixes & DJ sets
 - Dark/light themes
-- Google auth + saved tracks
+- Google auth + liked tracks
 - Keyboard shortcuts
 
 ## How it works
@@ -19,7 +19,7 @@ Deep cuts from curated underground channels. All human-selected.
 1. Browse curated tracks across **For You**, **Samples**, and **Mixes** tabs
 2. Filter by genre (House, Techno, Breaks...) and tags (Hot, Rare, New)
 3. Click any card to play — controls, seek, and volume live in the player bar
-4. Sign in with Google to save tracks and sync across devices
+4. Sign in with Google to like tracks and sync across devices
 5. Press `?` for keyboard shortcuts
 
 ## Under the hood

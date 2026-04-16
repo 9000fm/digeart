@@ -1014,6 +1014,10 @@ export default function Home() {
           break;
         case "l":
         case "L":
+          if (nowPlayingCard) toggleLike(nowPlayingCard.id);
+          break;
+        case "t":
+        case "T":
           if (nowPlayingCard) handleLocateCard();
           break;
         case "f":
@@ -1054,7 +1058,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, canGoPrev, handleToggleMute, handleLocateCard, handleViewChange, volume, handleVolumeChange]);
+  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, canGoPrev, handleToggleMute, handleLocateCard, handleViewChange, volume, handleVolumeChange, toggleLike]);
 
   const hasPlayer = !!nowPlayingCard;
 
