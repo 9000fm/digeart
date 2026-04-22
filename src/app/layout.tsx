@@ -1,10 +1,22 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Space_Mono, Big_Shoulders } from "next/font/google";
 import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import ThemeProvider from "@/components/ThemeProvider";
 import LanguageProvider from "@/components/LanguageProvider";
+import { LOCALES, type Locale } from "@/lib/i18n";
 import "./globals.css";
+
+function detectLocaleFromHeader(header: string | null): Locale {
+  if (!header) return "en";
+  const first = header.split(",")[0]?.trim().toLowerCase() ?? "";
+  for (const loc of LOCALES) {
+    if (first.startsWith(loc)) return loc as Locale;
+  }
+  if (first.startsWith("ja")) return "ja";
+  return "en";
+}
 
 const spaceMono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"] });
 const bigShoulders = Big_Shoulders({
@@ -31,17 +43,19 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const h = await headers();
+  const serverLocale = detectLocaleFromHeader(h.get("accept-language"));
   return (
-    <html lang="en">
+    <html lang={serverLocale}>
       <body className={`${spaceMono.className} ${displayFont.variable} ${bigShoulders.variable} antialiased`}>
         <SessionProvider>
           <ThemeProvider>
-            <LanguageProvider>
+            <LanguageProvider serverLocale={serverLocale}>
               {children}
             </LanguageProvider>
           </ThemeProvider>

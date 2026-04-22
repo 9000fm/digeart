@@ -36,13 +36,9 @@ function getStoredLocale(): Locale {
   return "en";
 }
 
-function getServerLocale(): Locale {
-  return "en";
-}
-
-export default function LanguageProvider({ children }: { children: ReactNode }) {
-  // useSyncExternalStore: server returns "en", client reads localStorage — no hydration mismatch
-  const initialLocale = useSyncExternalStore(subscribeToStorage, getStoredLocale, getServerLocale);
+export default function LanguageProvider({ children, serverLocale = "en" }: { children: ReactNode; serverLocale?: Locale }) {
+  // Server snapshot comes from Accept-Language header (set in layout), client reads localStorage first
+  const initialLocale = useSyncExternalStore(subscribeToStorage, getStoredLocale, () => serverLocale);
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   const setLocale = useCallback((newLocale: Locale) => {
