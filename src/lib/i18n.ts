@@ -107,8 +107,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Listo",
 
     // Welcome
-    "welcome.tagline": "Una plataforma para descubrir música.",
-    "welcome.signInPrompt": "Inicia sesión para guardar tracks.",
+    "welcome.tagline": "Una plataforma para descubrir música",
+    "welcome.signInPrompt": "Inicia sesión para guardar tracks",
     "welcome.skip": "Saltar por ahora",
 
     // About
@@ -250,8 +250,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Done",
 
     // Welcome
-    "welcome.tagline": "A platform for music discovery.",
-    "welcome.signInPrompt": "Sign in to save tracks.",
+    "welcome.tagline": "A platform for music discovery",
+    "welcome.signInPrompt": "Sign in to save tracks",
     "welcome.skip": "Skip for now",
 
     // About
@@ -393,8 +393,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Terminé",
 
     // Welcome
-    "welcome.tagline": "Une plateforme pour découvrir la musique.",
-    "welcome.signInPrompt": "Connecte-toi pour sauvegarder des tracks.",
+    "welcome.tagline": "Une plateforme pour découvrir la musique",
+    "welcome.signInPrompt": "Connecte-toi pour sauvegarder des tracks",
     "welcome.skip": "Passer pour le moment",
 
     // About
@@ -536,8 +536,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "完了",
 
     // Welcome
-    "welcome.tagline": "音楽を発見するプラットフォーム。",
-    "welcome.signInPrompt": "ログインしてトラックを保存。",
+    "welcome.tagline": "音楽を発見するプラットフォーム",
+    "welcome.signInPrompt": "ログインしてトラックを保存",
     "welcome.skip": "今はスキップ",
 
     // About
@@ -679,8 +679,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Готово",
 
     // Welcome
-    "welcome.tagline": "Платформа для поиска музыки.",
-    "welcome.signInPrompt": "Войди, чтобы сохранять треки.",
+    "welcome.tagline": "Платформа для поиска музыки",
+    "welcome.signInPrompt": "Войди, чтобы сохранять треки",
     "welcome.skip": "Пропустить",
 
     // About
