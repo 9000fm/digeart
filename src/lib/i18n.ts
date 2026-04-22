@@ -28,7 +28,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Iniciar sesión",
-    "auth.signInWithGoogle": "Entrar con Google",
+    "auth.signInWithGoogle": "Continuar con Google",
     "auth.signOut": "Cerrar sesión",
     "auth.savedTracks": "Tus me gusta",
     "auth.saveTracksSync": "Dale me gusta a tracks y sincroniza entre dispositivos",
@@ -48,7 +48,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "player.shuffleOff": "Shuffle off (s)",
     "player.mute": "Silenciar (m)",
     "player.unmute": "Activar sonido (m)",
-    "player.locate": "Apuntar (t)",
+    "player.locate": "Target (t)",
     "player.like": "Me gusta (l)",
     "player.unlike": "Quitar (l)",
     "player.fullscreen": "Pantalla completa (f)",
@@ -90,16 +90,16 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Tutorial
     "tutorial.clickToPlay": "Click para reproducir",
-    "tutorial.clickToPlayDesc": "Haz click en cualquier tarjeta para escuchar.",
+    "tutorial.clickToPlayDesc": "Haz click en cualquier track para escuchar.",
     "tutorial.thePlayer": "El reproductor",
-    "tutorial.thePlayerDesc": "Play, pausa, localizar, volumen, shuffle — todos los controles aquí.",
-    "tutorial.browseYourWay": "Explora a tu manera",
-    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes y Me gusta — descubre música en distintos formatos.",
+    "tutorial.thePlayerDesc": "Play, pausa, skip, shuffle y ajusta el volumen desde aquí.",
+    "tutorial.browseYourWay": "Elige una sección",
+    "tutorial.browseYourWayDesc": "Cambia entre Tracks, Samples, Mixes y Me gusta para explorar distintos sonidos.",
     "tutorial.filters": "Filtros",
     "tutorial.filtersDesc": "Filtros por género y año (próximamente).",
-    "tutorial.yourMenu": "Tu menú",
-    "tutorial.yourMenuDesc": "Apariencia, info, ajustes y más — todo en tu menú de perfil.",
-    "tutorial.yourMenuDescMobile": "Ajustes, acerca de y tracks con me gusta — todo en tu menú de perfil.",
+    "tutorial.yourMenu": "Ajustes personales",
+    "tutorial.yourMenuDesc": "Tema, ajustes y controles extra — todo en un solo lugar.",
+    "tutorial.yourMenuDescMobile": "Tema, ajustes y controles extra — todo en un solo lugar.",
     "tutorial.skipTitle": "¿Saltar tutorial?",
     "tutorial.skipDesc": "Puedes reiniciarlo desde Ajustes.",
     "tutorial.continue": "Continuar",
@@ -107,12 +107,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Listo",
 
     // Welcome
-    "welcome.tagline": "Encuentra música nueva",
-    "welcome.signInPrompt": "Inicia sesión para empezar",
-    "welcome.skip": "Ahora no",
+    "welcome.tagline": "Una plataforma para descubrir música.",
+    "welcome.signInPrompt": "Inicia sesión para guardar tracks.",
+    "welcome.skip": "Saltar por ahora",
 
     // About
-    "about.tagline": "Digeart es un proyecto personal dedicado a encontrar y compartir música para oídos curiosos. Todo seleccionado a mano.",
+    "about.tagline": "Plataforma de exploración enfocado en música underground y material poco común. Tracks, samples y mixes en un solo lugar.",
     "about.tags": "Tags",
     "about.trending": "Lo más escuchado",
     "about.hiddenGems": "Rarezas",
@@ -131,7 +131,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutPrev": "Track anterior",
     "about.shortcutShuffle": "Shuffle on/off",
     "about.shortcutMute": "Silenciar / Activar",
-    "about.shortcutLocate": "Apuntar al track",
+    "about.shortcutLocate": "Target track",
     "about.shortcutLike": "Me gusta",
     "about.shortcutQueue": "Cola de reproducción",
     "about.shortcutTab": "Ir a tab",
@@ -171,7 +171,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Sign in",
-    "auth.signInWithGoogle": "Enter with Google",
+    "auth.signInWithGoogle": "Continue with Google",
     "auth.signOut": "Sign out",
     "auth.savedTracks": "Liked tracks",
     "auth.saveTracksSync": "Like tracks & sync across devices",
@@ -233,16 +233,16 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Tutorial
     "tutorial.clickToPlay": "Click to play",
-    "tutorial.clickToPlayDesc": "Click any card to start listening.",
+    "tutorial.clickToPlayDesc": "Click any track to start listening.",
     "tutorial.thePlayer": "The player",
-    "tutorial.thePlayerDesc": "Play, pause, locate, volume, shuffle — all controls live here.",
-    "tutorial.browseYourWay": "Browse your way",
-    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes & Liked — each tab surfaces different music.",
+    "tutorial.thePlayerDesc": "Play, pause, skip, shuffle, and adjust volume from here.",
+    "tutorial.browseYourWay": "Pick a section",
+    "tutorial.browseYourWayDesc": "Jump between Tracks, Samples, Mixes, and Liked to explore different kinds of sounds.",
     "tutorial.filters": "Filters",
     "tutorial.filtersDesc": "Genre & year filters coming soon.",
-    "tutorial.yourMenu": "Your menu",
-    "tutorial.yourMenuDesc": "Theme, about, settings, and more — all inside your profile menu.",
-    "tutorial.yourMenuDescMobile": "Settings, about, and liked tracks — all inside your profile menu.",
+    "tutorial.yourMenu": "Personal settings",
+    "tutorial.yourMenuDesc": "Theme, settings, and extra controls are all gathered here.",
+    "tutorial.yourMenuDescMobile": "Theme, settings, and extra controls are all gathered here.",
     "tutorial.skipTitle": "Skip tutorial?",
     "tutorial.skipDesc": "You can restart it anytime from Settings.",
     "tutorial.continue": "Continue",
@@ -250,12 +250,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Done",
 
     // Welcome
-    "welcome.tagline": "Music discovery for diggers",
-    "welcome.signInPrompt": "Like it? Save it.",
-    "welcome.skip": "Not now",
+    "welcome.tagline": "A platform for music discovery.",
+    "welcome.signInPrompt": "Sign in to save tracks.",
+    "welcome.skip": "Skip for now",
 
     // About
-    "about.tagline": "Digeart is a personal project dedicated to finding and sharing music for curious ears. All hand-selected.",
+    "about.tagline": "Music discovery for underground and hard-to-find material. Tracks, samples, and mixes in one place.",
     "about.tags": "Tags",
     "about.trending": "Most played",
     "about.hiddenGems": "Rarities",
@@ -314,7 +314,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Se connecter",
-    "auth.signInWithGoogle": "Se connecter avec Google",
+    "auth.signInWithGoogle": "Continuer avec Google",
     "auth.signOut": "Se déconnecter",
     "auth.savedTracks": "Tracks que tu aimes",
     "auth.saveTracksSync": "Aime des tracks et synchronise entre appareils",
@@ -376,16 +376,16 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Tutorial
     "tutorial.clickToPlay": "Clique pour écouter",
-    "tutorial.clickToPlayDesc": "Clique sur n'importe quelle carte pour écouter.",
+    "tutorial.clickToPlayDesc": "Clique sur n'importe quel track pour commencer à écouter.",
     "tutorial.thePlayer": "Le lecteur",
-    "tutorial.thePlayerDesc": "Play, pause, localiser, volume, shuffle — tous les contrôles sont ici.",
-    "tutorial.browseYourWay": "Explore à ta façon",
-    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes & J'aime — chaque tab affiche une musique différente.",
+    "tutorial.thePlayerDesc": "Play, pause, skip, shuffle et ajuste le volume ici.",
+    "tutorial.browseYourWay": "Choisis une section",
+    "tutorial.browseYourWayDesc": "Passe entre Tracks, Samples, Mixes et J'aime pour explorer différents sons.",
     "tutorial.filters": "Filtres",
     "tutorial.filtersDesc": "Filtres par genre et année bientôt disponibles.",
-    "tutorial.yourMenu": "Ton menu",
-    "tutorial.yourMenuDesc": "Thème, info, réglages et plus — tout dans ton menu profil.",
-    "tutorial.yourMenuDescMobile": "Réglages, info et tracks aimés — tout dans ton menu profil.",
+    "tutorial.yourMenu": "Réglages personnels",
+    "tutorial.yourMenuDesc": "Thème, réglages et contrôles supplémentaires — tout au même endroit.",
+    "tutorial.yourMenuDescMobile": "Thème, réglages et contrôles supplémentaires — tout au même endroit.",
     "tutorial.skipTitle": "Passer le tutorial ?",
     "tutorial.skipDesc": "Tu peux le relancer depuis les Réglages.",
     "tutorial.continue": "Continuer",
@@ -393,12 +393,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Terminé",
 
     // Welcome
-    "welcome.tagline": "Découvre de la nouvelle musique",
-    "welcome.signInPrompt": "Tu aimes ? Sauvegarde.",
-    "welcome.skip": "Pas maintenant",
+    "welcome.tagline": "Une plateforme pour découvrir la musique.",
+    "welcome.signInPrompt": "Connecte-toi pour sauvegarder des tracks.",
+    "welcome.skip": "Passer pour le moment",
 
     // About
-    "about.tagline": "Digeart est un projet personnel dédié à trouver et partager de la musique pour les oreilles curieuses. Tout sélectionné à la main.",
+    "about.tagline": "Plateforme d'exploration axée sur la musique underground et le matériel rare. Tracks, samples et mixes au même endroit.",
     "about.tags": "Tags",
     "about.trending": "Les plus écoutés",
     "about.hiddenGems": "Raretés",
@@ -457,7 +457,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "ログイン",
-    "auth.signInWithGoogle": "Googleでログイン",
+    "auth.signInWithGoogle": "Googleで続行",
     "auth.signOut": "ログアウト",
     "auth.savedTracks": "いいねしたトラック",
     "auth.saveTracksSync": "トラックにいいねしてデバイス間で同期",
@@ -519,16 +519,16 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Tutorial
     "tutorial.clickToPlay": "クリックして再生",
-    "tutorial.clickToPlayDesc": "カードをクリックして聴き始めよう。",
+    "tutorial.clickToPlayDesc": "トラックをクリックして再生。",
     "tutorial.thePlayer": "プレイヤー",
-    "tutorial.thePlayerDesc": "再生、一時停止、トラック探索、音量、shuffle — すべてここに。",
-    "tutorial.browseYourWay": "自分のスタイルで探索",
-    "tutorial.browseYourWayDesc": "Tracks、Samples、Mixes、いいね — 各タブで違う音楽が見つかる。",
+    "tutorial.thePlayerDesc": "再生、一時停止、スキップ、shuffle、音量調整 — すべてここから。",
+    "tutorial.browseYourWay": "セクションを選ぶ",
+    "tutorial.browseYourWayDesc": "Tracks、Samples、Mixes、いいねを切り替えて色んな音を探そう。",
     "tutorial.filters": "フィルター",
     "tutorial.filtersDesc": "ジャンル・年代フィルターは近日公開。",
-    "tutorial.yourMenu": "メニュー",
-    "tutorial.yourMenuDesc": "テーマ、info、設定など — すべてプロフィールメニューに。",
-    "tutorial.yourMenuDescMobile": "設定、info、いいねしたトラック — すべてプロフィールメニューに。",
+    "tutorial.yourMenu": "個人設定",
+    "tutorial.yourMenuDesc": "テーマ、設定、その他のコントロール — すべてここに。",
+    "tutorial.yourMenuDescMobile": "テーマ、設定、その他のコントロール — すべてここに。",
     "tutorial.skipTitle": "Tutorialをスキップ？",
     "tutorial.skipDesc": "設定からいつでも再開できる。",
     "tutorial.continue": "続ける",
@@ -536,12 +536,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "完了",
 
     // Welcome
-    "welcome.tagline": "新しい音楽を見つけよう",
-    "welcome.signInPrompt": "気に入った？保存しよう。",
-    "welcome.skip": "今はいい",
+    "welcome.tagline": "音楽を発見するプラットフォーム。",
+    "welcome.signInPrompt": "ログインしてトラックを保存。",
+    "welcome.skip": "今はスキップ",
 
     // About
-    "about.tagline": "Digeart は好奇心ある耳のために音楽を見つけ、共有する個人プロジェクト。すべて手作業で厳選。",
+    "about.tagline": "アンダーグラウンドな音楽とレアな音源に特化した探索プラットフォーム。トラック、サンプル、ミックスが一か所に。",
     "about.tags": "Tags",
     "about.trending": "最も再生された",
     "about.hiddenGems": "レア曲",
@@ -600,7 +600,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Auth
     "auth.signIn": "Войти",
-    "auth.signInWithGoogle": "Войти через Google",
+    "auth.signInWithGoogle": "Продолжить через Google",
     "auth.signOut": "Выйти",
     "auth.savedTracks": "Понравившиеся треки",
     "auth.saveTracksSync": "Ставь нравится трекам и синхронизируй между устройствами",
@@ -662,16 +662,16 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Tutorial
     "tutorial.clickToPlay": "Нажми, чтобы слушать",
-    "tutorial.clickToPlayDesc": "Нажми на любую карточку, чтобы начать слушать.",
+    "tutorial.clickToPlayDesc": "Нажми на любой трек, чтобы начать слушать.",
     "tutorial.thePlayer": "Плеер",
-    "tutorial.thePlayerDesc": "Воспроизведение, пауза, поиск, громкость, shuffle — всё здесь.",
-    "tutorial.browseYourWay": "Исследуй по-своему",
-    "tutorial.browseYourWayDesc": "Tracks, Samples, Mixes и Нравится — каждый tab показывает разную музыку.",
+    "tutorial.thePlayerDesc": "Играй, паузь, переключай, shuffle и настраивай громкость здесь.",
+    "tutorial.browseYourWay": "Выбери раздел",
+    "tutorial.browseYourWayDesc": "Переключайся между Tracks, Samples, Mixes и Нравится, чтобы находить разные звуки.",
     "tutorial.filters": "Фильтры",
     "tutorial.filtersDesc": "Фильтры по жанру и году скоро появятся.",
-    "tutorial.yourMenu": "Твоё меню",
-    "tutorial.yourMenuDesc": "Тема, info, настройки и другое — всё в меню профиля.",
-    "tutorial.yourMenuDescMobile": "Настройки, info и понравившиеся треки — всё в меню профиля.",
+    "tutorial.yourMenu": "Личные настройки",
+    "tutorial.yourMenuDesc": "Тема, настройки и доп. элементы — всё собрано здесь.",
+    "tutorial.yourMenuDescMobile": "Тема, настройки и доп. элементы — всё собрано здесь.",
     "tutorial.skipTitle": "Пропустить tutorial?",
     "tutorial.skipDesc": "Можно перезапустить из Настроек.",
     "tutorial.continue": "Продолжить",
@@ -679,12 +679,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     "tutorial.done": "Готово",
 
     // Welcome
-    "welcome.tagline": "Открой новую музыку",
-    "welcome.signInPrompt": "Понравилось? Сохрани.",
-    "welcome.skip": "Не сейчас",
+    "welcome.tagline": "Платформа для поиска музыки.",
+    "welcome.signInPrompt": "Войди, чтобы сохранять треки.",
+    "welcome.skip": "Пропустить",
 
     // About
-    "about.tagline": "Digeart — личный проект, посвящённый поиску и распространению музыки для любопытных ушей. Всё отобрано вручную.",
+    "about.tagline": "Платформа для поиска, сфокусированная на андеграундной музыке и редком материале. Треки, сэмплы и миксы в одном месте.",
     "about.tags": "Tags",
     "about.trending": "Самые слушаемые",
     "about.hiddenGems": "Редкости",

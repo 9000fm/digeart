@@ -444,6 +444,7 @@ export default function NowPlayingBanner({
         size={size}
         ariaLabel={isAuthenticated ? (isLiked ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
         className={`${isLiked ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
+        listenForKeybind
       />
     </Tooltip>
   ) : null;

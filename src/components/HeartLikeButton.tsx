@@ -20,6 +20,7 @@ interface HeartLikeButtonProps {
   disabled?: boolean;
   ariaLabel?: string;
   lottieVariant?: "light" | "dark" | "auto";
+  listenForKeybind?: boolean;
 }
 
 const SIZES = {
@@ -41,6 +42,7 @@ export default function HeartLikeButton({
   disabled = false,
   ariaLabel,
   lottieVariant = "auto",
+  listenForKeybind = false,
 }: HeartLikeButtonProps) {
   const { theme } = useTheme();
   const resolvedVariant = lottieVariant === "auto"
@@ -99,6 +101,26 @@ export default function HeartLikeButton({
     },
     [isLiked, onToggle, disabled, beforeToggle]
   );
+
+  // Global keybind listener — only active on the player's heart (visible instance wins)
+  useEffect(() => {
+    if (!listenForKeybind) return;
+    const handler = () => {
+      if (disabled) return;
+      if (!btnRef.current || btnRef.current.offsetParent === null) return;
+      if (beforeToggle && !beforeToggle()) return;
+
+      if (!isLiked) {
+        selfTriggeredRef.current = true;
+        setShowLottie(true);
+        setFillReady(false);
+        setTimeout(() => setFillReady(true), 400);
+      }
+      onToggle();
+    };
+    document.addEventListener("heart-like-keybind", handler);
+    return () => document.removeEventListener("heart-like-keybind", handler);
+  }, [listenForKeybind, isLiked, onToggle, disabled, beforeToggle]);
 
   // Should the filled heart path be visible?
   // - Self-click: visible after 0.4s delay (fillReady)

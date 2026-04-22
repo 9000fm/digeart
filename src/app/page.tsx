@@ -976,15 +976,68 @@ export default function Home() {
   }, []);
 
   // ── Keyboard shortcuts ──
+  // Use e.code for letter/digit keys (physical position) so shortcuts work
+  // regardless of keyboard layout (Cyrillic, Japanese, German, French, etc.)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.isComposing || e.keyCode === 229) return; // IME active (Japanese/Chinese/Korean)
 
+      // Letter keys by physical position (layout-independent)
+      if (e.code.startsWith("Key")) {
+        const letter = e.code.slice(3).toLowerCase();
+        switch (letter) {
+          case "k":
+            e.preventDefault();
+            if (nowPlayingCard) handleTogglePlay();
+            return;
+          case "n":
+            if (nowPlayingCard) handleNextTrack();
+            return;
+          case "p":
+            if (nowPlayingCard && canGoPrev) handlePrevTrack();
+            return;
+          case "s":
+            if (nowPlayingCard) handleToggleAutoPlay();
+            return;
+          case "m":
+            if (nowPlayingCard) handleToggleMute();
+            return;
+          case "l":
+            if (nowPlayingCard) document.dispatchEvent(new Event("heart-like-keybind"));
+            return;
+          case "t":
+            if (nowPlayingCard) handleLocateCard();
+            return;
+          case "f":
+            if (document.fullscreenElement) {
+              document.exitFullscreen();
+            } else {
+              document.documentElement.requestFullscreen();
+            }
+            return;
+          case "q":
+            if (nowPlayingCard) setShowQueue((v) => !v);
+            return;
+        }
+      }
+
+      // Digit keys (1-4) — physical position
+      if (e.code.startsWith("Digit")) {
+        const digit = e.code.slice(5);
+        switch (digit) {
+          case "1": handleViewChange("home"); return;
+          case "2": handleViewChange("mixes"); return;
+          case "3": handleViewChange("samples"); return;
+          case "4": handleViewChange("saved"); return;
+        }
+      }
+
+      // Special keys by e.key (Space/Arrows/Symbols stay identical across layouts)
       switch (e.key) {
         case " ":
-        case "k":
-        case "K":
           e.preventDefault();
           if (nowPlayingCard) handleTogglePlay();
           break;
@@ -996,50 +1049,6 @@ export default function Home() {
           e.preventDefault();
           if (nowPlayingCard && canGoPrev) handlePrevTrack();
           break;
-        case "n":
-        case "N":
-          if (nowPlayingCard) handleNextTrack();
-          break;
-        case "p":
-        case "P":
-          if (nowPlayingCard && canGoPrev) handlePrevTrack();
-          break;
-        case "s":
-        case "S":
-          if (nowPlayingCard) handleToggleAutoPlay();
-          break;
-        case "m":
-        case "M":
-          if (nowPlayingCard) handleToggleMute();
-          break;
-        case "l":
-        case "L":
-          if (nowPlayingCard) toggleLike(nowPlayingCard.id);
-          break;
-        case "t":
-        case "T":
-          if (nowPlayingCard) handleLocateCard();
-          break;
-        case "f":
-        case "F":
-          if (document.fullscreenElement) {
-            document.exitFullscreen();
-          } else {
-            document.documentElement.requestFullscreen();
-          }
-          break;
-        case "1":
-          handleViewChange("home");
-          break;
-        case "2":
-          handleViewChange("mixes");
-          break;
-        case "3":
-          handleViewChange("samples");
-          break;
-        case "4":
-          handleViewChange("saved");
-          break;
         case "?":
           setShowAbout((v) => !v);
           break;
@@ -1049,10 +1058,6 @@ export default function Home() {
           break;
         case "-":
           if (nowPlayingCard) handleVolumeChange(Math.max(0, volume - 5));
-          break;
-        case "q":
-        case "Q":
-          if (nowPlayingCard) setShowQueue((v) => !v);
           break;
       }
     };
