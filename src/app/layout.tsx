@@ -34,6 +34,18 @@ const displayFont = localFont({
 export const metadata: Metadata = {
   title: "digeart — music discovery for diggers",
   description: "Underground electronic music, human-curated for diggers.",
+  openGraph: {
+    title: "digeart",
+    description: "Music discovery for underground diggers.",
+    url: "https://digeart.vercel.app",
+    siteName: "digeart",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "digeart",
+    description: "Music discovery for underground diggers.",
+  },
 };
 
 export const viewport: Viewport = {

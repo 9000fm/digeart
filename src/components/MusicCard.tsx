@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Using <img> instead of next/image — YouTube serves optimized thumbnails already
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
+import ShareButton from "./ShareButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
@@ -122,9 +123,10 @@ export default memo(function MusicCard({
         )}
       </div>
 
-      {/* Duration badge — top left (for mixes >40min) */}
+      {/* Duration pill — theme-aware (black on dark / white on light),
+           mobile: top-left, desktop: bottom-left */}
       {card.duration && card.duration > 2400 && (
-        <span className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-black/70 text-white font-mono text-[10px] rounded-md backdrop-blur-sm">
+        <span className="absolute top-2 sm:top-auto sm:bottom-2 left-2 z-10 px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
           {formatDuration(card.duration)}
         </span>
       )}
@@ -240,6 +242,16 @@ export default memo(function MusicCard({
             }`}
           />
         </Tooltip>
+
+        {/* Share button */}
+        <ShareButton
+          trackId={card.id}
+          trackName={card.name}
+          channel={card.artist}
+          youtubeUrl={card.youtubeUrl}
+          size="md"
+          className="w-8 h-8 rounded-full bg-black/70 text-white/70 hover:bg-black/90 hover:text-white opacity-0 group-hover:opacity-100"
+        />
       </div>
 
       {/* Info popover */}
@@ -276,8 +288,8 @@ export default memo(function MusicCard({
         )}
       </AnimatePresence>
 
-      {/* Track info — bottom (desktop hover) */}
-      <div className="absolute bottom-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+      {/* Track info — top-left (desktop hover) */}
+      <div className="absolute top-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
           <p className="font-mono text-xs text-white uppercase truncate leading-tight font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             {card.name}
           </p>

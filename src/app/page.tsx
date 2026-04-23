@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import NowPlayingBanner from "@/components/NowPlayingBanner";
 import Sidebar from "@/components/Sidebar";
 import UndoToast from "@/components/UndoToast";
+import LinkCopiedToast from "@/components/LinkCopiedToast";
 import OnboardingOverlay from "@/components/OnboardingOverlay";
 import QueuePanel from "@/components/QueuePanel";
 import WelcomeScreen from "@/components/WelcomeScreen";
@@ -367,6 +368,20 @@ export default function Home() {
     };
   }, [stopYTProgressPoller, startYTProgressPoller]);
 
+  // Pending auto-play from shared ?t=<videoId> link — read on mount, triggered when card registers
+  const pendingAutoPlayId = useRef<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get("t");
+    if (shared) {
+      pendingAutoPlayId.current = shared;
+      // Strip the ?t= from URL without reloading so refreshes don't re-trigger
+      const url = new URL(window.location.href);
+      url.searchParams.delete("t");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+  }, []);
+
   const registerCards = useCallback((cards: CardData[], view: ViewType) => {
     const newIds: string[] = [];
     for (const c of cards) {
@@ -386,6 +401,12 @@ export default function Home() {
     if (newIds.length > 0 && shuffleQueue.current.length > 0) {
       fisherYatesShuffle(newIds);
       shuffleQueue.current.push(...newIds);
+    }
+    // Deferred auto-play from shared ?t=<videoId> link
+    if (pendingAutoPlayId.current && cardRegistry.current.has(pendingAutoPlayId.current)) {
+      const id = pendingAutoPlayId.current;
+      pendingAutoPlayId.current = null;
+      setTimeout(() => handlePlayRef.current?.(id), 0);
     }
   }, []);
 
@@ -587,6 +608,10 @@ export default function Home() {
     playOriginView.current = activeViewRef.current;
     handlePlayInternal(card);
   }, [handlePlayInternal, handleTogglePlay, buildQueue]);
+
+  // Stable ref for handlePlay — used by shared-link auto-play
+  const handlePlayRef = useRef(handlePlay);
+  handlePlayRef.current = handlePlay;
 
   // Commit all pending unlikes (soft-deletes stay, just dismiss toasts)
   const commitPendingUnlike = useCallback(() => {
@@ -1170,6 +1195,7 @@ export default function Home() {
       </div>
 
       <UndoToast items={undoItems} onUndo={handleUndoUnlike} playerVisible={!!nowPlayingCard} />
+      <LinkCopiedToast playerVisible={!!nowPlayingCard} />
 
 
       <AnimatePresence>

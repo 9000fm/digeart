@@ -313,11 +313,11 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
 
 /* ── YouTube helpers ─────────────────────────────────────────────────── */
 
-/** Batch-fetch durations + view counts for video IDs via videos.list */
+/** Batch-fetch durations + view counts + embed status via videos.list */
 async function fetchVideoDetails(
   videoIds: string[]
-): Promise<Map<string, { duration: number; viewCount: number }>> {
-  const details = new Map<string, { duration: number; viewCount: number }>();
+): Promise<Map<string, { duration: number; viewCount: number; embeddable: boolean }>> {
+  const details = new Map<string, { duration: number; viewCount: number; embeddable: boolean }>();
   if (videoIds.length === 0) return details;
 
   const chunks: string[][] = [];
@@ -327,7 +327,7 @@ async function fetchVideoDetails(
 
   for (const chunk of chunks) {
     const params = new URLSearchParams({
-      part: "contentDetails,statistics",
+      part: "contentDetails,statistics,status",
       id: chunk.join(","),
       key: API_KEY,
     });
@@ -341,7 +341,8 @@ async function fetchVideoDetails(
         for (const item of data.items || []) {
           const dur = parseDuration(item.contentDetails?.duration || "");
           const views = parseInt(item.statistics?.viewCount || "0", 10);
-          details.set(item.id, { duration: dur, viewCount: views });
+          const embeddable = item.status?.embeddable !== false;
+          details.set(item.id, { duration: dur, viewCount: views, embeddable });
         }
       }
     } catch {
@@ -441,7 +442,8 @@ export async function getChannelUploads(
     if (!pageToken) break;
   }
 
-  // Fetch durations + view counts
+  // Fetch durations + view counts + embed status, then filter out non-embeddable videos
+  let filtered = allVideos;
   if (allVideos.length > 0) {
     const details = await fetchVideoDetails(allVideos.map((v) => v.id));
     for (const v of allVideos) {
@@ -451,10 +453,15 @@ export async function getChannelUploads(
         v.viewCount = d.viewCount;
       }
     }
+    // Drop videos explicitly marked non-embeddable — they would fail silently in the player
+    filtered = allVideos.filter((v) => {
+      const d = details.get(v.id);
+      return d ? d.embeddable : true;
+    });
   }
 
-  cacheSet(cacheKey, allVideos);
-  return allVideos;
+  cacheSet(cacheKey, filtered);
+  return filtered;
 }
 
 /**

@@ -699,3 +699,8 @@ body {
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
 }
 
+/* Share menu — per-row hover tint for platform icons */
+.share-menu-row:hover .share-menu-icon {
+  color: var(--hover-tint);
+}
+

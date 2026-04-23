@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
+import ShareButton from "./ShareButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
@@ -1200,6 +1201,7 @@ export default function NowPlayingBanner({
             <Tooltip label={t("player.next")} position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
             {locateButton("md")}
+            <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
             {pitchFader}
           </div>
           {/* Row 2: Seek bar */}
@@ -1269,7 +1271,7 @@ export default function NowPlayingBanner({
         ) : (
           <>
           {/* Expanded 3-row layout — narrow mobile (<500px) */}
-          <div className="h-full flex flex-col px-4 pt-1.5 pb-0 gap-1 min-[500px]:hidden">
+          <div className="h-full flex flex-col justify-between px-4 pt-1.5 pb-0 min-[500px]:hidden">
             {/* Row 1: Chevron + Art + Info */}
             <div className="flex items-center gap-2.5 min-w-0">
               <button
@@ -1327,6 +1329,7 @@ export default function NowPlayingBanner({
             <div className="flex items-center justify-center gap-3">
               {infoButton("md")}
               {likeButton("md")}
+              <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
               {prevButton(32)}
               {playPauseButton(40, 16)}
               {nextButton(32)}
@@ -1365,7 +1368,7 @@ export default function NowPlayingBanner({
           </div>
 
           {/* Expanded 2-row layout — tablet (500-1023px) */}
-          <div className="h-full hidden min-[500px]:flex flex-col justify-center px-3 gap-1">
+          <div className="h-full hidden min-[500px]:flex flex-col justify-between px-3 pt-2 pb-0">
             {/* Row 1: art + controls */}
             <div className="grid items-center gap-2" style={{ gridTemplateColumns: "minmax(150px, 1fr) auto minmax(80px, 1fr)" }}>
               {/* Left: chevron + art + track info */}
@@ -1443,6 +1446,7 @@ export default function NowPlayingBanner({
                   </button>
                 )}
                 {locateButton("sm")}
+                <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="sm" />
               </div>
               {/* Right: queue ··· volume + fullscreen */}
               <div className="flex items-center w-full relative z-10">

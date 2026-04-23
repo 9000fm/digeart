@@ -87,6 +87,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Toast
     "toast.removed": "Eliminado",
     "toast.undo": "Deshacer",
+    "toast.linkCopied": "Link copiado",
+
+    // Share
+    "share.action": "Compartir",
+    "share.message": "Lo encontré en digeart",
+    "share.copyLink": "Copiar link",
+    "share.moreOptions": "Más opciones…",
 
     // Tutorial
     "tutorial.clickToPlay": "Click para reproducir",
@@ -112,7 +119,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Saltar por ahora",
 
     // About
-    "about.tagline": "Plataforma de exploración enfocado en música underground y material poco común. Tracks, samples y mixes en un solo lugar.",
+    "about.tagline": "Descubre música del underground. Tracks, samples y mixes en un solo lugar.",
     "about.tags": "Tags",
     "about.trending": "Lo más escuchado",
     "about.hiddenGems": "Rarezas",
@@ -230,6 +237,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Toast
     "toast.removed": "Removed",
     "toast.undo": "Undo",
+    "toast.linkCopied": "Link copied",
+
+    // Share
+    "share.action": "Share",
+    "share.message": "Found this on digeart",
+    "share.copyLink": "Copy link",
+    "share.moreOptions": "More options…",
 
     // Tutorial
     "tutorial.clickToPlay": "Click to play",
@@ -373,6 +387,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Toast
     "toast.removed": "Supprimé",
     "toast.undo": "Annuler",
+    "toast.linkCopied": "Lien copié",
+
+    // Share
+    "share.action": "Partager",
+    "share.message": "J'ai trouvé ça sur digeart",
+    "share.copyLink": "Copier le lien",
+    "share.moreOptions": "Plus d'options…",
 
     // Tutorial
     "tutorial.clickToPlay": "Clique pour écouter",
@@ -516,6 +537,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Toast
     "toast.removed": "削除済み",
     "toast.undo": "元に戻す",
+    "toast.linkCopied": "リンクをコピー",
+
+    // Share
+    "share.action": "共有",
+    "share.message": "digeartで見つけた",
+    "share.copyLink": "リンクをコピー",
+    "share.moreOptions": "その他のオプション…",
 
     // Tutorial
     "tutorial.clickToPlay": "クリックして再生",
@@ -659,6 +687,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Toast
     "toast.removed": "Удалено",
     "toast.undo": "Отменить",
+    "toast.linkCopied": "Ссылка скопирована",
+
+    // Share
+    "share.action": "Поделиться",
+    "share.message": "Нашёл это на digeart",
+    "share.copyLink": "Копировать ссылку",
+    "share.moreOptions": "Другие варианты…",
 
     // Tutorial
     "tutorial.clickToPlay": "Нажми, чтобы слушать",
