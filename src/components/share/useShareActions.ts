@@ -5,9 +5,8 @@ import { useMemo, useCallback } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
 
 export interface ShareActionItem {
-  key: "copy" | "whatsapp" | "twitter" | "telegram" | "facebook" | "instagram";
+  key: "copy" | "whatsapp" | "twitter" | "telegram" | "facebook";
   label: string;
-  // Either a URL to open in a new tab, or a click handler (for copy-only like Instagram)
   href?: string;
   onClick?: () => void;
 }
@@ -30,12 +29,14 @@ export function useShareActions(trackId: string, trackName: string, channel?: st
   const titleLine = channel ? `${trackName} · ${channel}` : trackName;
   const body = `${message}: ${titleLine}`;
 
+  const copyPayload = `${body} ${url}`;
+
   const copyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(copyPayload);
       document.dispatchEvent(new CustomEvent("link-copied"));
     } catch { /* ignore */ }
-  }, [url]);
+  }, [copyPayload]);
 
   const openNativeShare = useCallback(async () => {
     try {
@@ -52,9 +53,22 @@ export function useShareActions(trackId: string, trackName: string, channel?: st
     { key: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${body} ${url}`)}` },
     { key: "twitter", label: "X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(body)}&url=${encodeURIComponent(url)}` },
     { key: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(body)}` },
-    { key: "facebook", label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
-    { key: "instagram", label: "Instagram", onClick: copyLink },
-  ], [t, body, url, copyLink]);
+    {
+      key: "facebook",
+      label: "Facebook",
+      // FB removed the `quote` param from sharer.php for non-app actors, so we copy
+      // the body to clipboard right before opening — user pastes into FB's compose box.
+      onClick: async () => {
+        try { await navigator.clipboard.writeText(copyPayload); } catch { /* ignore */ }
+        document.dispatchEvent(new CustomEvent("link-copied"));
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
+      },
+    },
+  ], [t, body, url, copyLink, copyPayload]);
 
   return { items, url, copyLink, openNativeShare, titleLine, moreLabel: t("share.moreOptions") };
 }

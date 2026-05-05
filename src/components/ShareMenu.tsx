@@ -11,7 +11,6 @@ import {
   IconX,
   IconTelegram,
   IconFacebook,
-  IconInstagram,
   IconMore,
   IconShare,
 } from "@/components/share/icons";
@@ -32,7 +31,6 @@ const ICON_BY_KEY = {
   twitter: IconX,
   telegram: IconTelegram,
   facebook: IconFacebook,
-  instagram: IconInstagram,
 } as const;
 
 export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anchorEl, open, onClose }: Props) {
