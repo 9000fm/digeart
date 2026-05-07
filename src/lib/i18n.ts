@@ -76,6 +76,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "saved.tracks": "Tracks",
     "saved.mixes": "Mixes",
     "saved.samples": "Samples",
+    "saved.viewGrid": "Vista cuadrícula",
+    "saved.viewList": "Vista lista",
     "saved.noSavedFilter": "Aún no hay {filter} con me gusta",
     "saved.recentlyRemoved": "Eliminados recientemente",
     "saved.play": "Reproducir",
@@ -91,7 +93,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Compartir",
-    "share.message": "Lo encontré en digeart",
+    "share.message": "Lo encontré en digeart (beta)",
     "share.copyLink": "Copiar link",
     "share.moreOptions": "Más opciones…",
 
@@ -226,6 +228,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "saved.tracks": "Tracks",
     "saved.mixes": "Mixes",
     "saved.samples": "Samples",
+    "saved.viewGrid": "Grid view",
+    "saved.viewList": "List view",
     "saved.noSavedFilter": "No liked {filter} yet",
     "saved.recentlyRemoved": "Recently removed",
     "saved.play": "Play",
@@ -241,7 +245,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Share",
-    "share.message": "Found this on digeart",
+    "share.message": "Found this on digeart (beta)",
     "share.copyLink": "Copy link",
     "share.moreOptions": "More options…",
 
@@ -376,6 +380,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "saved.tracks": "Tracks",
     "saved.mixes": "Mixes",
     "saved.samples": "Samples",
+    "saved.viewGrid": "Vue grille",
+    "saved.viewList": "Vue liste",
     "saved.noSavedFilter": "Pas encore de {filter} aimés",
     "saved.recentlyRemoved": "Supprimés récemment",
     "saved.play": "Lecture",
@@ -391,7 +397,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Partager",
-    "share.message": "J'ai trouvé ça sur digeart",
+    "share.message": "J'ai trouvé ça sur digeart (beta)",
     "share.copyLink": "Copier le lien",
     "share.moreOptions": "Plus d'options…",
 
@@ -526,6 +532,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "saved.tracks": "Tracks",
     "saved.mixes": "Mixes",
     "saved.samples": "Samples",
+    "saved.viewGrid": "グリッド表示",
+    "saved.viewList": "リスト表示",
     "saved.noSavedFilter": "いいねした{filter}はまだない",
     "saved.recentlyRemoved": "最近削除したもの",
     "saved.play": "再生",
@@ -541,7 +549,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "共有",
-    "share.message": "digeartで見つけた",
+    "share.message": "digeartで見つけた (beta)",
     "share.copyLink": "リンクをコピー",
     "share.moreOptions": "その他のオプション…",
 
@@ -676,6 +684,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "saved.tracks": "Tracks",
     "saved.mixes": "Mixes",
     "saved.samples": "Samples",
+    "saved.viewGrid": "Сетка",
+    "saved.viewList": "Список",
     "saved.noSavedFilter": "Пока нет понравившихся {filter}",
     "saved.recentlyRemoved": "Недавно удалённые",
     "saved.play": "Играть",
@@ -691,7 +701,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Поделиться",
-    "share.message": "Нашёл это на digeart",
+    "share.message": "Нашёл это на digeart (beta)",
     "share.copyLink": "Копировать ссылку",
     "share.moreOptions": "Другие варианты…",
 

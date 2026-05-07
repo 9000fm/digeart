@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MusicCard from "./MusicCard";
+import MusicRow from "./MusicRow";
 import MaintenanceScreen from "./MaintenanceScreen";
 import { useTranslation } from "./LanguageProvider";
+import { usePreferences } from "./PreferencesProvider";
 import type { CardData } from "@/lib/types";
 
 type SavedFilterType = "all" | "tracks" | "samples" | "mixes" | "deleted";
@@ -61,6 +63,7 @@ export default function SavedGrid({
   onFilterChange,
 }: SavedGridProps) {
   const { t } = useTranslation();
+  const { savedViewMode, setSavedViewMode } = usePreferences();
   const [removedOpen, setRemovedOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SavedFilterType>("all");
 
@@ -156,6 +159,35 @@ export default function SavedGrid({
     </div>
   );
 
+  const renderList = (items: CardData[]) => (
+    <div className="flex flex-col gap-0.5 px-1 sm:px-[7px] py-2">
+      <AnimatePresence>
+        {items.map((card) => (
+          <motion.div
+            key={card.id}
+            layout
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          >
+            <MusicRow
+              card={card}
+              saved={likedIds.has(card.id)}
+              isGracePeriod={softDeletedIds?.has(card.id)}
+              isPlaying={playingId === card.id && isPlaying}
+              viewContext="saved"
+              onPlay={() => onPlay(card.id)}
+              onSave={() => onToggleLike(card.id)}
+              onShare={() => shareCard(card)}
+              isAuthenticated={isAuthenticated}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+
+  const render = savedViewMode === "list" ? renderList : renderGrid;
+
   const filterTabs: { key: SavedFilterType; label: string; count: number }[] = [
     { key: "all", label: t("saved.all"), count: cards.length },
     { key: "tracks", label: t("saved.tracks"), count: tracks.length },
@@ -165,9 +197,9 @@ export default function SavedGrid({
 
   return (
     <div>
-      {/* Sub-tabs */}
+      {/* Sub-tabs — sticky below banner+header (and mobile nav strip) */}
       {cards.length > 0 && (
-        <div className="flex items-center gap-1.5 px-2 sm:px-[11px] pt-2 pb-1">
+        <div className="sticky z-30 bg-[var(--bg)] flex items-center gap-1.5 px-2 sm:px-[11px] pt-2 pb-2 top-[calc(var(--banner-height)+var(--header-height-mobile)+var(--nav-height-mobile))] min-[1152px]:top-[calc(var(--banner-height)+var(--header-height))]">
           {filterTabs.map((tab) => (
             <button
               key={tab.key}
@@ -181,10 +213,11 @@ export default function SavedGrid({
               {tab.label} ({tab.count})
             </button>
           ))}
+          {/* Trash/deleted button — right after Samples filter pill */}
           {recentlyRemoved.length > 0 && (
             <button
               onClick={() => handleFilterChange("deleted")}
-              className={`ml-auto px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1 ${
                 activeFilter === "deleted"
                   ? "bg-[var(--text)] text-[var(--bg)] font-bold"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
@@ -196,18 +229,63 @@ export default function SavedGrid({
               ({recentlyRemoved.length})
             </button>
           )}
+          {/* View mode toggle (grid / list) — pushed right; disabled on trash */}
+          <div className={`ml-auto flex items-center gap-1 ${activeFilter === "deleted" ? "opacity-40 pointer-events-none" : ""}`}>
+            <button
+              onClick={() => setSavedViewMode("grid")}
+              disabled={activeFilter === "deleted"}
+              aria-label={t("saved.viewGrid")}
+              title={t("saved.viewGrid")}
+              className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${
+                activeFilter === "deleted"
+                  ? "cursor-not-allowed text-[var(--text-secondary)]"
+                  : savedViewMode === "grid"
+                    ? "bg-[var(--text)] text-[var(--bg)] cursor-pointer"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] cursor-pointer"
+              }`}
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setSavedViewMode("list")}
+              disabled={activeFilter === "deleted"}
+              aria-label={t("saved.viewList")}
+              title={t("saved.viewList")}
+              className={`w-9 h-9 rounded-md flex items-center justify-center transition-colors ${
+                activeFilter === "deleted"
+                  ? "cursor-not-allowed text-[var(--text-secondary)]"
+                  : savedViewMode === "list"
+                    ? "bg-[var(--text)] text-[var(--bg)] cursor-pointer"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] cursor-pointer"
+              }`}
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <circle cx="4" cy="6" r="1" fill="currentColor" />
+                <circle cx="4" cy="12" r="1" fill="currentColor" />
+                <circle cx="4" cy="18" r="1" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Content */}
       {cards.length > 0 && activeFilter === "all" ? (
         <>
-          {tracks.length > 0 && renderGrid(tracks)}
-          {mixes.length > 0 && renderGrid(mixes)}
-          {samples.length > 0 && renderGrid(samples)}
+          {tracks.length > 0 && render(tracks)}
+          {mixes.length > 0 && render(mixes)}
+          {samples.length > 0 && render(samples)}
         </>
       ) : cards.length > 0 && filteredCards.length > 0 ? (
-        renderGrid(filteredCards)
+        render(filteredCards)
       ) : activeFilter !== "all" && activeFilter !== "deleted" && filteredCards.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           {activeFilter === "tracks" && (

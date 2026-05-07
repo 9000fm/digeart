@@ -157,11 +157,19 @@ function randomPhraseIndex(current: number): number {
   return next;
 }
 
-// Gear icon SVG
-const GearIcon = ({ className }: { className?: string }) => (
-  <svg className={className || "w-5 h-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+// Gear icon SVG — active=true renders a filled gear with bg-color hole (matches Heart fill-on-active pattern)
+const GearIcon = ({ className, active = false }: { className?: string; active?: boolean }) => (
+  <svg
+    className={className || "w-5 h-5"}
+    viewBox="0 0 24 24"
+    fill={active ? "currentColor" : "none"}
+    stroke={active ? "none" : "currentColor"}
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
-    <circle cx="12" cy="12" r="3" />
+    <circle cx="12" cy="12" r="3" fill={active ? "var(--bg)" : "none"} stroke={active ? "none" : "currentColor"} />
   </svg>
 );
 
@@ -495,8 +503,8 @@ export default function Sidebar({
                   onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
                     isActive
-                      ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
-                      : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
+                      ? "text-[var(--text)] bg-[var(--accent)]/12"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
                   }`}
                 >
                   {item.icon(isActive)}
@@ -527,17 +535,25 @@ export default function Sidebar({
               setShowAbout(!showAbout);
               setSettingsOpen(false);
             }}
-            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 ${
+            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
               showAbout
                 ? "text-[var(--text)] bg-[var(--accent)]/12"
-                : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
             }`}
           >
-            <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-            </svg>
+            {showAbout ? (
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="currentColor" />
+                <line x1="12" y1="16" x2="12" y2="11" stroke="var(--bg)" strokeWidth={2.2} strokeLinecap="round" />
+                <circle cx="12" cy="8" r="1.1" fill="var(--bg)" />
+              </svg>
+            ) : (
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+              </svg>
+            )}
           </button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-50">
             {t("settings.about")}
@@ -552,9 +568,13 @@ export default function Sidebar({
               setSettingsOpen(true);
               setShowAbout(false);
             }}
-            className="w-11 h-11 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-all duration-200"
+            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
+              settingsOpen
+                ? "text-[var(--text)] bg-[var(--accent)]/12"
+                : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+            }`}
           >
-            <GearIcon className="w-[22px] h-[22px]" />
+            <GearIcon className="w-[22px] h-[22px]" active={settingsOpen} />
           </button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/gear:opacity-100 transition-opacity duration-150 z-50">
             {t("auth.settings")}
@@ -709,8 +729,8 @@ export default function Sidebar({
                 onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
                   isActive
-                    ? "text-[var(--text)] bg-[var(--accent)]/12 opacity-100"
-                    : "text-[var(--text-muted)] opacity-60 hover:text-[var(--text)] hover:opacity-100 hover:bg-[var(--bg-alt)]"
+                    ? "text-[var(--text)] bg-[var(--accent)]/12"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
                 }`}
               >
                 {item.icon(isActive)}

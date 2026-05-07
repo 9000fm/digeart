@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import ThemeProvider from "@/components/ThemeProvider";
 import LanguageProvider from "@/components/LanguageProvider";
+import PreferencesProvider from "@/components/PreferencesProvider";
 import { LOCALES, type Locale } from "@/lib/i18n";
 import "./globals.css";
 
@@ -68,7 +69,9 @@ export default async function RootLayout({
         <SessionProvider>
           <ThemeProvider>
             <LanguageProvider serverLocale={serverLocale}>
-              {children}
+              <PreferencesProvider>
+                {children}
+              </PreferencesProvider>
             </LanguageProvider>
           </ThemeProvider>
         </SessionProvider>

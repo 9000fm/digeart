@@ -4,5 +4,6 @@ node_modules/
 .claude/
 CLAUDE.md
 BRAND.md
+NEXT_STEPS.md
 tsconfig.tsbuildinfo
 screenshots/
