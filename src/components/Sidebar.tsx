@@ -6,6 +6,7 @@ import SettingsPanel from "./SettingsPanel";
 import AuthButton from "./AuthButton";
 import { GENRE_LABELS } from "@/app/curator/types";
 import { useTranslation } from "./LanguageProvider";
+import { TAGS, type TagId } from "@/lib/tags";
 
 const SEARCH_PHRASES = [
   "House...",
@@ -34,22 +35,21 @@ const SEARCH_PHRASES = [
   "Experimental...",
 ];
 
+// Ticker phrases — English only by design (do NOT translate).
 const BANNER_PHRASES = [
-  "DIGEART — MÚSICA SELECTA",
-  "RARE GROOVES",
-  "MUSIC FOR DIGGERS",
-  "UNDERGROUND",
-  "VINYL CUTS",
-  "WAX ONLY",
+  "DIGEART — MUSIC FROM THE UNDERGROUND",
+  "HUMAN CURATED",
+  "FOR REAL DIGGERS",
 ];
 
 const SEPARATOR_ICONS = ["✦", "◇", "⬥", "✧", "◆", "⏣", "✦"];
 
+// One pass of all phrases joined with separators.
 const BANNER_SINGLE = BANNER_PHRASES.map((phrase, i) => {
   const icon = SEPARATOR_ICONS[i % SEPARATOR_ICONS.length];
   return `${phrase}     ${icon}     `;
 }).join("");
-// Repeat enough to fill any viewport width (~6000px per repeat)
+// Repeat enough to overflow any viewport width for a seamless loop.
 const BANNER_TEXT = BANNER_SINGLE.repeat(4);
 
 const GENRE_PRESETS = [
@@ -129,7 +129,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export type TagFilter = "all" | "hot" | "rare" | "new";
+export type TagFilter = "all" | TagId;
 
 interface SidebarProps {
   activeView: ViewType;
@@ -175,9 +175,7 @@ const GearIcon = ({ className, active = false }: { className?: string; active?: 
 
 const TAG_OPTIONS: { value: TagFilter; label: string; dotColor?: string }[] = [
   { value: "all", label: "All" },
-  { value: "hot", label: "Hot", dotColor: "bg-red-500" },
-  { value: "rare", label: "Rare", dotColor: "bg-pink-500" },
-  { value: "new", label: "New", dotColor: "bg-emerald-500" },
+  ...TAGS.map((t) => ({ value: t.id, label: t.label, dotColor: t.color })),
 ];
 
 export default function Sidebar({
@@ -224,6 +222,57 @@ export default function Sidebar({
   const isDeleting = useRef(false);
   const typingPaused = useRef(false);
 
+  // Ticker marquee — driven by a manual rAF loop (NOT CSS animation, NOT WAAPI).
+  // We advance an offset in px each frame scaled by a 0..1 speed, and wrap at half
+  // the track width (the two halves are identical, so the wrap is invisible). This
+  // is fully deterministic: it cannot "restart" on hover the way CSS/WAAPI did.
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const tickerSpeedRef = useRef(1);            // current speed 0..1, read by the loop
+  const tickerRampRafRef = useRef<number | null>(null); // brake/resume ramp handle
+
+  useEffect(() => {
+    const el = tickerRef.current;
+    if (!el) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    let last = 0;
+    let offset = 0;
+    const SECONDS_PER_HALF = 80; // full-speed time to scroll one half-width
+    const loop = (ts: number) => {
+      if (!last) last = ts;
+      const dt = (ts - last) / 1000;
+      last = ts;
+      const half = el.scrollWidth / 2;
+      if (half > 0) {
+        offset += dt * (half / SECONDS_PER_HALF) * tickerSpeedRef.current;
+        if (offset >= half) offset -= half;
+        el.style.transform = `translateX(${-offset}px) translateZ(0)`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Hover-brake: ease the speed 1↔0. Slower to brake (~0.9s), even slower to resume (~1.4s).
+  const rampTicker = useCallback((to: number) => {
+    if (tickerRampRafRef.current) cancelAnimationFrame(tickerRampRafRef.current);
+    const from = tickerSpeedRef.current;
+    if (from === to) return;
+    const duration = to === 0 ? 900 : 1400;
+    let start: number | null = null;
+    const step = (ts: number) => {
+      if (start === null) start = ts;
+      const p = Math.min(1, (ts - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 2); // ease-out
+      tickerSpeedRef.current = from + (to - from) * eased;
+      if (p < 1) tickerRampRafRef.current = requestAnimationFrame(step);
+      else tickerRampRafRef.current = null;
+    };
+    tickerRampRafRef.current = requestAnimationFrame(step);
+  }, []);
+  useEffect(() => () => { if (tickerRampRafRef.current) cancelAnimationFrame(tickerRampRafRef.current); }, []);
+
   // Fuzzy-match genre labels against search query
   const genreMatches = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -254,6 +303,21 @@ export default function Sidebar({
     const onResize = () => { setShowAbout(false); setSettingsOpen(false); };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // Settings keybind (",") — toggle the settings panel, anchored to the gear icon
+  useEffect(() => {
+    const handler = () => {
+      setSettingsOpen((open) => {
+        if (open) return false;
+        const el = gearRef.current ?? document.querySelector("[data-auth-desktop]") ?? document.querySelector("[data-auth-button]");
+        setSettingsAnchor(el?.getBoundingClientRect() ?? null);
+        setShowAbout(false);
+        return true;
+      });
+    };
+    document.addEventListener("open-settings-keybind", handler);
+    return () => document.removeEventListener("open-settings-keybind", handler);
   }, []);
 
   // Close About on outside click or Escape
@@ -337,12 +401,14 @@ export default function Sidebar({
       {/* ===== SCROLLING BANNER ===== */}
       <div
         className="fixed top-0 left-0 right-0 z-[60] h-[var(--banner-height)] marquee-aurora overflow-hidden flex items-center"
+        onMouseEnter={() => rampTicker(0)}
+        onMouseLeave={() => rampTicker(1)}
       >
-        <div className="marquee-track inline-flex whitespace-nowrap">
-          <span className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
+        <div ref={tickerRef} className="marquee-track inline-flex whitespace-nowrap">
+          <span className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.35em] shrink-0 px-2">
             {BANNER_TEXT}
           </span>
-          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.25em] shrink-0 px-2">
+          <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.35em] shrink-0 px-2">
             {BANNER_TEXT}
           </span>
         </div>
@@ -555,14 +621,15 @@ export default function Sidebar({
               </svg>
             )}
           </button>
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-50">
-            {t("settings.about")}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-[90]">
+            {t("settings.about")} (I)
           </div>
         </div>
         {/* Settings gear */}
         <div className="relative group/gear">
           <button
             ref={gearRef}
+            data-settings-trigger
             onClick={() => {
               setSettingsAnchor(gearRef.current?.getBoundingClientRect() ?? null);
               setSettingsOpen(true);
@@ -576,8 +643,8 @@ export default function Sidebar({
           >
             <GearIcon className="w-[22px] h-[22px]" active={settingsOpen} />
           </button>
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/gear:opacity-100 transition-opacity duration-150 z-50">
-            {t("auth.settings")}
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/gear:opacity-100 transition-opacity duration-150 z-[90]">
+            {t("auth.settings")} (,)
           </div>
         </div>
         </div>
@@ -764,12 +831,15 @@ export default function Sidebar({
             <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
               <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tags")}</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">Hot</span></span>
-                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.trending")}</span>
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-pink-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">Rare</span></span>
-                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.hiddenGems")}</span>
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500" /><span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">New</span></span>
-                <span className="font-mono text-[11px] text-[var(--text-muted)]">{t("about.addedRecently")}</span>
+                {TAGS.map((tag) => (
+                  <Fragment key={tag.id}>
+                    <span className="flex items-center gap-1">
+                      <span className={`w-1 h-1 rounded-full ${tag.color}`} />
+                      <span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">{tag.label}</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-[var(--text-muted)]">{t(tag.descKey)}</span>
+                  </Fragment>
+                ))}
               </div>
             </div>
 
@@ -786,7 +856,8 @@ export default function Sidebar({
                   ["L", t("about.shortcutLike")],
                   ["Q", t("about.shortcutQueue")],
                   ["1\u20134", t("about.shortcutTab")],
-                  ["?", t("about.shortcutPanel")],
+                  ["? / I", t("about.shortcutPanel")],
+                  [",", t("about.shortcutSettings")],
                 ].map(([key, desc]) => (
                   <Fragment key={key}>
                     <kbd className="font-mono text-[var(--text)] bg-[var(--border)]/20 px-0.5 rounded text-center min-w-[14px]" style={{ fontSize: 11 }}>{key}</kbd>
@@ -878,12 +949,15 @@ export default function Sidebar({
               <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
                 <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">{t("about.tags")}</p>
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold tracking-wider">Hot</span></span>
-                  <span className="font-mono text-[10px] text-[var(--text-muted)]">{t("about.trending")}</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-pink-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold tracking-wider">Rare</span></span>
-                  <span className="font-mono text-[10px] text-[var(--text-muted)]">{t("about.hiddenGems")}</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /><span className="font-mono text-[10px] text-[var(--text-muted)] font-bold tracking-wider">New</span></span>
-                  <span className="font-mono text-[10px] text-[var(--text-muted)]">{t("about.addedRecently")}</span>
+                  {TAGS.map((tag) => (
+                    <Fragment key={tag.id}>
+                      <span className="flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${tag.color}`} />
+                        <span className="font-mono text-[10px] text-[var(--text-muted)] font-bold tracking-wider">{tag.label}</span>
+                      </span>
+                      <span className="font-mono text-[10px] text-[var(--text-muted)]">{t(tag.descKey)}</span>
+                    </Fragment>
+                  ))}
                 </div>
               </div>
 

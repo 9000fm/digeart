@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
 import { useSession } from "next-auth/react";
@@ -23,18 +23,35 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
   const { t, locale, setLocale } = useTranslation();
   const isAuthenticated = !!session?.user;
   const [langOpen, setLangOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const handleClose = () => { setLangOpen(false); onClose(); };
   const LANG_LABELS: Record<string, string> = { es: "Español", en: "English", fr: "Français", ja: "日本語", ru: "Русский" };
   const LANG_CODES: Record<string, string> = { es: "ES", en: "EN", fr: "FR", ja: "JP", ru: "RU" };
 
-  // Close on Escape
+  // Close on outside click or Escape — NO blocking overlay, so the sidebar
+  // stays fully hoverable while the panel is open (matches the About panel).
   useEffect(() => {
     if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      // Ignore the triggers that open Settings (gear + auth dropdown items),
+      // so clicking them doesn't close-then-reopen.
+      if ((target as HTMLElement)?.closest?.("[data-settings-trigger]")) return;
+      handleClose();
+    };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
     };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    const timer = setTimeout(() => {
+      window.addEventListener("mousedown", handleClick);
+      window.addEventListener("keydown", handleKey);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
   }, [open, onClose]);
 
 
@@ -42,18 +59,9 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
     <AnimatePresence>
       {open && (
         <>
-          {/* Overlay — subtle */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[70]"
-            onClick={handleClose}
-          />
-
           {/* Floating card — anchored to gear icon */}
           <div
+            ref={panelRef}
             className="fixed z-[80] w-[240px]"
             style={
               anchorRect
@@ -172,7 +180,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {onToggleDjMode && (
                 <div className={`hidden min-[1152px]:flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
                   <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
-                    {t("settings.speedAdjust")}
+                    {t("settings.speedAdjust")} <span className="text-[var(--text-muted)]">(beta)</span>
                   </span>
                   <button
                     onClick={onToggleDjMode}

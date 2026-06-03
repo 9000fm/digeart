@@ -25,6 +25,7 @@ interface SavedGridProps {
   playingId: string | null;
   isPlaying: boolean;
   onPlay: (id: string) => void;
+  onPlayNext?: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeTagFilters?: string[];
   isAuthenticated?: boolean;
@@ -52,6 +53,7 @@ export default function SavedGrid({
   playingId,
   isPlaying,
   onPlay,
+  onPlayNext,
   onToggleLike,
   activeTagFilters = [],
   isAuthenticated = true,
@@ -149,6 +151,7 @@ export default function SavedGrid({
               activeTagFilters={activeTagFilters}
               viewContext="saved"
               onPlay={() => onPlay(card.id)}
+              onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
               onSave={() => onToggleLike(card.id)}
               onShare={() => shareCard(card)}
               isAuthenticated={isAuthenticated}

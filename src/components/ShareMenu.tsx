@@ -38,6 +38,21 @@ export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anc
   const { items, openNativeShare, moreLabel } = useShareActions(trackId, trackName, channel, youtubeUrl);
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Auto-dismiss: close a few seconds after the pointer is away from the menu.
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelDismiss = useCallback(() => {
+    if (dismissTimer.current) { clearTimeout(dismissTimer.current); dismissTimer.current = null; }
+  }, []);
+  const startDismiss = useCallback(() => {
+    cancelDismiss();
+    dismissTimer.current = setTimeout(() => onClose(), 3500);
+  }, [cancelDismiss, onClose]);
+  useEffect(() => {
+    if (!open) { cancelDismiss(); return; }
+    startDismiss(); // also closes if opened and never hovered
+    return cancelDismiss;
+  }, [open, startDismiss, cancelDismiss]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []); // eslint-disable-line react-hooks/set-state-in-effect -- mount gate for createPortal(document.body)
 
@@ -123,24 +138,27 @@ export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anc
 
   return createPortal(
     <AnimatePresence>
-      {open && pos && (
+      {open && (
         <motion.div
           ref={menuRef}
-          initial={{ opacity: 0, y: 6, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 6, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 320, damping: 26 }}
-          style={{ top: pos.top, left: pos.left, width: 200 }}
-          className="fixed z-[9999] bg-[var(--bg-alt)]/25 backdrop-blur-2xl border border-[var(--border)]/40 rounded-xl shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={pos ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.97 }}
+          exit={{ opacity: 0, scale: 0.97 }}
+          transition={{ duration: 0.13, ease: "easeOut" }}
+          onMouseEnter={cancelDismiss}
+          onMouseLeave={startDismiss}
+          style={{ top: pos?.top ?? 0, left: pos?.left ?? 0, width: 200, visibility: pos ? "visible" : "hidden" }}
+          className="fixed z-[9999] share-menu-surface rounded-xl shadow-2xl overflow-hidden"
           role="menu"
         >
-          {/* Title header — clearly differentiated from item rows */}
-          <div className="flex items-center justify-center gap-1.5 px-3 py-2.5 border-b border-[var(--text)]/10 bg-[var(--text)]/[0.03]">
-            <span className="w-3 h-3 flex items-center justify-center text-[var(--text-secondary)] [&>svg]:w-3 [&>svg]:h-3">
+          {/* Title header — "SHARE {track}", truncated with ellipsis */}
+          <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-[var(--text)]/10 bg-[var(--text)]/[0.03] min-w-0">
+            <span className="shrink-0 w-3 h-3 flex items-center justify-center text-[var(--text-secondary)] [&>svg]:w-3 [&>svg]:h-3">
               {IconShare}
             </span>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--text-secondary)] font-bold">
-              {t("share.action")}
+            <p className="font-mono text-[11px] uppercase font-bold truncate min-w-0">
+              <span className="tracking-[0.15em] text-[var(--text-secondary)]">{t("share.action")}</span>
+              {trackName ? <span className="text-[var(--text)]"> {trackName}</span> : null}
             </p>
           </div>
 

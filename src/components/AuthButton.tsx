@@ -73,7 +73,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
 
   const langRow = (
     <div className="relative">
-      <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 14 }} onClick={(e) => { e.stopPropagation(); setLangOpen((v) => !v); }}>
+      <div className="w-full flex items-center justify-between px-4 py-2 font-mono text-[var(--text-secondary)] cursor-pointer select-none hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors" style={{ fontSize: 14 }} onClick={(e) => { e.stopPropagation(); setLangOpen((v) => !v); }}>
         <span className="flex items-center gap-2.5">
           <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -95,7 +95,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg mx-3 mb-1 py-1">
+            <div className="bg-[var(--bg-alt)] border border-[var(--border)]/50 rounded-lg mx-3 mt-2 mb-1 py-1">
               {LOCALES.map((loc) => (
                 <button
                   key={loc}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "@/components/LanguageProvider";
 import Tooltip from "@/components/Tooltip";
 import ShareMenu from "@/components/ShareMenu";
@@ -13,6 +13,7 @@ interface Props {
   size?: "sm" | "md";
   className?: string;
   showTooltip?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function ShareButton({
@@ -23,12 +24,14 @@ export default function ShareButton({
   size = "md",
   className = "",
   showTooltip = true,
+  onOpenChange,
 }: Props) {
   const { t } = useTranslation();
   // Store button element in state (instead of ref) so the ShareMenu can read it
   // during render — satisfies react-hooks/refs rule.
   const [btnEl, setBtnEl] = useState<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { onOpenChange?.(menuOpen); }, [menuOpen, onOpenChange]);
 
   const onClick = useCallback(
     (e: React.MouseEvent) => {

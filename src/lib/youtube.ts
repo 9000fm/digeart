@@ -7,9 +7,9 @@ const YT_API = "https://www.googleapis.com/youtube/v3";
 
 /* ── Tag type ────────────────────────────────────────────────────────── */
 
-export type Tag = "all" | "hot" | "rare" | "new";
+export type Tag = "all" | "hot" | "gem" | "new";
 
-const VALID_TAGS: Tag[] = ["all", "hot", "rare", "new"];
+const VALID_TAGS: Tag[] = ["all", "hot", "gem", "new"];
 
 export function isValidTag(v: string | null | undefined): v is Tag {
   return VALID_TAGS.includes(v as Tag);
@@ -283,6 +283,62 @@ export function parseDuration(iso: string): number {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
+/* ── Curator gems (editorial picks) ──────────────────────────────────── */
+
+// GEM = a track liked by a curator. Curator identity comes from the `curators`
+// table (same source as auth.ts), NOT a hardcoded env. Cached ~60s so we don't
+// hit Supabase on every request; survives pool rebuilds (separate table).
+let _gemCache: { ids: Set<string>; at: number } | null = null;
+
+export async function getCuratorGemIds(): Promise<Set<string>> {
+  const now = Date.now();
+  if (_gemCache && now - _gemCache.at < 60_000) return _gemCache.ids;
+
+  const ids = new Set<string>();
+  try {
+    const { data: curators } = await supabase.from("curators").select("email");
+    const emails = (curators ?? [])
+      .map((c: { email: string | null }) => c.email)
+      .filter((e): e is string => !!e);
+    if (emails.length > 0) {
+      const { data: likes } = await supabase
+        .from("likes")
+        .select("video_id")
+        .in("user_email", emails)
+        .is("deleted_at", null);
+      for (const l of likes ?? []) ids.add((l as { video_id: string }).video_id);
+    }
+  } catch {
+    // On any failure, fall back to whatever we had (or empty) — never throw.
+    if (_gemCache) return _gemCache.ids;
+  }
+  _gemCache = { ids, at: now };
+  return ids;
+}
+
+// Stamp isGem onto cards by matching card.id against the curator gem set.
+// HOT threshold = the 90th percentile of viewCounts in the pool, so HOT marks the
+// top ~10% most-viewed of the CURRENT pool (auto-adjusts as the catalog grows).
+// Returns Infinity when there's nothing to rank (→ nothing is hot).
+function computeHotThreshold(cards: CardData[]): number {
+  const views = cards
+    .map((c) => c.viewCount)
+    .filter((v): v is number => v != null)
+    .sort((a, b) => a - b);
+  if (views.length === 0) return Infinity;
+  return views[Math.floor(views.length * 0.9)];
+}
+
+// Stamp isGem (curator-liked) + isHot (top 10% by views) onto cards.
+// Returns new objects only for cards that match (leaves the rest untouched).
+function stampTags(cards: CardData[], gemIds: Set<string>, hotThreshold: number): CardData[] {
+  return cards.map((c) => {
+    const isGem = gemIds.has(c.id);
+    const isHot = c.viewCount != null && c.viewCount >= hotThreshold;
+    return isGem || isHot ? { ...c, ...(isGem && { isGem: true }), ...(isHot && { isHot: true }) } : c;
+  });
+}
+
 /* ── Tag filtering utility ───────────────────────────────────────────── */
 
 /**
@@ -295,17 +351,16 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
   // No filter needed
   if (tags.length === 0 || (tags.length === 1 && tags[0] === "all")) return pool;
 
-  const thirtyDaysMs = 30 * 86_400_000;
-  const twoYearsMs = 2 * 365 * 86_400_000;
+  const hundredDaysMs = 100 * 86_400_000;
   const now = Date.now();
 
   return pool.filter((c) => {
     for (const t of tags) {
       if (t === "all") return true;
-      if (t === "hot" && c.viewCount != null && c.viewCount >= 50_000) return true;
-      if (t === "rare" && c.viewCount != null && c.viewCount < 10_000
-        && c.publishedAt && now - new Date(c.publishedAt).getTime() > twoYearsMs) return true;
-      if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= thirtyDaysMs) return true;
+      // HOT/GEM are stamped server-side before filtering (top-10% views / curator-liked).
+      if (t === "hot" && c.isHot) return true;
+      if (t === "gem" && c.isGem) return true;
+      if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= hundredDaysMs) return true;
     }
     return false;
   });
@@ -686,7 +741,7 @@ async function getRawVideos(
       if (isNonElectronicOnly(c.labels)) return false;
       return true;
     });
-    maxPages = 8;
+    maxPages = 12;
     maxResults = 50;
   } else if (poolType === "mixes") {
     channels = allApproved.filter(
@@ -694,7 +749,7 @@ async function getRawVideos(
         MIX_CHANNEL_LABELS.some((ml) => ml.toLowerCase() === l.toLowerCase())
       )
     );
-    maxPages = 5;
+    maxPages = 7;
     maxResults = 50;
   } else {
     channels = allApproved.filter(
@@ -702,7 +757,7 @@ async function getRawVideos(
         STRICT_SAMPLE_LABELS.some((sl) => l.toLowerCase() === sl.toLowerCase())
       )
     );
-    maxPages = 8;
+    maxPages = 12;
     maxResults = 50;
   }
 
@@ -909,7 +964,9 @@ export async function discoverFromYouTube(
   const { pool, needsRebuild } = await getDiscoverPool();
   if (pool.length === 0) return { cards: [], totalFiltered: 0, needsRebuild };
 
-  const genreFiltered = filterCardsByGenre(pool, genre);
+  const gemIds = await getCuratorGemIds();
+  const hotThreshold = computeHotThreshold(pool);
+  const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;
   if (rotate && feed.length > 1) {
@@ -1014,7 +1071,9 @@ export async function discoverMixes(
     pool = [];
   }
 
-  const genreFiltered = filterCardsByGenre(pool, genre);
+  const gemIds = await getCuratorGemIds();
+  const hotThreshold = computeHotThreshold(pool);
+  const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;
   if (rotate && feed.length > 1) {
@@ -1096,7 +1155,9 @@ export async function discoverSamples(
     pool = [];
   }
 
-  const genreFiltered = filterCardsByGenre(pool, genre);
+  const gemIds = await getCuratorGemIds();
+  const hotThreshold = computeHotThreshold(pool);
+  const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;
   if (rotate && feed.length > 1) {

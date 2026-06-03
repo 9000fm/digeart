@@ -701,6 +701,7 @@ export default function NowPlayingBanner({
 
   // Info button (reusable like likeButton)
   const infoButton = (size: "sm" | "md" = "md") => isAuthenticated ? (
+    <Tooltip label={t("card.info")} position="top" hideOnClick>
     <button
       ref={infoButtonRef}
       data-info-toggle
@@ -730,6 +731,7 @@ export default function NowPlayingBanner({
         </svg>
       )}
     </button>
+    </Tooltip>
   ) : null;
 
   // Shuffle button
@@ -1194,6 +1196,7 @@ export default function NowPlayingBanner({
         <div className="flex flex-col items-center justify-center gap-0.5 min-w-0 w-full">
           {/* Row 1: info, heart, transport, shuffle, locate */}
           <div className="flex items-center gap-1.5">
+            <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
             {infoButton("md")}
             {likeButton("sm")}
             {hasPrev ? <Tooltip label={t("player.previous")} position="top">{prevButton(32)}</Tooltip> : prevButton(32)}
@@ -1201,7 +1204,6 @@ export default function NowPlayingBanner({
             <Tooltip label={t("player.next")} position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
             {locateButton("md")}
-            <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
             {pitchFader}
           </div>
           {/* Row 2: Seek bar */}
@@ -1327,9 +1329,9 @@ export default function NowPlayingBanner({
 
             {/* Row 2: Transport controls — centered */}
             <div className="flex items-center justify-center gap-3">
+              <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
               {infoButton("md")}
               {likeButton("md")}
-              <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
               {prevButton(32)}
               {playPauseButton(40, 16)}
               {nextButton(32)}
@@ -1418,6 +1420,7 @@ export default function NowPlayingBanner({
               </div>
               {/* Center: info, heart, transport, shuffle, locate */}
               <div className="flex items-center justify-center gap-1">
+                <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="sm" />
                 {infoButton("sm")}
                 {likeButton("sm")}
                 {prevButton(28)}
@@ -1446,7 +1449,6 @@ export default function NowPlayingBanner({
                   </button>
                 )}
                 {locateButton("sm")}
-                <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="sm" />
               </div>
               {/* Right: queue ··· volume + fullscreen */}
               <div className="flex items-center w-full relative z-10">

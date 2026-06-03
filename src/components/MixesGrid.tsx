@@ -11,6 +11,7 @@ interface MixesGridProps {
   playingId: string | null;
   isPlaying: boolean;
   onPlay: (id: string) => void;
+  onPlayNext?: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeTagFilters?: string[];
@@ -25,6 +26,7 @@ export default function MixesGrid({
   playingId,
   isPlaying,
   onPlay,
+  onPlayNext,
   onToggleSave,
   onToggleLike,
   activeTagFilters = [],
@@ -172,6 +174,7 @@ export default function MixesGrid({
             activeTagFilters={activeTagFilters}
             viewContext="mixes"
             onPlay={() => onPlay(card.id)}
+            onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
             onSave={() => onToggleLike(card.id)}
             onShare={() => shareCard(card)}
             isAuthenticated={isAuthenticated}

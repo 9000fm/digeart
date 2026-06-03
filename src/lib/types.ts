@@ -21,4 +21,6 @@ export interface CardData {
   description: string | null;
   starred?: boolean;
   genres?: string[];
+  isGem?: boolean; // editorial: curator-liked track (stamped server-side)
+  isHot?: boolean; // top 10% most-viewed of the current pool (stamped server-side)
 }

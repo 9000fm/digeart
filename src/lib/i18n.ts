@@ -65,6 +65,8 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Cards
     "card.save": "Me gusta",
+    "card.info": "Información",
+    "card.playNext": "Reproducir siguiente",
     "card.saved": "¡Te gusta!",
     "card.unlike": "Quitar",
     "card.loginToSave": "Inicia sesión para dar me gusta",
@@ -121,17 +123,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Saltar por ahora",
 
     // About
-    "about.tagline": "Descubre música del underground. Tracks, samples y mixes en un solo lugar.",
+    "about.tagline": "Música del underground. Tracks, mixes, samples y otras rarezas.",
     "about.tags": "Tags",
-    "about.trending": "Lo más escuchado",
-    "about.hiddenGems": "Rarezas",
-    "about.addedRecently": "Novedades",
+    "about.trending": "Más escuchados",
+    "about.hiddenGems": "Joyas",
+    "about.addedRecently": "Recién agregados",
     "about.shortcuts": "Atajos",
     "about.tabs": "Tabs",
-    "about.electronic": "Electrónica underground selecta",
-    "about.djSets": "DJ sets y live sets",
-    "about.worldFunk": "World, jazz, ambient y otras rarezas",
-    "about.yourLiked": "Tus tracks favoritos",
+    "about.electronic": "Selección del día",
+    "about.djSets": "DJ sets, programas de radio y lives",
+    "about.worldFunk": "Material para samplear y rarezas",
+    "about.yourLiked": "Tu selección",
     "about.legal": "Todos los tracks son propiedad de sus respectivos dueños y titulares de derechos. Esta plataforma no reclama propiedad de ningún contenido.",
     "about.projectPrefix": "",
     "about.projectSuffix": "· 2026",
@@ -145,6 +147,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutQueue": "Cola de reproducción",
     "about.shortcutTab": "Ir a tab",
     "about.shortcutPanel": "Mostrar info",
+    "about.shortcutSettings": "Ajustes",
 
     // Search
     "search.comingSoon": "Próximamente",
@@ -217,6 +220,8 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Cards
     "card.save": "Like",
+    "card.info": "Info",
+    "card.playNext": "Play next",
     "card.saved": "Liked!",
     "card.unlike": "Unlike",
     "card.loginToSave": "Log in to like",
@@ -273,17 +278,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Skip for now",
 
     // About
-    "about.tagline": "Music discovery for underground and hard-to-find material. Tracks, samples, and mixes in one place.",
+    "about.tagline": "Music from the underground. Tracks, mixes, samples and other rarities.",
     "about.tags": "Tags",
     "about.trending": "Most played",
-    "about.hiddenGems": "Rarities",
-    "about.addedRecently": "New arrivals",
+    "about.hiddenGems": "Selected",
+    "about.addedRecently": "Recently added",
     "about.shortcuts": "Shortcuts",
     "about.tabs": "Tabs",
-    "about.electronic": "Electronic cuts from the underground",
-    "about.djSets": "DJ sets & live sets",
-    "about.worldFunk": "World, jazz, ambient & rare finds",
-    "about.yourLiked": "Your liked tracks",
+    "about.electronic": "Today's picks",
+    "about.djSets": "DJ sets, radio shows and live recordings",
+    "about.worldFunk": "Sample material and curios",
+    "about.yourLiked": "Your selection",
     "about.legal": "All tracks are property of their respective owners and rights holders. This platform does not claim ownership of any content.",
     "about.projectPrefix": "",
     "about.projectSuffix": "· 2026",
@@ -297,6 +302,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutQueue": "Playback queue",
     "about.shortcutTab": "Go to tab",
     "about.shortcutPanel": "Show info",
+    "about.shortcutSettings": "Settings",
 
     // Search
     "search.comingSoon": "Coming soon",
@@ -369,6 +375,8 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Cards
     "card.save": "J'aime",
+    "card.info": "Infos",
+    "card.playNext": "Lire ensuite",
     "card.saved": "J'aime !",
     "card.unlike": "Retirer",
     "card.loginToSave": "Connecte-toi pour aimer",
@@ -425,17 +433,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Passer pour le moment",
 
     // About
-    "about.tagline": "Plateforme d'exploration axée sur la musique underground et le matériel rare. Tracks, samples et mixes au même endroit.",
+    "about.tagline": "Musique de l'underground. Tracks, mixes, samples et autres raretés.",
     "about.tags": "Tags",
     "about.trending": "Les plus écoutés",
-    "about.hiddenGems": "Raretés",
-    "about.addedRecently": "Nouveautés",
+    "about.hiddenGems": "Sélection",
+    "about.addedRecently": "Récemment ajoutés",
     "about.shortcuts": "Raccourcis",
     "about.tabs": "Tabs",
-    "about.electronic": "Électro underground selecte",
-    "about.djSets": "DJ sets & live sets",
-    "about.worldFunk": "World, jazz, ambient & raretés",
-    "about.yourLiked": "Tes tracks favoris",
+    "about.electronic": "Sélection du jour",
+    "about.djSets": "DJ sets, émissions radio et lives",
+    "about.worldFunk": "Matériel à sampler et curiosités",
+    "about.yourLiked": "Ta sélection",
     "about.legal": "Tous les tracks sont la propriété de leurs propriétaires et ayants droit respectifs. Cette plateforme ne revendique la propriété d'aucun contenu.",
     "about.projectPrefix": "",
     "about.projectSuffix": "· 2026",
@@ -449,6 +457,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutQueue": "File de lecture",
     "about.shortcutTab": "Aller au tab",
     "about.shortcutPanel": "Afficher info",
+    "about.shortcutSettings": "Réglages",
 
     // Search
     "search.comingSoon": "Bientôt disponible",
@@ -521,6 +530,8 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Cards
     "card.save": "いいね",
+    "card.info": "情報",
+    "card.playNext": "次に再生",
     "card.saved": "いいね!",
     "card.unlike": "削除",
     "card.loginToSave": "ログインしていいね",
@@ -577,17 +588,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "今はスキップ",
 
     // About
-    "about.tagline": "アンダーグラウンドな音楽とレアな音源に特化した探索プラットフォーム。トラック、サンプル、ミックスが一か所に。",
+    "about.tagline": "アンダーグラウンドの音楽。トラック、ミックス、サンプル、その他のレア音源。",
     "about.tags": "Tags",
-    "about.trending": "最も再生された",
-    "about.hiddenGems": "レア曲",
+    "about.trending": "最も再生",
+    "about.hiddenGems": "セレクト",
     "about.addedRecently": "新着",
     "about.shortcuts": "ショートカット",
     "about.tabs": "Tabs",
-    "about.electronic": "アンダーグラウンドの電子音楽",
-    "about.djSets": "DJ sets & live sets",
-    "about.worldFunk": "ワールド、ジャズ、アンビエント、レア音源",
-    "about.yourLiked": "お気に入りのトラック",
+    "about.electronic": "今日のピック",
+    "about.djSets": "DJセット、ラジオ番組、ライブ録音",
+    "about.worldFunk": "サンプル素材と珍品",
+    "about.yourLiked": "あなたのセレクション",
     "about.legal": "すべてのトラックは各権利者の所有物です。本プラットフォームはコンテンツの所有権を主張しません。",
     "about.projectPrefix": "",
     "about.projectSuffix": "· 2026",
@@ -601,6 +612,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutQueue": "再生キュー",
     "about.shortcutTab": "タブ移動",
     "about.shortcutPanel": "情報表示",
+    "about.shortcutSettings": "設定",
 
     // Search
     "search.comingSoon": "近日公開",
@@ -673,6 +685,8 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Cards
     "card.save": "Нравится",
+    "card.info": "Информация",
+    "card.playNext": "Воспроизвести далее",
     "card.saved": "Нравится!",
     "card.unlike": "Убрать",
     "card.loginToSave": "Войди, чтобы поставить нравится",
@@ -729,17 +743,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     "welcome.skip": "Пропустить",
 
     // About
-    "about.tagline": "Платформа для поиска, сфокусированная на андеграундной музыке и редком материале. Треки, сэмплы и миксы в одном месте.",
+    "about.tagline": "Музыка из андеграунда. Треки, миксы, сэмплы и другие редкости.",
     "about.tags": "Tags",
     "about.trending": "Самые слушаемые",
-    "about.hiddenGems": "Редкости",
-    "about.addedRecently": "Новинки",
+    "about.hiddenGems": "Отобранные",
+    "about.addedRecently": "Недавно добавленные",
     "about.shortcuts": "Горячие клавиши",
     "about.tabs": "Tabs",
-    "about.electronic": "Андеграунд электроника",
-    "about.djSets": "DJ sets & live sets",
-    "about.worldFunk": "World, jazz, ambient и редкие находки",
-    "about.yourLiked": "Твои любимые треки",
+    "about.electronic": "Подборка дня",
+    "about.djSets": "DJ-сеты, радиошоу и лайвы",
+    "about.worldFunk": "Сэмпл-материал и редкости",
+    "about.yourLiked": "Твоя подборка",
     "about.legal": "Все треки являются собственностью их владельцев и правообладателей. Платформа не претендует на права на какой-либо контент.",
     "about.projectPrefix": "",
     "about.projectSuffix": "· 2026",
@@ -753,6 +767,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.shortcutQueue": "Очередь воспроизведения",
     "about.shortcutTab": "Перейти к табу",
     "about.shortcutPanel": "Показать info",
+    "about.shortcutSettings": "Настройки",
 
     // Search
     "search.comingSoon": "Скоро",

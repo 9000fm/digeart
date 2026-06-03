@@ -104,6 +104,7 @@ export default function Home() {
   const [recentlyRemoved, setRecentlyRemoved] = useState<(CardData & { deletedAt: string })[]>([]);
   const [showAbout, setShowAbout] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [, bumpQueue] = useState(0); // force re-render so an open QueuePanel reflects queue mutations
   const [showWelcome, setShowWelcome] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mountedTabs, setMountedTabs] = useState<Set<ViewType>>(new Set(["home"]));
@@ -609,6 +610,27 @@ export default function Home() {
     handlePlayInternal(card);
   }, [handlePlayInternal, handleTogglePlay, buildQueue]);
 
+  // Play Next — insert this track right after the currently-playing one.
+  const handlePlayNext = useCallback((id: string) => {
+    const card = cardRegistry.current.get(id);
+    if (!card) return;
+    const q = shuffleQueue.current;
+    // Nothing playing yet → just start it
+    if (!nowPlayingCardRef.current || queueIndex.current < 0 || q.length === 0) {
+      handlePlay(id);
+      return;
+    }
+    // De-dupe: drop any existing occurrence, keeping queueIndex pointing at the
+    // still-playing track, then insert right after it.
+    const existing = q.indexOf(id);
+    if (existing !== -1) {
+      q.splice(existing, 1);
+      if (existing <= queueIndex.current) queueIndex.current -= 1;
+    }
+    q.splice(queueIndex.current + 1, 0, id);
+    bumpQueue((v) => v + 1);
+  }, [handlePlay]);
+
   // Stable ref for handlePlay — used by shared-link auto-play
   const handlePlayRef = useRef(handlePlay);
   handlePlayRef.current = handlePlay;
@@ -1046,6 +1068,9 @@ export default function Home() {
           case "q":
             if (nowPlayingCard) setShowQueue((v) => !v);
             return;
+          case "i":
+            setShowAbout((v) => !v);
+            return;
         }
       }
 
@@ -1077,6 +1102,9 @@ export default function Home() {
         case "?":
           setShowAbout((v) => !v);
           break;
+        case ",":
+          document.dispatchEvent(new Event("open-settings-keybind"));
+          break;
         case "+":
         case "=":
           if (nowPlayingCard) handleVolumeChange(Math.min(100, volume + 5));
@@ -1094,7 +1122,7 @@ export default function Home() {
 
   return (
     <main
-      className="layout-shift min-h-screen bg-[var(--bg)] min-[1152px]:ml-[var(--sidebar-width)]"
+      className="layout-shift min-h-screen bg-[var(--bg-content)] min-[1152px]:ml-[var(--sidebar-width)]"
       data-player={hasPlayer ? "true" : "false"}
     >
       {/* Hidden YT Player container */}
@@ -1127,6 +1155,7 @@ export default function Home() {
           playingId={playingId}
           isPlaying={isPlaying}
           onPlay={handlePlay}
+          onPlayNext={handlePlayNext}
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
           activeGenre={activeGenre}
@@ -1145,6 +1174,7 @@ export default function Home() {
             playingId={playingId}
             isPlaying={isPlaying}
             onPlay={handlePlay}
+            onPlayNext={handlePlayNext}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1163,6 +1193,7 @@ export default function Home() {
             playingId={playingId}
             isPlaying={isPlaying}
             onPlay={handlePlay}
+            onPlayNext={handlePlayNext}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1182,6 +1213,7 @@ export default function Home() {
           playingId={playingId}
           isPlaying={isPlaying}
           onPlay={handlePlay}
+          onPlayNext={handlePlayNext}
           onToggleLike={toggleLike}
           activeTagFilters={activeTagFilters}
           isAuthenticated={isAuthenticated}

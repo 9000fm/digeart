@@ -9,6 +9,7 @@ import ShareButton from "./ShareButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
+import { TAGS, TAG_BY_ID, type TagId } from "@/lib/tags";
 
 interface MusicCardProps {
   card: CardData;
@@ -18,6 +19,7 @@ interface MusicCardProps {
   activeTagFilters?: string[];
   viewContext?: string;
   onPlay: () => void;
+  onPlayNext?: () => void;
   onSave: () => void;
   onShare?: () => void;
   isAuthenticated?: boolean;
@@ -51,6 +53,7 @@ export default memo(function MusicCard({
   isPlaying,
   activeTagFilters = [],
   onPlay,
+  onPlayNext,
   onSave,
   viewContext = "default",
   isAuthenticated = true,
@@ -59,15 +62,22 @@ export default memo(function MusicCard({
   const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false); // keep the card "hovered" while its share menu is open
   const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card.videoId, card.description);
   const infoRef = useRef<HTMLDivElement>(null);
+  const infoBtnRef = useRef<HTMLButtonElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close info popover on outside click
   useEffect(() => {
     if (!showInfo) return;
     const handleClick = (e: MouseEvent) => {
-      if (infoRef.current && !infoRef.current.contains(e.target as Node)) setShowInfo(false);
+      const target = e.target as Node;
+      if (infoRef.current?.contains(target)) return;
+      // Ignore the info button itself, so a second click toggles it closed
+      // (its onClick handles that) instead of close-then-reopen.
+      if (infoBtnRef.current?.contains(target)) return;
+      setShowInfo(false);
     };
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowInfo(false); };
     const t = setTimeout(() => {
@@ -85,7 +95,7 @@ export default memo(function MusicCard({
   const handleHeartClick = useCallback(() => onSave(), [onSave]);
 
   return (
-    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${isGracePeriod ? "opacity-75" : ""}`}
+    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
       onMouseLeave={() => {
         if (showInfo) {
           infoTimerRef.current = setTimeout(() => setShowInfo(false), 400);
@@ -133,30 +143,34 @@ export default memo(function MusicCard({
 
       {/* Status tags — top right */}
       {(() => {
-        const isNew = card.publishedAt ? (now - new Date(card.publishedAt).getTime()) / 86400000 <= 30 : false;
+        const isNew = card.publishedAt ? (now - new Date(card.publishedAt).getTime()) / 86400000 <= 100 : false;
+        const isHot = !!card.isHot; // top 10% by views (stamped server-side)
+        const isGem = !!card.isGem; // editorial: curator-liked track
+        const matches: Record<TagId, boolean> = { hot: isHot, gem: isGem, new: isNew };
+
         const tags: { label: string; color: string }[] = [];
+        const pushTag = (id: TagId) => {
+          const { label, color } = TAG_BY_ID[id];
+          tags.push({ label, color });
+        };
 
         // When specific filters are active, trust the API — show matching badges
         if (activeTagFilters.length > 0) {
-          if (activeTagFilters.includes("hot")) tags.push({ label: "Hot", color: "bg-red-500" });
-          if (activeTagFilters.includes("rare")) tags.push({ label: "Rare", color: "bg-pink-500" });
-          if (activeTagFilters.includes("new")) tags.push({ label: "New", color: "bg-emerald-500" });
+          for (const tag of TAGS) {
+            if (activeTagFilters.includes(tag.id)) pushTag(tag.id);
+          }
           // If no specific tags matched above but filters are set, still compute from data
           if (tags.length === 0) {
-            if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-            if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (now - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
-            if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
+            for (const tag of TAGS) if (matches[tag.id]) pushTag(tag.id);
           }
         } else {
           // No filter — compute from card data
-          if (card.viewCount != null && card.viewCount >= 50_000) tags.push({ label: "Hot", color: "bg-red-500" });
-          if (card.viewCount != null && card.viewCount < 10_000 && !isNew && card.publishedAt && (now - new Date(card.publishedAt).getTime()) > 2 * 365 * 86400000) tags.push({ label: "Rare", color: "bg-pink-500" });
-          if (isNew) tags.push({ label: "New", color: "bg-emerald-500" });
+          for (const tag of TAGS) if (matches[tag.id]) pushTag(tag.id);
         }
 
         if (tags.length === 0) return null;
         return (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end min-[1152px]:opacity-0 min-[1152px]:group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end transition-opacity duration-200">
             {tags.map((tag) => (
               <span key={tag.label} className={`px-2.5 py-1 ${tag.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-md shadow-sm`}>
                 {tag.label}
@@ -183,11 +197,14 @@ export default memo(function MusicCard({
       </div>
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none rounded-2xl" />
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 pointer-events-none rounded-2xl" />
+
+      {/* Bottom scrim — guarantees contrast for the action buttons on any cover (TRIAL) */}
+      <div className="absolute inset-x-0 bottom-0 h-20 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 pointer-events-none rounded-b-2xl" />
 
       {/* Play/Stop button — center, on hover */}
       <div
-        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200"
         onClick={handlePlay}
       >
         <span
@@ -199,27 +216,74 @@ export default memo(function MusicCard({
         </span>
       </div>
 
-      {/* Action buttons — bottom right */}
+      {/* Share — DESKTOP only: bottom-left corner (separated from the info/like cluster) */}
+      <div className="absolute bottom-2 left-2 z-20 hidden min-[1152px]:flex">
+        <ShareButton
+          trackId={card.id}
+          trackName={card.name}
+          channel={card.artist}
+          youtubeUrl={card.youtubeUrl}
+          size="md"
+          onOpenChange={setShareOpen}
+          className="w-8 h-8 rounded-full text-white/80 hover:text-white opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+        />
+      </div>
+
+      {/* Action buttons — bottom right: SHARE · INFO · LIKE (like rightmost) */}
       <div className="absolute bottom-2 right-2 z-20 hidden sm:flex items-center gap-1.5">
+        {/* Share — tablet only (desktop has it bottom-left) */}
+        <div className="flex min-[1152px]:hidden">
+          <ShareButton
+            trackId={card.id}
+            trackName={card.name}
+            channel={card.artist}
+            youtubeUrl={card.youtubeUrl}
+            size="md"
+            onOpenChange={setShareOpen}
+            className="w-8 h-8 rounded-full text-white/80 hover:text-white opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+          />
+        </div>
         {/* Info button — available to all users */}
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 bg-black/70 text-white/70 hover:bg-black/90 hover:text-white ${
-            showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100"
-          }`}
-        >
-          {loadingDesc ? (
-            <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-              <path d="M12 2a10 10 0 0 1 10 10" />
-            </svg>
-          ) : (
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <circle cx="12" cy="8" r="0.5" fill="currentColor" />
-            </svg>
-          )}
-        </button>
+        <Tooltip label={t("card.info")} position="top" hideOnClick>
+          <button
+            ref={infoBtnRef}
+            onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
+              showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
+            }`}
+          >
+            {loadingDesc ? (
+              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+        </Tooltip>
+
+        {/* Play Next button — DESKTOP only, between Info and Like */}
+        {onPlayNext && (
+          <Tooltip label={t("card.playNext")} position="top" hideOnClick>
+            <button
+              onClick={(e) => { e.stopPropagation(); onPlayNext(); }}
+              aria-label={t("card.playNext")}
+              className="hidden min-[1152px]:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="15" y2="7" />
+                <line x1="4" y1="12" x2="15" y2="12" />
+                <line x1="4" y1="17" x2="11" y2="17" />
+                <line x1="18" y1="13" x2="18" y2="21" />
+                <line x1="14" y1="17" x2="22" y2="17" />
+              </svg>
+            </button>
+          </Tooltip>
+        )}
 
         {/* Like button */}
         <Tooltip label={isAuthenticated ? (saved ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
@@ -231,27 +295,19 @@ export default memo(function MusicCard({
             disabled={!isAuthenticated}
             ariaLabel={isAuthenticated ? (saved ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
             lottieVariant="light"
-            className={`rounded-full bg-black/70 text-white hover:bg-black/90 ${
+            className={`rounded-full active:scale-95 transition-all duration-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
+              saved ? "text-white" : "text-white/80 hover:text-white"
+            } ${
               saved
                 ? "opacity-100"
                 : isGracePeriod
                   ? "opacity-100"
                   : isAuthenticated
-                    ? "opacity-0 group-hover:opacity-100"
+                    ? "opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
                     : "opacity-0 group-hover:opacity-50 cursor-default"
             }`}
           />
         </Tooltip>
-
-        {/* Share button */}
-        <ShareButton
-          trackId={card.id}
-          trackName={card.name}
-          channel={card.artist}
-          youtubeUrl={card.youtubeUrl}
-          size="md"
-          className="w-8 h-8 rounded-full bg-black/70 text-white/70 hover:bg-black/90 hover:text-white opacity-0 group-hover:opacity-100"
-        />
       </div>
 
       {/* Info popover */}
@@ -289,7 +345,7 @@ export default memo(function MusicCard({
       </AnimatePresence>
 
       {/* Track info — top-left (desktop hover) */}
-      <div className="absolute top-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+      <div className="absolute top-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 hidden sm:block">
           <p className="font-mono text-xs text-white uppercase truncate leading-tight font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             {card.name}
           </p>
