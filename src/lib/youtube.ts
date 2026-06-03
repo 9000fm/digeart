@@ -125,6 +125,35 @@ async function getApprovedChannels(): Promise<ApprovedChannel[]> {
   return channels;
 }
 
+/* ── DB circuit breaker ──────────────────────────────────────────────────
+ * If Supabase starts hanging (e.g. free-tier disk-IO budget exhausted), every
+ * request that piles on makes it worse — that feedback loop is what turned a
+ * brief DB blip into a full outage. This breaker trips on the first timeout and
+ * tells callers to skip the DB for a cool-off window, serving cached/empty data
+ * instead. State lives on globalThis so it's shared across warm invocations. */
+const DB_QUERY_TIMEOUT = 8_000; // ms — a healthy query answers in <1s
+const DB_CIRCUIT_COOLOFF = 30_000; // ms — skip the DB this long after a timeout
+
+const dbBreaker = globalThis as typeof globalThis & { __digeartDbOpenUntil?: number };
+
+function dbCircuitOpen(): boolean {
+  return (dbBreaker.__digeartDbOpenUntil ?? 0) > Date.now();
+}
+
+function tripDbCircuit(): void {
+  dbBreaker.__digeartDbOpenUntil = Date.now() + DB_CIRCUIT_COOLOFF;
+}
+
+/** Run a Supabase query with a hard timeout. Rejects (→ trips breaker) on hang. */
+function withDbTimeout<T>(query: PromiseLike<T>): Promise<T> {
+  return Promise.race([
+    Promise.resolve(query),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("db-timeout")), DB_QUERY_TIMEOUT)
+    ),
+  ]);
+}
+
 /* ── Persistent pool cache (Supabase) ────────────────────────────────── */
 
 const POOL_MAX_AGE = 12 * 60 * 60 * 1000; // 12 hours (rebuilds ~2x/day)
@@ -136,16 +165,20 @@ interface PoolCacheResult<T = CardData[]> {
 }
 
 async function getPoolFromSupabase<T = CardData[]>(key: string, maxAge = POOL_MAX_AGE): Promise<PoolCacheResult<T> | null> {
+  if (dbCircuitOpen()) return null; // DB is struggling — don't pile on
   try {
-    const { data } = await supabaseAdmin()
-      .from("pool_cache")
-      .select("data, updated_at")
-      .eq("key", key)
-      .single();
+    const { data } = await withDbTimeout(
+      supabaseAdmin()
+        .from("pool_cache")
+        .select("data, updated_at")
+        .eq("key", key)
+        .single()
+    );
     if (!data) return null;
     const age = Date.now() - new Date(data.updated_at).getTime();
     return { data: data.data as T, isStale: age > maxAge };
   } catch {
+    tripDbCircuit(); // timeout or error → cool off before hitting the DB again
     return null;
   }
 }
@@ -294,22 +327,28 @@ export async function getCuratorGemIds(): Promise<Set<string>> {
   const now = Date.now();
   if (_gemCache && now - _gemCache.at < 60_000) return _gemCache.ids;
 
+  if (dbCircuitOpen() && _gemCache) return _gemCache.ids; // DB struggling — reuse old
   const ids = new Set<string>();
   try {
-    const { data: curators } = await supabaseAdmin().from("curators").select("email");
+    const { data: curators } = await withDbTimeout(
+      supabaseAdmin().from("curators").select("email")
+    );
     const emails = (curators ?? [])
       .map((c: { email: string | null }) => c.email)
       .filter((e): e is string => !!e);
     if (emails.length > 0) {
-      const { data: likes } = await supabaseAdmin()
-        .from("likes")
-        .select("video_id")
-        .in("user_email", emails)
-        .is("deleted_at", null);
+      const { data: likes } = await withDbTimeout(
+        supabaseAdmin()
+          .from("likes")
+          .select("video_id")
+          .in("user_email", emails)
+          .is("deleted_at", null)
+      );
       for (const l of likes ?? []) ids.add((l as { video_id: string }).video_id);
     }
   } catch {
-    // On any failure, fall back to whatever we had (or empty) — never throw.
+    // On any failure, cool off and fall back to whatever we had (or empty).
+    tripDbCircuit();
     if (_gemCache) return _gemCache.ids;
   }
   _gemCache = { ids, at: now };
