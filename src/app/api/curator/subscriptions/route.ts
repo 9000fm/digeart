@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 interface YTSubscriptionItem {
   snippet: {
@@ -83,7 +83,7 @@ export async function POST() {
   } while (pageToken);
 
   // Get all existing channel IDs from Supabase
-  const { data: existing } = await supabase
+  const { data: existing } = await supabaseAdmin()
     .from("curator_channels")
     .select("channel_id, status");
 
@@ -159,7 +159,7 @@ export async function POST() {
       import_source: "subscription",
       imported_at: now,
     }));
-    await supabase.from("curator_channels").insert(rows);
+    await supabaseAdmin().from("curator_channels").insert(rows);
   }
 
   // Insert filtered channels
@@ -172,7 +172,7 @@ export async function POST() {
       import_source: "subscription",
       imported_at: now,
     }));
-    await supabase.from("curator_channels").insert(rows);
+    await supabaseAdmin().from("curator_channels").insert(rows);
   }
 
   return NextResponse.json({

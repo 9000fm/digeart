@@ -1,5 +1,5 @@
 import { cacheGet, cacheSet } from "./cache";
-import { supabase } from "./supabase";
+import { supabaseAdmin } from "./supabaseAdmin";
 import type { CardData } from "./types";
 
 const API_KEY = process.env.YOUTUBE_API_KEY!;
@@ -90,12 +90,12 @@ async function getApprovedChannels(): Promise<ApprovedChannel[]> {
 
   // Try with new columns first (boost_state, activity_tier); fall back if migration not applied
   let rows: { channel_id: string; name: string; labels?: string[] | null; starred?: boolean | null; activity_tier?: string | null; boost_state?: string | null }[] | null = null;
-  const withMeta = await supabase
+  const withMeta = await supabaseAdmin()
     .from("curator_channels")
     .select("channel_id, name, labels, starred, activity_tier, boost_state")
     .eq("status", "approved");
   if (withMeta.error) {
-    const fallback = await supabase
+    const fallback = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, labels, starred")
       .eq("status", "approved");
@@ -137,7 +137,7 @@ interface PoolCacheResult<T = CardData[]> {
 
 async function getPoolFromSupabase<T = CardData[]>(key: string, maxAge = POOL_MAX_AGE): Promise<PoolCacheResult<T> | null> {
   try {
-    const { data } = await supabase
+    const { data } = await supabaseAdmin()
       .from("pool_cache")
       .select("data, updated_at")
       .eq("key", key)
@@ -157,7 +157,7 @@ const LOCK_TTL = 5 * 60 * 1000; // 5 min — auto-expires if rebuild crashes
 async function acquireRebuildLock(poolKey: string): Promise<boolean> {
   const key = `lock-${poolKey}`;
   try {
-    const { data } = await supabase
+    const { data } = await supabaseAdmin()
       .from("pool_cache")
       .select("updated_at")
       .eq("key", key)
@@ -166,7 +166,7 @@ async function acquireRebuildLock(poolKey: string): Promise<boolean> {
       const age = Date.now() - new Date(data.updated_at).getTime();
       if (age < LOCK_TTL) return false; // Another instance is rebuilding
     }
-    await supabase
+    await supabaseAdmin()
       .from("pool_cache")
       .upsert({ key, data: { locked: true }, updated_at: new Date().toISOString() });
     return true;
@@ -177,13 +177,13 @@ async function acquireRebuildLock(poolKey: string): Promise<boolean> {
 
 async function releaseRebuildLock(poolKey: string): Promise<void> {
   try {
-    await supabase.from("pool_cache").delete().eq("key", `lock-${poolKey}`);
+    await supabaseAdmin().from("pool_cache").delete().eq("key", `lock-${poolKey}`);
   } catch { /* non-critical */ }
 }
 
 async function savePoolToSupabase(key: string, pool: unknown): Promise<void> {
   try {
-    await supabase
+    await supabaseAdmin()
       .from("pool_cache")
       .upsert({ key, data: pool, updated_at: new Date().toISOString() });
   } catch {
@@ -296,12 +296,12 @@ export async function getCuratorGemIds(): Promise<Set<string>> {
 
   const ids = new Set<string>();
   try {
-    const { data: curators } = await supabase.from("curators").select("email");
+    const { data: curators } = await supabaseAdmin().from("curators").select("email");
     const emails = (curators ?? [])
       .map((c: { email: string | null }) => c.email)
       .filter((e): e is string => !!e);
     if (emails.length > 0) {
-      const { data: likes } = await supabase
+      const { data: likes } = await supabaseAdmin()
         .from("likes")
         .select("video_id")
         .in("user_email", emails)

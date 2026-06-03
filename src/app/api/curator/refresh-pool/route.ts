@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheDeleteByPrefix } from "@/lib/cache";
 import { rebuildDiscoverPool, rebuildMixesPool, rebuildSamplesPool } from "@/lib/youtube";
 import { after } from "next/server";
@@ -13,7 +13,7 @@ export async function POST() {
 
   // Mark all pools as stale by backdating updated_at (keeps old data serving)
   const staleDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { error } = await supabase
+  const { error } = await supabaseAdmin()
     .from("pool_cache")
     .update({ updated_at: staleDate })
     .in("key", ["discover", "mixes", "samples", "raw-discover", "raw-mixes", "raw-samples"]);

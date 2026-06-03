@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const API_KEY = process.env.YOUTUBE_API_KEY!;
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   const lines = urls.split("\n").map((l: string) => l.trim()).filter(Boolean);
 
   // Get existing channel IDs from Supabase
-  const { data: existing } = await supabase.from("curator_channels").select("channel_id");
+  const { data: existing } = await supabaseAdmin().from("curator_channels").select("channel_id");
   const existingIds = new Set((existing || []).map((c: { channel_id: string }) => c.channel_id));
 
   const added: string[] = [];
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         channelName = resolved.name;
       }
 
-      await supabase.from("curator_channels").insert({
+      await supabaseAdmin().from("curator_channels").insert({
         channel_id: channelId,
         name: channelName,
         status: "pending",

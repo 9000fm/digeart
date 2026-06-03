@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getChannelUploads, getChannelStats, getOldestUploadDate } from "@/lib/youtube";
 import { classifyActivity } from "@/lib/curator-activity";
 import { auth } from "@/auth";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Curator-only auth gate. Returns NextResponse if forbidden, null if allowed.
 async function requireCurator(): Promise<NextResponse | null> {
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
   // Stats — single query instead of 6
   if (mode === "stats") {
-    const { data: rows } = await supabase
+    const { data: rows } = await supabaseAdmin()
       .from("curator_channels")
       .select("status, starred");
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       const data = await res.json();
       const subIds = (data.items || []).map((i: { snippet: { resourceId: { channelId: string } } }) => i.snippet.resourceId.channelId);
 
-      const { data: existing } = await supabase.from("curator_channels").select("channel_id");
+      const { data: existing } = await supabaseAdmin().from("curator_channels").select("channel_id");
       const existingIds = new Set((existing || []).map((c: { channel_id: string }) => c.channel_id));
       const newCount = subIds.filter((id: string) => !existingIds.has(id)).length;
 
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
 
   // Filtered channels
   if (mode === "filtered") {
-    const { data: channels } = await supabase
+    const { data: channels } = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, notes, imported_at")
       .eq("status", "filtered")
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
 
   // Rejected channels
   if (mode === "rejected") {
-    const { data: channels } = await supabase
+    const { data: channels } = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, reviewed_at, imported_at, notes")
       .eq("status", "rejected")
@@ -153,14 +153,14 @@ export async function GET(req: NextRequest) {
       boost_state?: string | null;
     };
     let channels: ApprovedRow[] | null = null;
-    const withMeta = await supabase
+    const withMeta = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, labels, starred, reviewed_at, notes, activity_tier, last_upload_at, total_uploads, subscriber_count, curator_notes, boost_state")
       .eq("status", "approved")
       .order("name");
     if (withMeta.error) {
       // Migration not applied yet — fall back to original columns
-      const fallback = await supabase
+      const fallback = await supabaseAdmin()
         .from("curator_channels")
         .select("channel_id, name, labels, starred, reviewed_at, notes")
         .eq("status", "approved")
@@ -200,13 +200,13 @@ export async function GET(req: NextRequest) {
       subscriber_count?: number | null;
     };
     let channels: PendingRow[] | null = null;
-    const withMeta = await supabase
+    const withMeta = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, imported_at, activity_tier, last_upload_at, total_uploads, subscriber_count")
       .eq("status", "pending")
       .order("imported_at", { ascending: false });
     if (withMeta.error) {
-      const fallback = await supabase
+      const fallback = await supabaseAdmin()
         .from("curator_channels")
         .select("channel_id, name, imported_at")
         .eq("status", "pending")
@@ -247,13 +247,13 @@ export async function GET(req: NextRequest) {
 
     // Fetch channel row — try with boost_state, fall back if migration not applied
     let chData: { channel_id: string; name: string; starred?: boolean | null; boost_state?: string | null } | null = null;
-    const chWithBoost = await supabase
+    const chWithBoost = await supabaseAdmin()
       .from("curator_channels")
       .select("channel_id, name, starred, boost_state")
       .eq("channel_id", rescanChannelId)
       .single();
     if (chWithBoost.error) {
-      const fallback = await supabase
+      const fallback = await supabaseAdmin()
         .from("curator_channels")
         .select("channel_id, name, starred")
         .eq("channel_id", rescanChannelId)
@@ -296,7 +296,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Update scan info + activity metadata. Try with new columns; fall back to original if migration not applied.
-    const fullUpdate = await supabase
+    const fullUpdate = await supabaseAdmin()
       .from("curator_channels")
       .update({
         last_scanned_at: new Date().toISOString(),
@@ -311,7 +311,7 @@ export async function GET(req: NextRequest) {
       .eq("channel_id", rescanChannelId);
     if (fullUpdate.error) {
       // Migration not applied — fall back to original columns only
-      const { error: fallbackErr } = await supabase
+      const { error: fallbackErr } = await supabaseAdmin()
         .from("curator_channels")
         .update({
           last_scanned_at: new Date().toISOString(),
@@ -343,7 +343,7 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* ignore */ }
 
-    const { count: pendingCount } = await supabase
+    const { count: pendingCount } = await supabaseAdmin()
       .from("curator_channels")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending");
@@ -364,7 +364,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Default: next unreviewed channel
-  const { data: nextChannel } = await supabase
+  const { data: nextChannel } = await supabaseAdmin()
     .from("curator_channels")
     .select("channel_id, name, starred")
     .eq("status", "pending")
@@ -373,7 +373,7 @@ export async function GET(req: NextRequest) {
     .single();
 
   if (!nextChannel) {
-    const { data: doneRows } = await supabase.from("curator_channels").select("status");
+    const { data: doneRows } = await supabaseAdmin().from("curator_channels").select("status");
     let total = 0, approvedCount = 0;
     for (const row of doneRows || []) { total++; if (row.status === "approved") approvedCount++; }
     return NextResponse.json({ done: true, reviewed: total, total, approvedCount });
@@ -384,13 +384,13 @@ export async function GET(req: NextRequest) {
     allUploads = await getChannelUploads(nextChannel.channel_id, 50, true, true);
   } catch { /* ignore */ }
 
-  const { error: scanErr2 } = await supabase
+  const { error: scanErr2 } = await supabaseAdmin()
     .from("curator_channels")
     .update({ last_scanned_at: new Date().toISOString(), uploads_fetched: allUploads.length })
     .eq("channel_id", nextChannel.channel_id);
   if (scanErr2) console.error("Failed to update scan info:", scanErr2);
 
-  const { data: statusRows } = await supabase
+  const { data: statusRows } = await supabaseAdmin()
     .from("curator_channels")
     .select("status");
   const counts = { total: 0, approved: 0, pending: 0 };
@@ -424,7 +424,7 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   if (decision === "approve") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({
         status: "approved",
@@ -435,7 +435,7 @@ export async function POST(req: NextRequest) {
       .eq("channel_id", channelId);
     if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   } else if (decision === "reject") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({
         status: "rejected",
@@ -464,7 +464,7 @@ export async function PUT(req: NextRequest) {
 
   // Send to pending (filtered) from review
   if (action === "sendToPending") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "filtered", notes: "Rejected from Review" })
       .eq("channel_id", channelId);
@@ -474,7 +474,7 @@ export async function PUT(req: NextRequest) {
 
   // Rescue from rejected → pending (music-channels / review)
   if (action === "rescueChannel") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "pending", reviewed_at: null })
       .eq("channel_id", channelId);
@@ -484,7 +484,7 @@ export async function PUT(req: NextRequest) {
 
   // Rescue from filtered → pending (review)
   if (action === "rescueFiltered") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "pending", reviewed_at: null, notes: null })
       .eq("channel_id", channelId);
@@ -494,7 +494,7 @@ export async function PUT(req: NextRequest) {
 
   // Rescue from rejected → filtered (pending review)
   if (action === "rescueToFiltered") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "filtered", notes: "Rescued from Rejected" })
       .eq("channel_id", channelId);
@@ -504,7 +504,7 @@ export async function PUT(req: NextRequest) {
 
   // Confirm reject from filtered → rejected
   if (action === "confirmRejectFiltered") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "rejected", reviewed_at: new Date().toISOString() })
       .eq("channel_id", channelId);
@@ -514,7 +514,7 @@ export async function PUT(req: NextRequest) {
 
   // Change decision (from approved → rejected). Preserve labels in case of undo/rescue.
   if (action === "changeDecision") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: body.newDecision || "rejected", reviewed_at: new Date().toISOString() })
       .eq("channel_id", channelId);
@@ -524,7 +524,7 @@ export async function PUT(req: NextRequest) {
 
   // Undo last decision — revert channel to pending, clear reviewed_at
   if (action === "undoDecision") {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ status: "pending", reviewed_at: null })
       .eq("channel_id", channelId);
@@ -535,7 +535,7 @@ export async function PUT(req: NextRequest) {
   // Update labels
   if (action === "updateLabels") {
     if (!Array.isArray(body.labels)) return NextResponse.json({ error: "labels must be an array" }, { status: 400 });
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ labels: body.labels })
       .eq("channel_id", channelId);
@@ -546,7 +546,7 @@ export async function PUT(req: NextRequest) {
   // Update curator notes (private free-text per channel) — silently no-op if migration not applied
   if (action === "updateCuratorNotes") {
     const notes = typeof body.curatorNotes === "string" ? body.curatorNotes.slice(0, 500) : null;
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ curator_notes: notes })
       .eq("channel_id", channelId);
@@ -564,7 +564,7 @@ export async function PUT(req: NextRequest) {
     if (boostState !== "boost" && boostState !== "default" && boostState !== "bury") {
       return NextResponse.json({ error: "boostState must be 'boost' | 'default' | 'bury'" }, { status: 400 });
     }
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from("curator_channels")
       .update({ boost_state: boostState })
       .eq("channel_id", channelId);
@@ -587,7 +587,7 @@ export async function PATCH(req: NextRequest) {
   const { channelId } = body;
   if (!channelId) return NextResponse.json({ error: "channelId required" }, { status: 400 });
 
-  const { data: ch } = await supabase
+  const { data: ch } = await supabaseAdmin()
     .from("curator_channels")
     .select("starred")
     .eq("channel_id", channelId)
@@ -596,7 +596,7 @@ export async function PATCH(req: NextRequest) {
   if (!ch) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const newStarred = !ch.starred;
-  const { error } = await supabase
+  const { error } = await supabaseAdmin()
     .from("curator_channels")
     .update({ starred: newStarred })
     .eq("channel_id", channelId);
