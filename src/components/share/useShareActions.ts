@@ -27,9 +27,9 @@ export function useShareActions(trackId: string, trackName: string, channel?: st
 
   const message = t("share.message");
   const titleLine = channel ? `${trackName} · ${channel}` : trackName;
-  const body = `${message}: ${titleLine}`;
+  const body = `${message} | ${titleLine}`;
 
-  const copyPayload = `${body} ${url}`;
+  const copyPayload = `${body} (${url})`;
 
   const copyLink = useCallback(async () => {
     try {
@@ -50,7 +50,7 @@ export function useShareActions(trackId: string, trackName: string, channel?: st
 
   const items: ShareActionItem[] = useMemo(() => [
     { key: "copy", label: t("share.copyLink"), onClick: copyLink },
-    { key: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${body} ${url}`)}` },
+    { key: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent(`${body} (${url})`)}` },
     { key: "twitter", label: "X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(body)}&url=${encodeURIComponent(url)}` },
     { key: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(body)}` },
     {

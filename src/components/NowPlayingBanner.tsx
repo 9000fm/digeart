@@ -444,7 +444,7 @@ export default function NowPlayingBanner({
         beforeToggle={isAuthenticated ? undefined : () => false}
         size={size}
         ariaLabel={isAuthenticated ? (isLiked ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
-        className={`${isLiked ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
+        className={`${isLiked ? "text-[var(--text)]" : "text-[var(--text-secondary)] hover:text-[var(--text)]"} ${!isAuthenticated ? "opacity-50 cursor-default" : ""}`}
         listenForKeybind
       />
     </Tooltip>
@@ -466,7 +466,7 @@ export default function NowPlayingBanner({
           onLocate();
         }}
         className={`locate-btn shrink-0 flex items-center justify-center hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95 ${
-          locateSpin ? "text-[var(--text)]" : "text-[var(--text-muted)]"
+          locateSpin ? "text-[var(--text)]" : "text-[var(--text-secondary)]"
         } ${size === "sm" ? "w-7 h-7" : "w-7 h-7"}`}
       >
         <svg
@@ -530,7 +530,7 @@ export default function NowPlayingBanner({
         data-queue-btn
         onClick={(e) => { e.stopPropagation(); onToggleQueue(); }}
         className={`shrink-0 flex items-center justify-center transition-colors w-8 h-8 2xl:w-10 2xl:h-10 active:scale-[0.89] transition-transform ${
-          showQueue ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+          showQueue ? "text-[var(--text)]" : "text-[var(--text-secondary)] hover:text-[var(--text)]"
         }`}
       >
         <svg className="w-4 h-4 2xl:w-5 2xl:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
@@ -717,7 +717,7 @@ export default function NowPlayingBanner({
       }}
       className={`shrink-0 flex items-center justify-center rounded-full transition-all duration-200 ${
         size === "sm" ? "w-6 h-6" : "w-8 h-8 2xl:w-10 2xl:h-10"
-      } ${showInfo ? "text-[var(--text)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
+      } ${showInfo ? "text-[var(--text)]" : "text-[var(--text-secondary)] hover:text-[var(--text)]"}`}
     >
       {loadingDesc ? (
         <svg className={`${size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4"} animate-spin`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">

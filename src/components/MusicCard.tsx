@@ -216,8 +216,8 @@ export default memo(function MusicCard({
         </span>
       </div>
 
-      {/* Share — DESKTOP only: bottom-left corner (separated from the info/like cluster) */}
-      <div className="absolute bottom-2 left-2 z-20 hidden min-[1152px]:flex">
+      {/* Share — bottom-left corner (tablet + desktop), separated from the info/like cluster */}
+      <div className="absolute bottom-2 left-2 z-20 hidden sm:flex">
         <ShareButton
           trackId={card.id}
           trackName={card.name}
@@ -229,20 +229,8 @@ export default memo(function MusicCard({
         />
       </div>
 
-      {/* Action buttons — bottom right: SHARE · INFO · LIKE (like rightmost) */}
+      {/* Action buttons — bottom right: INFO · PLAY-NEXT · LIKE */}
       <div className="absolute bottom-2 right-2 z-20 hidden sm:flex items-center gap-1.5">
-        {/* Share — tablet only (desktop has it bottom-left) */}
-        <div className="flex min-[1152px]:hidden">
-          <ShareButton
-            trackId={card.id}
-            trackName={card.name}
-            channel={card.artist}
-            youtubeUrl={card.youtubeUrl}
-            size="md"
-            onOpenChange={setShareOpen}
-            className="w-8 h-8 rounded-full text-white/80 hover:text-white opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
-          />
-        </div>
         {/* Info button — available to all users */}
         <Tooltip label={t("card.info")} position="top" hideOnClick>
           <button
@@ -266,13 +254,13 @@ export default memo(function MusicCard({
           </button>
         </Tooltip>
 
-        {/* Play Next button — DESKTOP only, between Info and Like */}
+        {/* Play Next button — tablet + desktop, between Info and Like */}
         {onPlayNext && (
           <Tooltip label={t("card.playNext")} position="top" hideOnClick>
             <button
               onClick={(e) => { e.stopPropagation(); onPlayNext(); }}
               aria-label={t("card.playNext")}
-              className="hidden min-[1152px]:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
+              className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="7" x2="15" y2="7" />

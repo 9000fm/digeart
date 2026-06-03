@@ -95,7 +95,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Compartir",
-    "share.message": "Lo encontré en digeart (beta)",
+    "share.message": "Lo encontré en digeart.online",
     "share.copyLink": "Copiar link",
     "share.moreOptions": "Más opciones…",
 
@@ -250,7 +250,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Share",
-    "share.message": "Found this on digeart (beta)",
+    "share.message": "Found this on digeart.online",
     "share.copyLink": "Copy link",
     "share.moreOptions": "More options…",
 
@@ -405,7 +405,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Partager",
-    "share.message": "J'ai trouvé ça sur digeart (beta)",
+    "share.message": "J'ai trouvé ça sur digeart.online",
     "share.copyLink": "Copier le lien",
     "share.moreOptions": "Plus d'options…",
 
@@ -560,7 +560,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "共有",
-    "share.message": "digeartで見つけた (beta)",
+    "share.message": "digeart.online で見つけた",
     "share.copyLink": "リンクをコピー",
     "share.moreOptions": "その他のオプション…",
 
@@ -715,7 +715,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Share
     "share.action": "Поделиться",
-    "share.message": "Нашёл это на digeart (beta)",
+    "share.message": "Нашёл это на digeart.online",
     "share.copyLink": "Копировать ссылку",
     "share.moreOptions": "Другие варианты…",
 

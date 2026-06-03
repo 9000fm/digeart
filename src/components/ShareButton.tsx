@@ -52,14 +52,14 @@ export default function ShareButton({
       ref={setBtnEl}
       onClick={onClick}
       aria-label={t("share.action")}
-      className={`share-btn shrink-0 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95 cursor-pointer ${btnSize} ${className}`}
+      className={`share-btn shrink-0 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95 cursor-pointer ${btnSize} ${className}`}
     >
       <svg
         className={iconSize}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth={1.5}
+        strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       >
