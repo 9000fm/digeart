@@ -625,8 +625,8 @@ body {
   }
 }
 
-/* Larger screens (> Full HD) — denser grid */
-@media (min-width: 1920px) {
+/* Larger-than-Full-HD screens (2K+) — denser grid. 1080p (1920) stays at 5. */
+@media (min-width: 2300px) {
   .dot-grid {
     grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
   }

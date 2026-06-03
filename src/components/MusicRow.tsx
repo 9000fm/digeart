@@ -1,11 +1,12 @@
 "use client";
 
-import { memo } from "react";
-import { motion } from "framer-motion";
+import { memo, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import HeartLikeButton from "./HeartLikeButton";
 import ShareButton from "./ShareButton";
 import Tooltip from "./Tooltip";
 import { useTranslation } from "./LanguageProvider";
+import { useVideoDescription } from "@/hooks/useVideoDescription";
 import type { CardData } from "@/lib/types";
 
 interface MusicRowProps {
@@ -28,6 +29,17 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function formatViewCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
+  return String(count);
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
 export default memo(function MusicRow({
   card,
   saved,
@@ -39,6 +51,27 @@ export default memo(function MusicRow({
   isAuthenticated = true,
 }: MusicRowProps) {
   const { t } = useTranslation();
+  const [showInfo, setShowInfo] = useState(false);
+  const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card.videoId, card.description);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const infoBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Close info popover on outside click / Escape
+  useEffect(() => {
+    if (!showInfo) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (infoRef.current?.contains(target)) return;
+      if (infoBtnRef.current?.contains(target)) return;
+      setShowInfo(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowInfo(false); };
+    const tm = setTimeout(() => {
+      window.addEventListener("mousedown", handleClick);
+      window.addEventListener("keydown", handleKey);
+    }, 10);
+    return () => { clearTimeout(tm); window.removeEventListener("mousedown", handleClick); window.removeEventListener("keydown", handleKey); };
+  }, [showInfo]);
 
   return (
     <motion.div
@@ -98,11 +131,44 @@ export default memo(function MusicRow({
         </p>
       </div>
 
-      {/* Right cluster: heart, share, duration */}
+      {/* Right cluster: SHARE · INFO · LIKE · duration (share+info always visible) */}
       <div
-        className="shrink-0 flex items-center gap-2"
+        className="relative shrink-0 flex items-center gap-2"
         onClick={(e) => e.stopPropagation()}
       >
+        <ShareButton
+          trackId={card.id}
+          trackName={card.name}
+          channel={card.artist}
+          youtubeUrl={card.youtubeUrl}
+          size="sm"
+          className="w-6 h-6 rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+        />
+
+        {/* Info button */}
+        <Tooltip label={t("card.info")} position="top" hideOnClick>
+          <button
+            ref={infoBtnRef}
+            onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
+            aria-label={t("card.info")}
+            className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--bg-alt)] ${
+              showInfo ? "text-[var(--text)]" : "text-[var(--text-secondary)] hover:text-[var(--text)]"
+            }`}
+          >
+            {loadingDesc ? (
+              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+        </Tooltip>
+
         <Tooltip
           label={
             isAuthenticated
@@ -135,21 +201,46 @@ export default memo(function MusicRow({
           />
         </Tooltip>
 
-        <ShareButton
-          trackId={card.id}
-          trackName={card.name}
-          channel={card.artist}
-          youtubeUrl={card.youtubeUrl}
-          size="sm"
-          className="w-6 h-6 rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] opacity-0 group-hover:opacity-100"
-        />
-
         {/* Duration — always visible, fixed-width tabular */}
         {card.duration != null && card.duration > 0 && (
           <span className="font-mono text-[11px] text-[var(--text-secondary)] tabular-nums tracking-wider w-12 text-right">
             {formatDuration(card.duration)}
           </span>
         )}
+
+        {/* Info popover — theme-aware (row sits on --bg) */}
+        <AnimatePresence>
+          {showInfo && (
+            <motion.div
+              ref={infoRef}
+              initial={{ opacity: 0, y: 6, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="absolute bottom-full right-0 mb-2 z-30 w-[220px] bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl shadow-2xl p-3 text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="font-mono text-[10px] text-[var(--text)] font-bold truncate">{card.album}</p>
+              <div className="flex items-center gap-3 mt-1.5">
+                {card.viewCount != null && (
+                  <span className="font-mono text-[10px] text-[var(--text-secondary)]">{formatViewCount(card.viewCount)} views</span>
+                )}
+                {card.publishedAt && (
+                  <span className="font-mono text-[10px] text-[var(--text-secondary)]">{formatDate(card.publishedAt)}</span>
+                )}
+              </div>
+              {loadingDesc && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <svg className="w-3 h-3 animate-spin text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>
+                  <span className="font-mono text-[9px] text-[var(--text-muted)]">Loading...</span>
+                </div>
+              )}
+              {!loadingDesc && cardDescription && (
+                <p className="font-mono text-[10px] text-[var(--text-muted)] mt-2 leading-relaxed line-clamp-4">{cardDescription}</p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
