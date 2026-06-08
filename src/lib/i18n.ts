@@ -126,7 +126,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Música del underground.",
-    "welcome.signInPrompt": "Inicia sesión para guardar tracks",
+    "welcome.signInPrompt": "Inicia sesión para una mejor experiencia",
     "welcome.skip": "Saltar por ahora",
 
     // About
@@ -290,7 +290,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Music from the underground.",
-    "welcome.signInPrompt": "Sign in to save tracks",
+    "welcome.signInPrompt": "Sign in for a better experience",
     "welcome.skip": "Skip for now",
 
     // About
@@ -454,7 +454,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Musique de l'underground.",
-    "welcome.signInPrompt": "Connecte-toi pour sauvegarder des tracks",
+    "welcome.signInPrompt": "Connecte-toi pour une meilleure expérience",
     "welcome.skip": "Passer pour le moment",
 
     // About
@@ -618,7 +618,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "アンダーグラウンドの音楽。",
-    "welcome.signInPrompt": "ログインしてトラックを保存",
+    "welcome.signInPrompt": "ログインして、より良い体験を",
     "welcome.skip": "今はスキップ",
 
     // About
@@ -782,7 +782,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Welcome
     "welcome.tagline": "Музыка из андеграунда.",
-    "welcome.signInPrompt": "Войди, чтобы сохранять треки",
+    "welcome.signInPrompt": "Войди для лучшего опыта",
     "welcome.skip": "Пропустить",
 
     // About

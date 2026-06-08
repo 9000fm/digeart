@@ -87,11 +87,9 @@ export default function WelcomeScreen({ show, onDismiss }: WelcomeScreenProps) {
               {t("welcome.skip")}
             </button>
 
-            {/* Superself + Version */}
-            <div className="mt-10 flex items-center justify-center gap-1.5">
-              <svg className="w-3 h-3 shrink-0 text-white/25" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.4"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/></svg>
-              <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-mono font-bold superself-shimmer text-white/25" style={{ fontSize: 14 }}>superself</a>
-              <span className="font-mono text-white/15" style={{ fontSize: 14 }}>· v{process.env.APP_VERSION}</span>
+            {/* Version */}
+            <div className="mt-10 flex items-center justify-center">
+              <span className="font-mono text-white/15" style={{ fontSize: 14 }}>v{process.env.APP_VERSION}</span>
             </div>
           </motion.div>
         </motion.div>
