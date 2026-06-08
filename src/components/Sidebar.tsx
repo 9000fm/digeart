@@ -880,7 +880,8 @@ export default function Sidebar({
                   ["L", t("about.shortcutLike")],
                   ["Q", t("about.shortcutQueue")],
                   ["1\u20134", t("about.shortcutTab")],
-                  ["? / I", t("about.shortcutPanel")],
+                  ["?", t("settings.about")],
+                  ["I", t("about.shortcutPanel")],
                   [",", t("about.shortcutSettings")],
                 ].map(([key, desc]) => (
                   <Fragment key={key}>
@@ -911,9 +912,12 @@ export default function Sidebar({
               </div>
             </div>
 
-            <p className="mt-2 pt-1.5 border-t border-[var(--border)] font-mono text-[11px] text-[var(--text-muted)] leading-snug text-justify">
-              {t("about.legal")}
-            </p>
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]">
+              <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.disclaimerTitle")}</p>
+              <p className="font-mono text-[11px] text-[var(--text-muted)] leading-snug text-justify">
+                {t("about.legal")}
+              </p>
+            </div>
 
             <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-[var(--border)]">
               <span className="inline-flex text-[var(--text-muted)]">

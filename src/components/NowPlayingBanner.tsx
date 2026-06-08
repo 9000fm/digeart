@@ -1385,10 +1385,10 @@ export default function NowPlayingBanner({
             {/* Row 1: art + controls */}
             <div className="grid items-center gap-2" style={{ gridTemplateColumns: "minmax(150px, 1fr) auto minmax(80px, 1fr)" }}>
               {/* Left: chevron + art + track info */}
-              <div className="flex items-center gap-2 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
+              <div className="flex items-center gap-1.5 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
-                  className="shrink-0 w-7 h-7 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
+                  className="shrink-0 w-5 h-7 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9" />
@@ -1459,7 +1459,6 @@ export default function NowPlayingBanner({
                     <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current transition-opacity duration-200 ${autoPlay ? "opacity-100" : "opacity-0"}`} />
                   </button>
                 )}
-                {locateButton("sm")}
               </div>
               {/* Right: queue ··· volume + fullscreen */}
               <div className="flex items-center w-full relative z-10">

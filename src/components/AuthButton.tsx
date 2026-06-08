@@ -21,6 +21,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isCurator = !!(session as unknown as { isCurator?: boolean }).isCurator;
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1152;
 
   useEffect(() => {
@@ -164,6 +165,22 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
                 <p className="font-mono text-xs text-[var(--text-muted)] truncate">{session.user.email}</p>
               </div>
             </div>
+
+            {/* Curator panel link — curator only. Desktop + tablet. */}
+            {isCurator && (
+              <div className="py-1">
+                <a
+                  href="/curator"
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 font-mono text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
+                  style={{ fontSize: 13 }}
+                >
+                  <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                  {t("auth.curatorPanel")}
+                </a>
+              </div>
+            )}
 
             {/* Menu items — adaptive: full on tablet/mobile, minimal on desktop */}
             {!isDesktop && (
