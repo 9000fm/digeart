@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // Required for NextAuth v5 behind Vercel's proxy so it trusts the prod host.
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -35,8 +37,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/curators?email=eq.${encodeURIComponent(email)}&select=id`,
               {
                 headers: {
-                  apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                  Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+                  // SECRET key, not anon: the `curators` table may have RLS enabled (RLS-prep
+                  // migration), which blocks an anon SELECT and silently makes every fresh
+                  // login non-curator -> redirected off /curator. The secret key bypasses RLS.
+                  apikey: process.env.SUPABASE_SECRET_KEY!,
+                  Authorization: `Bearer ${process.env.SUPABASE_SECRET_KEY!}`,
                 },
               }
             );
