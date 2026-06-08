@@ -32,9 +32,14 @@ function getSteps(t: (key: string) => string): OnboardingStep[] {
       description: t("tutorial.filtersDesc"),
     },
     {
+      target: "[data-settings-trigger]",
+      title: t("tutorial.settings"),
+      description: t("tutorial.settingsDesc"),
+    },
+    {
       target: "[data-auth-desktop]",
-      title: t("tutorial.yourMenu"),
-      description: t("tutorial.yourMenuDesc"),
+      title: t("tutorial.yourAccount"),
+      description: t("tutorial.yourAccountDesc"),
     },
   ];
 }

@@ -89,19 +89,10 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             transition={{ duration: 0.16, ease: "easeOut" }}
             className="bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl overflow-hidden"
           >
-            <div className="relative px-3 py-2.5 flex items-center justify-between after:content-[''] after:absolute after:inset-x-3 after:bottom-0 after:border-b after:border-[var(--border)]">
+            <div className="relative px-3 py-2.5 flex items-center after:content-[''] after:absolute after:inset-x-3 after:bottom-0 after:border-b after:border-[var(--border)]">
               <h2 className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                 {t("settings.title")}
               </h2>
-              <button
-                onClick={handleClose}
-                className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] transition-colors"
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                </svg>
-              </button>
             </div>
 
             <div className="px-3 py-1 [&>*]:py-2">
