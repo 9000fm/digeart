@@ -129,7 +129,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "about.tagline": "Música del underground. Tracks, mixes, samples y otras rarezas.",
     "about.tags": "Tags",
     "about.trending": "Más escuchados",
-    "about.hiddenGems": "Joyas raras",
+    "about.hiddenGems": "Joyas",
     "about.addedRecently": "Recién agregados",
     "about.shortcuts": "Atajos",
     "about.tabs": "Tabs",
