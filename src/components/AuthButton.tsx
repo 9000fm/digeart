@@ -21,7 +21,7 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const isCurator = !!(session as unknown as { isCurator?: boolean }).isCurator;
+  const isCurator = !!(session && (session as unknown as { isCurator?: boolean }).isCurator);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1152;
 
   useEffect(() => {
