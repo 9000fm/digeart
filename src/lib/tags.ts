@@ -13,7 +13,7 @@ export interface TagMeta {
 
 export const TAGS: readonly TagMeta[] = [
   { id: "hot", label: "Hot", color: "bg-red-500",    descKey: "about.trending" },
-  { id: "gem", label: "Gem", color: "bg-pink-500",   descKey: "about.hiddenGems" },
+  { id: "gem", label: "Gem", color: "bg-fuchsia-500", descKey: "about.hiddenGems" },
   { id: "new", label: "New", color: "bg-emerald-500", descKey: "about.addedRecently" },
 ] as const;
 

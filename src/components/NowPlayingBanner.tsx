@@ -457,6 +457,17 @@ export default function NowPlayingBanner({
     document.addEventListener("locate-triggered", handler);
     return () => document.removeEventListener("locate-triggered", handler);
   }, []);
+
+  // "I" keyboard shortcut toggles the now-playing track's info — click the visible info button
+  // (there are several across breakpoints; pick the one that's actually on screen).
+  useEffect(() => {
+    const handler = () => {
+      const btns = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-info-toggle]"));
+      (btns.find((b) => b.offsetParent !== null) ?? btns[0])?.click();
+    };
+    document.addEventListener("info-toggle-keybind", handler);
+    return () => document.removeEventListener("info-toggle-keybind", handler);
+  }, []);
   const locateButton = (size: "sm" | "md" = "md") => onLocate ? (
     <Tooltip label={t("player.locate")} position="top" hideOnClick>
       <button
@@ -701,7 +712,7 @@ export default function NowPlayingBanner({
 
   // Info button (reusable like likeButton)
   const infoButton = (size: "sm" | "md" = "md") => isAuthenticated ? (
-    <Tooltip label={t("card.info")} position="top" hideOnClick>
+    <Tooltip label={`${t("card.info")} (I)`} position="top" hideOnClick>
     <button
       ref={infoButtonRef}
       data-info-toggle

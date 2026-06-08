@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "digeart — music discovery for underground diggers";
+export const alt = "digeart · music from the underground";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -58,10 +58,7 @@ export default async function OpenGraphImage() {
           }}
         >
           <span style={{ fontSize: 42, opacity: 0.4, fontWeight: 400 }}>
-            {">"} music discovery
-          </span>
-          <span style={{ fontSize: 42, opacity: 0.4, fontWeight: 400 }}>
-            {">"} for underground diggers
+            {">"} music from the underground
           </span>
         </div>
 

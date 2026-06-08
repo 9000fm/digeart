@@ -49,8 +49,8 @@ const BANNER_SINGLE = BANNER_PHRASES.map((phrase, i) => {
   const icon = SEPARATOR_ICONS[i % SEPARATOR_ICONS.length];
   return `${phrase}     ${icon}     `;
 }).join("");
-// Repeat enough to overflow any viewport width for a seamless loop.
-const BANNER_TEXT = BANNER_SINGLE.repeat(4);
+// One BANNER_SINGLE pass; the component repeats it to a measured count (bannerReps) so one
+// copy always exceeds the viewport width — keeps the 2-copy loop seamless with no empty gap.
 
 const GENRE_PRESETS = [
   { label: "All", genres: ["electronic", "house", "techno"] },
@@ -229,6 +229,9 @@ export default function Sidebar({
   const tickerRef = useRef<HTMLDivElement>(null);
   const tickerSpeedRef = useRef(1);            // current speed 0..1, read by the loop
   const tickerRampRafRef = useRef<number | null>(null); // brake/resume ramp handle
+  // Banner copy width is measured so one copy always >= viewport (seamless, no empty gap).
+  const [bannerReps, setBannerReps] = useState(4);
+  const bannerText = useMemo(() => BANNER_SINGLE.repeat(bannerReps), [bannerReps]);
 
   useEffect(() => {
     const el = tickerRef.current;
@@ -253,6 +256,27 @@ export default function Sidebar({
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Size one banner copy to >= viewport width so the 2-copy marquee never shows an empty gap
+  // on wide screens. Re-measure on resize and after the banner font loads.
+  useEffect(() => {
+    const measure = () => {
+      const el = tickerRef.current;
+      if (!el) return;
+      const oneCopy = el.scrollWidth / 2;        // width of one BANNER_SINGLE.repeat(bannerReps)
+      const singleWidth = oneCopy / bannerReps;  // width of a single BANNER_SINGLE pass
+      if (singleWidth <= 0) return;
+      const needed = Math.max(4, Math.ceil(window.innerWidth / singleWidth) + 1);
+      if (needed !== bannerReps) setBannerReps(needed);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    let cancelled = false;
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(() => { if (!cancelled) measure(); });
+    }
+    return () => { cancelled = true; window.removeEventListener("resize", measure); };
+  }, [bannerReps]);
 
   // Hover-brake: ease the speed 1↔0. Slower to brake (~0.9s), even slower to resume (~1.4s).
   const rampTicker = useCallback((to: number) => {
@@ -406,10 +430,10 @@ export default function Sidebar({
       >
         <div ref={tickerRef} className="marquee-track inline-flex whitespace-nowrap">
           <span className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.35em] shrink-0 px-2">
-            {BANNER_TEXT}
+            {bannerText}
           </span>
           <span aria-hidden="true" className="font-[family-name:var(--font-banner)] text-[11px] font-medium uppercase tracking-[0.35em] shrink-0 px-2">
-            {BANNER_TEXT}
+            {bannerText}
           </span>
         </div>
       </div>
@@ -610,19 +634,19 @@ export default function Sidebar({
             {showAbout ? (
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" fill="currentColor" />
-                <line x1="12" y1="16" x2="12" y2="11" stroke="var(--bg)" strokeWidth={2.2} strokeLinecap="round" />
-                <circle cx="12" cy="8" r="1.1" fill="var(--bg)" />
+                <path d="M9.6 9.3a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1.1.85-1.1 1.7" fill="none" stroke="var(--bg)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="16.6" r="1.1" fill="var(--bg)" />
               </svg>
             ) : (
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <circle cx="12" cy="8" r="0.5" fill="currentColor" />
+                <path d="M9.6 9.3a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1.1.85-1.1 1.7" />
+                <circle cx="12" cy="16.6" r="0.5" fill="currentColor" />
               </svg>
             )}
           </button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-[90]">
-            {t("settings.about")} (I)
+            {t("settings.about")} (?)
           </div>
         </div>
         {/* Settings gear */}
@@ -632,7 +656,7 @@ export default function Sidebar({
             data-settings-trigger
             onClick={() => {
               setSettingsAnchor(gearRef.current?.getBoundingClientRect() ?? null);
-              setSettingsOpen(true);
+              setSettingsOpen((open) => !open); // toggle open/close, like the About button
               setShowAbout(false);
             }}
             className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
@@ -812,10 +836,10 @@ export default function Sidebar({
         {showAbout && (
           <motion.div
             key="about-popover"
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
             className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[320px] max-h-[calc(100vh-120px)] overflow-y-auto"
             style={aboutSource === "gear" && gearAnchor ? {
               left: gearAnchor.left,
@@ -828,13 +852,13 @@ export default function Sidebar({
             <p className="font-[family-name:var(--font-display)] text-3xl text-[var(--text)]">digeart</p>
             <p className="font-mono text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
 
-            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tags")}</p>
-              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]">
+              <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.tags")}</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1">
                 {TAGS.map((tag) => (
                   <Fragment key={tag.id}>
                     <span className="flex items-center gap-1">
-                      <span className={`w-1 h-1 rounded-full ${tag.color}`} />
+                      <span className={`w-2 h-2 rounded-full ${tag.color}`} />
                       <span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">{tag.label}</span>
                     </span>
                     <span className="font-mono text-[11px] text-[var(--text-muted)]">{t(tag.descKey)}</span>
@@ -843,11 +867,11 @@ export default function Sidebar({
               </div>
             </div>
 
-            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.shortcuts")}</p>
-              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]">
+              <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.shortcuts")}</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1">
                 {[
-                  ["Space / K", t("about.shortcutPlayPause")],
+                  [`${t("about.keySpace")} / K`, t("about.shortcutPlayPause")],
                   ["N / \u2192", t("about.shortcutNext")],
                   ["P / \u2190", t("about.shortcutPrev")],
                   ["S", t("about.shortcutShuffle")],
@@ -860,36 +884,49 @@ export default function Sidebar({
                   [",", t("about.shortcutSettings")],
                 ].map(([key, desc]) => (
                   <Fragment key={key}>
-                    <kbd className="font-mono text-[var(--text)] bg-[var(--border)]/20 px-0.5 rounded text-center min-w-[14px]" style={{ fontSize: 11 }}>{key}</kbd>
+                    <kbd className="font-mono text-[var(--text)] bg-[var(--text)]/10 px-1.5 py-0.5 rounded text-center min-w-[16px]" style={{ fontSize: 11 }}>{key}</kbd>
                     <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
               </div>
             </div>
 
-            <div className="mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <p className="font-mono text-[13px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-1">{t("about.tabs")}</p>
-              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-0.5">
+            <div className="mt-2 pt-1.5 border-t border-[var(--border)]">
+              <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.tabs")}</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1">
                 {[
-                  [t("nav.forYou"), t("about.electronic")],
-                  [t("nav.mixes"), t("about.djSets")],
-                  [t("nav.samples"), t("about.worldFunk")],
-                  [t("nav.saved"), t("about.yourLiked")],
-                ].map(([tab, desc]) => (
+                  [t("nav.forYou"), t("about.electronic"), "1"],
+                  [t("nav.mixes"), t("about.djSets"), "2"],
+                  [t("nav.samples"), t("about.worldFunk"), "3"],
+                  [t("nav.saved"), t("about.yourLiked"), "4"],
+                ].map(([tab, desc, dgt]) => (
                   <Fragment key={tab}>
-                    <span className="font-mono text-[11px] text-[var(--text-secondary)] font-bold shrink-0">{tab}</span>
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <kbd className="font-mono text-[var(--text)] bg-[var(--text)]/10 px-1.5 py-0.5 rounded text-center min-w-[16px]" style={{ fontSize: 11 }}>{dgt}</kbd>
+                      <span className="font-mono text-[11px] text-[var(--text-secondary)] font-bold">{tab}</span>
+                    </span>
                     <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
               </div>
             </div>
 
-            <p className="mt-2 pt-1.5 border-t border-[var(--border)]/30 font-mono text-[11px] text-[var(--text-muted)] leading-snug text-justify">
+            <p className="mt-2 pt-1.5 border-t border-[var(--border)] font-mono text-[11px] text-[var(--text-muted)] leading-snug text-justify">
               {t("about.legal")}
             </p>
 
-            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[var(--border)]/30">
-              <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-3.5 h-3.5 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
+            <div className="flex items-center gap-2 mt-2 pt-1.5 border-t border-[var(--border)]">
+              <span className="inline-flex text-[var(--text-muted)]">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 32 32">
+                  <polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/>
+                  <polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/>
+                  <polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/>
+                  <polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/>
+                  <polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/>
+                  <polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/>
+                  <polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/>
+                </svg>
+              </span>
               <span className="font-mono text-[11px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
             </div>
           </motion.div>
@@ -916,7 +953,7 @@ export default function Sidebar({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}
@@ -946,7 +983,7 @@ export default function Sidebar({
               <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5 leading-relaxed text-justify">{t("about.tagline")}</p>
 
               {/* Tag legend */}
-              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
+              <div className="mt-2.5 pt-2 border-t border-[var(--border)]">
                 <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">{t("about.tags")}</p>
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   {TAGS.map((tag) => (
@@ -962,7 +999,7 @@ export default function Sidebar({
               </div>
 
               {/* Navigation guide */}
-              <div className="mt-2.5 pt-2 border-t border-[var(--border)]/50">
+              <div className="mt-2.5 pt-2 border-t border-[var(--border)]">
                 <p className="font-mono text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mb-1.5">{t("about.tabs")}</p>
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   {[
@@ -979,8 +1016,18 @@ export default function Sidebar({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[var(--border)]/50">
-                <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1 superself-link"><svg className="w-4 h-4 shrink-0 -mt-px" viewBox="0 0 32 32"><polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/><polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/><polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/><polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/><polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/><polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/><polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/></svg>{t("about.projectPrefix")} <a href="https://superself.online" target="_blank" rel="noopener noreferrer" className="font-bold superself-shimmer">superself</a> {t("about.projectSuffix")}</span>
+              <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span className="inline-flex text-[var(--text-muted)]">
+                  <svg className="w-4 h-4" viewBox="0 0 32 32">
+                    <polygon points="8,4 24,4 30,13 16,29 2,13" fill="currentColor" opacity="0.5"/>
+                    <polygon points="8,4 12,13 16,4" fill="currentColor" opacity="0.35"/>
+                    <polygon points="24,4 20,13 16,4" fill="currentColor" opacity="0.45"/>
+                    <polygon points="2,13 12,13 16,29" fill="currentColor" opacity="0.3"/>
+                    <polygon points="30,13 20,13 16,29" fill="currentColor" opacity="0.2"/>
+                    <polygon points="12,13 20,13 16,29" fill="currentColor" opacity="0.25"/>
+                    <polygon points="12,13 20,13 16,4" fill="currentColor" opacity="0.5"/>
+                  </svg>
+                </span>
                 <span className="font-mono text-[9px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
               </div>
             </motion.div>

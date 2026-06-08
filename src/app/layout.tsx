@@ -33,11 +33,11 @@ const displayFont = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "digeart — music discovery for diggers",
-  description: "Underground electronic music, human-curated for diggers.",
+  title: "digeart · music from the underground",
+  description: "Music from the underground.",
   openGraph: {
     title: "digeart",
-    description: "Music discovery for underground diggers.",
+    description: "Music from the underground.",
     url: "https://digeart.vercel.app",
     siteName: "digeart",
     type: "website",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "digeart",
-    description: "Music discovery for underground diggers.",
+    description: "Music from the underground.",
   },
 };
 

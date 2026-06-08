@@ -141,18 +141,18 @@ export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anc
       {open && (
         <motion.div
           ref={menuRef}
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={pos ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.97 }}
-          exit={{ opacity: 0, scale: 0.97 }}
-          transition={{ duration: 0.13, ease: "easeOut" }}
+          initial={{ opacity: 0, y: -6 }}
+          animate={pos ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.16, ease: "easeOut" }}
           onMouseEnter={cancelDismiss}
           onMouseLeave={startDismiss}
           style={{ top: pos?.top ?? 0, left: pos?.left ?? 0, width: 200, visibility: pos ? "visible" : "hidden" }}
-          className="fixed z-[9999] share-menu-surface rounded-xl shadow-2xl overflow-hidden"
+          className="fixed z-[9999] bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl overflow-hidden"
           role="menu"
         >
           {/* Title header — "SHARE {track}", truncated with ellipsis */}
-          <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-[var(--text)]/10 bg-[var(--text)]/[0.03] min-w-0">
+          <div className="relative flex items-center gap-1.5 px-3 py-2.5 min-w-0 after:content-[''] after:absolute after:inset-x-3 after:bottom-0 after:border-b after:border-[var(--border)]">
             <span className="shrink-0 w-3 h-3 flex items-center justify-center text-[var(--text-secondary)] [&>svg]:w-3 [&>svg]:h-3">
               {IconShare}
             </span>
@@ -167,15 +167,15 @@ export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anc
             const Icon = ICON_BY_KEY[opt.key];
             const row = (
               <>
-                <span className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-[var(--text)]/70">
+                <span className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-[var(--text-secondary)]">
                   <span className="block w-3.5 h-3.5 [&>svg]:w-3.5 [&>svg]:h-3.5">{Icon}</span>
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/90 font-bold">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)] font-bold">
                   {opt.label}
                 </span>
               </>
             );
-            const base = `flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--text)]/8 transition-colors cursor-pointer ${i < items.length - 1 ? "border-b border-[var(--text)]/8" : ""}`;
+            const base = `flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--text)]/8 transition-colors cursor-pointer`;
             if (opt.href) {
               return (
                 <a
@@ -206,7 +206,7 @@ export default function ShareMenu({ trackId, trackName, channel, youtubeUrl, anc
           {/* More options row */}
           <button
             onClick={() => { openNativeShare(); onClose(); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 border-t border-[var(--text)]/10 hover:bg-[var(--text)]/8 transition-colors cursor-pointer text-left"
+            className="relative w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--text)]/8 transition-colors cursor-pointer text-left before:content-[''] before:absolute before:inset-x-3 before:top-0 before:border-t before:border-[var(--border)]"
             role="menuitem"
           >
             <span className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)]">

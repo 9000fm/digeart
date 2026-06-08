@@ -42,7 +42,7 @@ html {
 
 [data-theme="dark"] {
   --bg: #09090b;
-  --bg-content: #151517; /* subtly lighter than --bg so dark covers stand out, without going too grey */
+  --bg-content: #0d0d0f; /* darker than the old #151517 (user request) but still above --bg so dark covers separate */
   --bg-alt: #18181b;
   --bg-card: #18181b;
   --bg-overlay: rgba(0, 0, 0, 0.6);
@@ -135,13 +135,13 @@ body {
 /* Share menu surface — mostly opaque + light blur so the busy grid behind never
    bleeds through into a murky grey that clashes with the text (light & dark). */
 .share-menu-surface {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 [data-theme="dark"] .share-menu-surface {
-  background: rgba(20, 20, 23, 0.9);
+  background: rgba(9, 9, 11, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 

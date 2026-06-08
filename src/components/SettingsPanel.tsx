@@ -83,14 +83,14 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
             }
           >
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden"
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl overflow-hidden"
           >
-            <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
-              <h2 className="font-mono text-[9px] font-bold text-[var(--text)] uppercase tracking-widest">
+            <div className="relative px-3 py-2.5 flex items-center justify-between after:content-[''] after:absolute after:inset-x-3 after:bottom-0 after:border-b after:border-[var(--border)]">
+              <h2 className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                 {t("settings.title")}
               </h2>
               <button
@@ -104,10 +104,10 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               </button>
             </div>
 
-            <div className="px-4 py-3 space-y-2.5">
+            <div className="px-3 py-1 [&>*]:py-2">
               {/* Theme toggle — always visible */}
               <div className="flex items-center justify-between cursor-pointer" onClick={toggleTheme}>
-                <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
+                <span className="font-mono text-[var(--text)]" style={{ fontSize: 13 }}>
                   {t("settings.theme")}
                 </span>
                 <button
@@ -122,7 +122,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Language picker — always visible */}
               <div>
                 <div className="flex items-center justify-between cursor-pointer" onClick={() => setLangOpen((v) => !v)}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 13 }}>
                     {t("settings.language")}
                   </span>
                   <button
@@ -163,7 +163,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* About — mobile/tablet only (desktop has sidebar info button) */}
               {onOpenInfo && (
                 <div className="min-[1152px]:hidden flex items-center justify-between cursor-pointer" onClick={() => { onOpenInfo(); onClose(); }}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 13 }}>
                     {t("settings.about")}
                   </span>
                   <button
@@ -179,7 +179,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Speed toggle — auth only, desktop/tablet */}
               {onToggleDjMode && (
                 <div className={`hidden min-[1152px]:flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 13 }}>
                     {t("settings.speedAdjust")} <span className="text-[var(--text-muted)]">(beta)</span>
                   </span>
                   <button
@@ -199,7 +199,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
               {/* Tutorial — auth only */}
               {onRunTutorial && (
                 <div className={`flex items-center justify-between ${!isAuthenticated ? "opacity-40 pointer-events-none" : ""}`}>
-                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 14 }}>
+                  <span className="font-mono text-[var(--text)]" style={{ fontSize: 13 }}>
                     {t("settings.tutorial")}
                   </span>
                   <button
@@ -214,7 +214,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
 
               {/* Sign in CTA for non-auth */}
               {!isAuthenticated && (
-                <p className="font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border)]/30" style={{ fontSize: 12 }}>
+                <p className="font-mono text-[var(--text-muted)]" style={{ fontSize: 12 }}>
                   {t("settings.signInToUnlock")}
                 </p>
               )}

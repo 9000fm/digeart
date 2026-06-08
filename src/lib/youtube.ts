@@ -378,6 +378,35 @@ function stampTags(cards: CardData[], gemIds: Set<string>, hotThreshold: number)
   });
 }
 
+// Space curator gems through the feed so the GEM tag is a rare "find". Uses VARYING
+// gaps (not a fixed cadence) so gems don't land on a metronomic grid — feels organic.
+// Cycles this gap sequence; averages ~37 → ~1 gem per ~40 cards. Reorders the WHOLE
+// feed once; pagination then slices it, so windows stay consistent with no dupes. When
+// gems run out deeper in the feed, the density just tapers off (no gem is repeated).
+const GEM_GAPS = [30, 35, 40, 32, 41, 37, 43]; // regular tracks between consecutive gems
+
+function interleaveGems(feed: CardData[]): CardData[] {
+  const gems = feed.filter((c) => c.isGem);
+  if (gems.length === 0) return feed; // nothing to space → leave order untouched
+  const rest = feed.filter((c) => !c.isGem);
+  const out: CardData[] = [];
+  let gi = 0, ri = 0, gapIdx = 0, sinceGem = 0, nextGap = GEM_GAPS[0];
+  while (ri < rest.length || gi < gems.length) {
+    if (sinceGem >= nextGap && gi < gems.length) {
+      out.push(gems[gi++]);
+      sinceGem = 0;
+      gapIdx = (gapIdx + 1) % GEM_GAPS.length;
+      nextGap = GEM_GAPS[gapIdx];
+    } else if (ri < rest.length) {
+      out.push(rest[ri++]);
+      sinceGem++;
+    } else {
+      out.push(gems[gi++]); // regular tracks exhausted → dump any remaining gems
+    }
+  }
+  return out;
+}
+
 /* ── Tag filtering utility ───────────────────────────────────────────── */
 
 /**
@@ -1012,6 +1041,11 @@ export async function discoverFromYouTube(
     const r = ((rotate % feed.length) + feed.length) % feed.length;
     feed = [...feed.slice(r), ...feed.slice(0, r)];
   }
+  // Default homepage feed only — space gems to ~2-3 per 20 (rotate still varies WHICH
+  // gems/tracks appear; this only controls spacing). Skipped when a tag filter is
+  // active so filtering by HOT/GEM/NEW returns the exact matches untouched.
+  const noTagFilter = tag === "all" || (Array.isArray(tag) && tag.length === 0);
+  if (noTagFilter) feed = interleaveGems(feed);
   return {
     cards: feed.slice(offset, offset + limit),
     totalFiltered: feed.length,

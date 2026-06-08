@@ -133,10 +133,11 @@ export default memo(function MusicCard({
         )}
       </div>
 
-      {/* Duration pill — theme-aware (black on dark / white on light),
-           mobile: top-left, desktop: bottom-left */}
+      {/* Duration pill — MOBILE ONLY here (top-left). On sm+ it renders inside the
+           top-right stack ABOVE the tags (see below) so it never clashes with the
+           bottom-left share button. */}
       {card.duration && card.duration > 2400 && (
-        <span className="absolute top-2 sm:top-auto sm:bottom-2 left-2 z-10 px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
+        <span className="sm:hidden absolute top-2 left-2 z-10 px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
           {formatDuration(card.duration)}
         </span>
       )}
@@ -168,9 +169,17 @@ export default memo(function MusicCard({
           for (const tag of TAGS) if (matches[tag.id]) pushTag(tag.id);
         }
 
-        if (tags.length === 0) return null;
+        // On sm+ the always-on duration pill lives at the TOP of this top-right stack,
+        // above any status tags. (Mobile shows it top-left instead — see above.)
+        const hasDuration = !!(card.duration && card.duration > 2400);
+        if (tags.length === 0 && !hasDuration) return null;
         return (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end transition-opacity duration-200">
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end transition-opacity duration-200">
+            {card.duration && card.duration > 2400 && (
+              <span className="hidden sm:block px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
+                {formatDuration(card.duration)}
+              </span>
+            )}
             {tags.map((tag) => (
               <span key={tag.label} className={`px-2.5 py-1 ${tag.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-md shadow-sm`}>
                 {tag.label}

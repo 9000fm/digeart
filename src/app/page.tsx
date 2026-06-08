@@ -1069,7 +1069,7 @@ export default function Home() {
             if (nowPlayingCard) setShowQueue((v) => !v);
             return;
           case "i":
-            setShowAbout((v) => !v);
+            if (nowPlayingCard) document.dispatchEvent(new Event("info-toggle-keybind"));
             return;
         }
       }

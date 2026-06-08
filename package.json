@@ -2,7 +2,7 @@
   "name": "digeart",
   "version": "2.3-beta",
   "private": true,
-  "description": "Music discovery for diggers.",
+  "description": "Music from the underground.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
