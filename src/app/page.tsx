@@ -191,9 +191,24 @@ export default function Home() {
       return;
     }
     window.onYouTubeIframeAPIReady = initPlayer;
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
+
+    // Defer the ~1MB IFrame API off the critical first paint — it loads on the
+    // first idle moment, well before the user hits play. The player is still
+    // pre-created on load, so the mobile first-tap gesture path is unchanged.
+    const loadYT = () => {
+      if (document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) return;
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    };
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    if (typeof w.requestIdleCallback === "function") {
+      w.requestIdleCallback(loadYT, { timeout: 2500 });
+    } else {
+      setTimeout(loadYT, 1500);
+    }
   }, []);
 
   // ── Cleanup progress interval on unmount ──

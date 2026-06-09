@@ -359,13 +359,23 @@ export async function getCuratorGemIds(): Promise<Set<string>> {
 // HOT threshold = the 90th percentile of viewCounts in the pool, so HOT marks the
 // top ~10% most-viewed of the CURRENT pool (auto-adjusts as the catalog grows).
 // Returns Infinity when there's nothing to rank (→ nothing is hot).
+// Memoize the threshold per pool version. The pool array reference is stable across
+// warm requests (same cached object) and replaced wholesale on every rebuild, so a
+// WeakMap auto-invalidates: new pool → miss → recompute once → old entry GC'd. This
+// skips a full-pool sort on every request AND every infinite-scroll page. The feed's
+// fresh-on-refresh order (rotate + shuffle) is untouched — this only caches a constant.
+const _hotThresholdCache = new WeakMap<CardData[], number>();
+
 function computeHotThreshold(cards: CardData[]): number {
+  const cached = _hotThresholdCache.get(cards);
+  if (cached !== undefined) return cached;
   const views = cards
     .map((c) => c.viewCount)
     .filter((v): v is number => v != null)
     .sort((a, b) => a - b);
-  if (views.length === 0) return Infinity;
-  return views[Math.floor(views.length * 0.9)];
+  const threshold = views.length === 0 ? Infinity : views[Math.floor(views.length * 0.9)];
+  _hotThresholdCache.set(cards, threshold);
+  return threshold;
 }
 
 // Stamp isGem (curator-liked) + isHot (top 10% by views) onto cards.

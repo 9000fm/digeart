@@ -65,6 +65,11 @@ export default async function RootLayout({
   const serverLocale = detectLocaleFromHeader(h.get("accept-language"));
   return (
     <html lang={serverLocale}>
+      <head>
+        {/* Warm the YouTube thumbnail connection so covers load faster */}
+        <link rel="preconnect" href="https://i.ytimg.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://i.ytimg.com" />
+      </head>
       <body className={`${spaceMono.className} ${displayFont.variable} ${bigShoulders.variable} antialiased`}>
         <SessionProvider>
           <ThemeProvider>

@@ -94,6 +94,13 @@ export default memo(function MusicCard({
   // HeartLikeButton has disabled={!isAuthenticated}, so onSave only fires when auth'd
   const handleHeartClick = useCallback(() => onSave(), [onSave]);
 
+  // Prefer YouTube's WebP thumbnail (~30% smaller, identical look). Works on
+  // already-cached JPEG URLs too; falls back to the original JPEG on error.
+  const rawImg = card.image || "/placeholder.svg";
+  const webpSrc = rawImg.includes("/vi/")
+    ? rawImg.replace("/vi/", "/vi_webp/").replace(/hqdefault\.jpg$/, "hqdefault.webp")
+    : rawImg;
+
   return (
     <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
       onMouseLeave={() => {
@@ -122,13 +129,28 @@ export default memo(function MusicCard({
           </div>
         ) : (
           <img
-            src={card.image || "/placeholder.svg"}
+            src={webpSrc}
             alt={`${card.name} by ${card.artist}`}
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
             decoding="async"
             onClick={handlePlay}
-            onError={() => setImgError(true)}
+            onLoad={(e) => {
+              // YouTube returns a tiny (120px) grey placeholder at 200 OK when a
+              // video has no WebP variant — detect it and use the real JPEG.
+              const img = e.currentTarget;
+              if (img.naturalWidth <= 120 && img.src.endsWith(".webp") && card.image) {
+                img.src = card.image;
+              }
+            }}
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src.endsWith(".webp") && card.image) {
+                img.src = card.image; // WebP 404 → original JPEG
+              } else {
+                setImgError(true);
+              }
+            }}
             title="YouTube"
           />
         )}
