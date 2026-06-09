@@ -126,6 +126,7 @@ export default memo(function MusicCard({
             alt={`${card.name} by ${card.artist}`}
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
+            decoding="async"
             onClick={handlePlay}
             onError={() => setImgError(true)}
             title="YouTube"

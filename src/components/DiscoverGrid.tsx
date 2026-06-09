@@ -123,7 +123,7 @@ export default function DiscoverGrid({
           fetchCards(activeGenre, tagKey, genreKey, true);
         }
       },
-      { rootMargin: "400px" }
+      { rootMargin: "1000px" }
     );
 
     const el = observerRef.current;
