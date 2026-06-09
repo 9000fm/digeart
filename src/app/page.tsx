@@ -203,6 +203,13 @@ export default function Home() {
     };
   }, []);
 
+  // ── Reload starts at the top (infinite feed would otherwise restore scroll near the bottom) ──
+  useEffect(() => {
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
   // ── Supabase: load saved likes on mount ──
   useEffect(() => {
     if (!session?.user?.email) return;
