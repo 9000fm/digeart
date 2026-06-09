@@ -191,15 +191,28 @@ export default function Home() {
     }
     window.onYouTubeIframeAPIReady = initPlayer;
 
-    // Defer the ~1MB IFrame API off the critical first paint — it loads on the
-    // first idle moment, well before the user hits play. The player is still
-    // pre-created on load, so the mobile first-tap gesture path is unchanged.
+    // Keep the ~1MB IFrame API off the critical first paint, but warm it the moment
+    // the user shows intent (first move / scroll / touch / key) so the player is
+    // ready by the time they click a card. Falls back to the first idle moment if
+    // they never interact. Player is still pre-created before any play tap, so the
+    // mobile first-tap gesture path is unchanged.
     const loadYT = () => {
       if (document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) return;
       const tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
       document.head.appendChild(tag);
     };
+    let warmed = false;
+    const intentEvents = ["pointermove", "pointerdown", "scroll", "keydown", "touchstart"];
+    const warmOnIntent = () => {
+      if (warmed) return;
+      warmed = true;
+      loadYT();
+      intentEvents.forEach((ev) => window.removeEventListener(ev, warmOnIntent));
+    };
+    intentEvents.forEach((ev) => window.addEventListener(ev, warmOnIntent, { passive: true }));
+
+    // Fallback: warm during the first idle moment even without interaction.
     const w = window as Window & {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
     };
@@ -208,6 +221,10 @@ export default function Home() {
     } else {
       setTimeout(loadYT, 1500);
     }
+
+    return () => {
+      intentEvents.forEach((ev) => window.removeEventListener(ev, warmOnIntent));
+    };
   }, []);
 
   // ── Cleanup progress interval on unmount ──
