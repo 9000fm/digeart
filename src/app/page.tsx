@@ -26,6 +26,7 @@ import WelcomeScreen from "@/components/WelcomeScreen";
 import type { ViewType } from "@/components/Sidebar";
 import type { CardData } from "@/lib/types";
 import { stripCardForStorage, hydrateCardDefaults } from "@/lib/youtube";
+import { updatePlayback } from "@/lib/playbackProgress";
 
 /* ── YouTube IFrame API types ── */
 interface YTPlayer {
@@ -67,8 +68,6 @@ export default function Home() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [nowPlayingCard, setNowPlayingCard] = useState<CardData | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [djMode, setDjMode] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("digeart-dj-mode") === "1";
@@ -304,8 +303,7 @@ export default function Home() {
         const state = p.getPlayerState();
         // Update progress when playing (1) or buffering (3) with valid data
         if (state === 1 || (state === 3 && duration > 0 && current > 0)) {
-          setAudioProgress(current);
-          if (duration > 0) setAudioDuration(duration);
+          updatePlayback(duration > 0 ? { progress: current, duration } : { progress: current });
         }
         // End detection — catches track end even in background tabs
         // where onStateChange(ENDED) is deferred
@@ -377,7 +375,7 @@ export default function Home() {
         // Get real duration
         try {
           const dur = event.target.getDuration();
-          if (dur > 0) setAudioDuration(dur);
+          if (dur > 0) updatePlayback({ duration: dur });
         } catch { /* ignore */ }
         // Re-apply DJ mode playback rate on new track
         if (playbackRateRef.current !== 1) {
@@ -503,8 +501,7 @@ export default function Home() {
     setPlayingId(card.id);
     // Don't set isPlaying=true here — wait for YouTube state 1 (playing)
     // This prevents EQ animating while video is still loading/cued
-    setAudioProgress(0);
-    setAudioDuration(card.duration || 0);
+    updatePlayback({ progress: 0, duration: card.duration || 0 });
     setNowPlayingCard(card);
     setCanGoPrev(queueIndex.current > 0);
 
@@ -826,8 +823,7 @@ export default function Home() {
     setPlayingId(null);
     setIsPlaying(false);
     setNowPlayingCard(null);
-    setAudioProgress(0);
-    setAudioDuration(0);
+    updatePlayback({ progress: 0, duration: 0 });
     shuffleQueue.current = [];
     queueIndex.current = -1;
     queueView.current = null;
@@ -925,7 +921,7 @@ export default function Home() {
   const handleSeek = useCallback((seconds: number) => {
     if (ytPlayerRef.current) {
       ytPlayerRef.current.seekTo(seconds, true);
-      setAudioProgress(seconds);
+      updatePlayback({ progress: seconds });
     }
   }, []);
 
@@ -1265,8 +1261,6 @@ export default function Home() {
             onPrevTrack={handlePrevTrack}
             onNextTrack={handleNextTrack}
             hasPrev={canGoPrev}
-            audioProgress={audioProgress}
-            audioDuration={audioDuration}
             onSeek={handleSeek}
             autoPlay={autoPlayEnabled}
             onToggleAutoPlay={handleToggleAutoPlay}

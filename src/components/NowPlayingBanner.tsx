@@ -9,6 +9,7 @@ import ShareButton from "./ShareButton";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
+import { usePlaybackProgress } from "@/lib/playbackProgress";
 
 function formatViewCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -31,8 +32,6 @@ interface NowPlayingBannerProps {
   onPrevTrack?: () => void;
   onNextTrack?: () => void;
   hasPrev?: boolean;
-  audioProgress?: number;
-  audioDuration?: number;
   onSeek?: (seconds: number) => void;
   autoPlay?: boolean;
   onToggleAutoPlay?: () => void;
@@ -69,8 +68,6 @@ export default function NowPlayingBanner({
   onPrevTrack,
   onNextTrack,
   hasPrev = false,
-  audioProgress = 0,
-  audioDuration = 0,
   onSeek,
   autoPlay = true,
   onToggleAutoPlay,
@@ -90,6 +87,9 @@ export default function NowPlayingBanner({
   onPlaybackRateChange,
 }: NowPlayingBannerProps) {
   const { t } = useTranslation();
+  // Live playback position — sourced from an external store (not props) so progress
+  // ticks re-render only this player UI, never the page/card grid. See playbackProgress.ts
+  const { progress: audioProgress, duration: audioDuration } = usePlaybackProgress();
 
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
