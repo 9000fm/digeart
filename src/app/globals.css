@@ -632,6 +632,16 @@ body {
   }
 }
 
+/* Virtualization-lite: let the browser skip layout/paint for off-screen grid cards
+   so deep scroll stays smooth. Cards stay in the DOM + a11y tree; rendering is just
+   deferred until they near the viewport. `auto` remembers each card's real size after
+   first paint, so the scrollbar stays stable. Unsupported browsers ignore it (cards
+   render normally). */
+.dot-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
 /* Vinyl spinner for loading states */
 @keyframes vinyl-spin {
   from { transform: rotate(0deg); }
