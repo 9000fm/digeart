@@ -102,7 +102,7 @@ export default memo(function MusicCard({
     : rawImg;
 
   return (
-    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-200 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
+    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-100 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
       onMouseLeave={() => {
         if (showInfo) {
           infoTimerRef.current = setTimeout(() => setShowInfo(false), 400);
@@ -197,7 +197,7 @@ export default memo(function MusicCard({
         const hasDuration = !!(card.duration && card.duration > 2400);
         if (tags.length === 0 && !hasDuration) return null;
         return (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end transition-opacity duration-200">
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end transition-opacity duration-100">
             {card.duration && card.duration > 2400 && (
               <span className="hidden sm:block px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
                 {formatDuration(card.duration)}
@@ -213,7 +213,7 @@ export default memo(function MusicCard({
       })()}
 
       {/* Center EQ — wind-down animation on stop */}
-      <div className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-200 ${isPlaying ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: isPlaying ? "0ms" : "350ms" }}>
+      <div className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-100 ${isPlaying ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: isPlaying ? "0ms" : "350ms" }}>
         <div className="flex flex-col items-center bg-black/60 rounded-lg px-3 py-2 backdrop-blur-sm">
           <div className="flex items-end gap-[3px] h-10">
             {[1, 2, 3, 4, 5].map((n) => (
@@ -229,14 +229,14 @@ export default memo(function MusicCard({
       </div>
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 pointer-events-none rounded-2xl" />
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-100 pointer-events-none rounded-2xl" />
 
       {/* Bottom scrim — guarantees contrast for the action buttons on any cover (TRIAL) */}
-      <div className="absolute inset-x-0 bottom-0 h-20 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 pointer-events-none rounded-b-2xl" />
+      <div className="absolute inset-x-0 bottom-0 h-20 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-100 pointer-events-none rounded-b-2xl" />
 
       {/* Play/Stop button — center, on hover */}
       <div
-        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200"
+        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-100"
         onClick={handlePlay}
       >
         <span
@@ -268,7 +268,7 @@ export default memo(function MusicCard({
           <button
             ref={infoBtnRef}
             onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
               showInfo ? "opacity-100 text-white" : "opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
             }`}
           >
@@ -292,7 +292,7 @@ export default memo(function MusicCard({
             <button
               onClick={(e) => { e.stopPropagation(); onPlayNext(); }}
               aria-label={t("card.playNext")}
-              className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-200 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
+              className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="7" x2="15" y2="7" />
@@ -315,7 +315,7 @@ export default memo(function MusicCard({
             disabled={!isAuthenticated}
             ariaLabel={isAuthenticated ? (saved ? t("card.unlike") : t("card.save")) : t("card.loginToSave")}
             lottieVariant="light"
-            className={`rounded-full active:scale-95 transition-all duration-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
+            className={`rounded-full active:scale-95 transition-all duration-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
               saved ? "text-white" : "text-white/80 hover:text-white"
             } ${
               saved
@@ -365,7 +365,7 @@ export default memo(function MusicCard({
       </AnimatePresence>
 
       {/* Track info — top-left (desktop hover) */}
-      <div className="absolute top-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-200 hidden sm:block">
+      <div className="absolute top-0 left-0 right-[72px] z-10 px-2.5 py-2 opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 transition-opacity duration-100 hidden sm:block">
           <p className="font-mono text-xs text-white uppercase truncate leading-tight font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
             {card.name}
           </p>
