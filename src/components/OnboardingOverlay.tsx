@@ -96,6 +96,8 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
 
   // Is this the player step? (index 1 in full steps)
   const isPlayerStep = steps[step]?.target === ".player-banner";
+  // Is this the "click to play" card step? (index 0) — needs the same click-through hole.
+  const isCardStep = steps[step]?.target === "[data-card-id]";
 
   // Auto-play a random track when reaching the player step (step 2)
   useEffect(() => {
@@ -255,6 +257,19 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   const handleConfirmSkip = useCallback(() => { setShowConfirm(false); onComplete(); }, [onComplete]);
   const handleCancelSkip = useCallback(() => setShowConfirm(false), []);
 
+  // Card step: when the user actually clicks the highlighted card, the player appears —
+  // advance to the player step automatically (honors the "click to play" prompt).
+  useEffect(() => {
+    if (!show || !ready || !isCardStep) return;
+    const check = setInterval(() => {
+      if (document.querySelector(".player-banner")) {
+        clearInterval(check);
+        goTo(step + 1);
+      }
+    }, 200);
+    return () => clearInterval(check);
+  }, [show, ready, isCardStep, step, goTo]);
+
   // Escape key: dismiss skip dialog if showing, otherwise trigger skip confirm
   useEffect(() => {
     if (!show || !ready) return;
@@ -351,8 +366,8 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   return (
     <>
       {/* Overlay layer */}
-      {isPlayerStep && spotlight ? (
-        /* Player step: 4 backdrop divs around spotlight — clicks pass through to player */
+      {(isPlayerStep || isCardStep) && spotlight ? (
+        /* Player + card steps: 4 backdrop divs around spotlight — clicks pass through */
         <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: "none" }}>
           <div style={{ opacity: spotlightVisible ? 1 : 0, transition: "opacity 160ms ease-out" }}>
             {/* Top */}
