@@ -32,6 +32,11 @@ function getSteps(t: (key: string) => string): OnboardingStep[] {
       description: t("tutorial.filtersDesc"),
     },
     {
+      target: "[data-about-trigger]",
+      title: t("tutorial.about"),
+      description: t("tutorial.aboutDesc"),
+    },
+    {
       target: "[data-settings-trigger]",
       title: t("tutorial.settings"),
       description: t("tutorial.settingsDesc"),
@@ -257,10 +262,13 @@ export default function OnboardingOverlay({ show, onComplete, onPlayRandom }: On
   const handleConfirmSkip = useCallback(() => { setShowConfirm(false); onComplete(); }, [onComplete]);
   const handleCancelSkip = useCallback(() => setShowConfirm(false), []);
 
-  // Card step: when the user actually clicks the highlighted card, the player appears —
-  // advance to the player step automatically (honors the "click to play" prompt).
+  // Card step: when the user clicks the highlighted card, the player appears — advance
+  // to the player step automatically (honors the "click to play" prompt). Guard: if the
+  // player is ALREADY open (e.g. navigating BACK from step 2 with a track playing), skip
+  // it — otherwise you'd be bounced forward and could never return to this step.
   useEffect(() => {
     if (!show || !ready || !isCardStep) return;
+    if (document.querySelector(".player-banner")) return;
     const check = setInterval(() => {
       if (document.querySelector(".player-banner")) {
         clearInterval(check);

@@ -614,6 +614,7 @@ export default function Sidebar({
         <div className="relative group/info">
           <button
             ref={aboutIconRef}
+            data-about-trigger
             onClick={() => {
               setAboutSource("gear");
               const rect = gearRef.current?.getBoundingClientRect();
