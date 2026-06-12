@@ -193,6 +193,7 @@ export async function GET(req: NextRequest) {
     type PendingRow = {
       channel_id: string;
       name: string;
+      labels?: string[] | null;
       imported_at?: string | null;
       activity_tier?: string | null;
       last_upload_at?: string | null;
@@ -202,13 +203,13 @@ export async function GET(req: NextRequest) {
     let channels: PendingRow[] | null = null;
     const withMeta = await supabaseAdmin()
       .from("curator_channels")
-      .select("channel_id, name, imported_at, activity_tier, last_upload_at, total_uploads, subscriber_count")
+      .select("channel_id, name, labels, imported_at, activity_tier, last_upload_at, total_uploads, subscriber_count")
       .eq("status", "pending")
       .order("imported_at", { ascending: false });
     if (withMeta.error) {
       const fallback = await supabaseAdmin()
         .from("curator_channels")
-        .select("channel_id, name, imported_at")
+        .select("channel_id, name, labels, imported_at")
         .eq("status", "pending")
         .order("imported_at", { ascending: false });
       channels = fallback.data;
@@ -220,6 +221,7 @@ export async function GET(req: NextRequest) {
       channels: (channels || []).map((c) => ({
         name: c.name,
         id: c.channel_id,
+        labels: c.labels || [], // carry existing tags so re-review pre-selects them (and Approve preserves them)
         importedAt: c.imported_at,
         activityTier: c.activity_tier ?? null,
         lastUploadAt: c.last_upload_at ?? null,
@@ -514,9 +516,13 @@ export async function PUT(req: NextRequest) {
 
   // Change decision (from approved → rejected). Preserve labels in case of undo/rescue.
   if (action === "changeDecision") {
+    // Normalize to the canonical status strings. The UI sends the verb ("approve"/
+    // "reject"); writing that raw produced a "reject" typo-status that no tab queried,
+    // silently hiding channels. Always map to "approved"/"rejected".
+    const newStatus = body.newDecision === "approve" || body.newDecision === "approved" ? "approved" : "rejected";
     const { error } = await supabaseAdmin()
       .from("curator_channels")
-      .update({ status: body.newDecision || "rejected", reviewed_at: new Date().toISOString() })
+      .update({ status: newStatus, reviewed_at: new Date().toISOString() })
       .eq("channel_id", channelId);
     if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
     return NextResponse.json({ ok: true });

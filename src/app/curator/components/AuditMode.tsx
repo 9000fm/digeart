@@ -139,7 +139,8 @@ export function AuditMode({
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "l" || e.key === "L") handleSaveLabels();
-      if (e.key === "r" || e.key === "R") handleReject();
+      // Reject is intentionally CLICK-ONLY here (approved audit): a stray "r" used to
+      // reject a curated channel by accident. Use the REJECT button + confirm instead.
       if (e.key === "f" || e.key === "F") handleToggleStar();
       if (e.key === "b" || e.key === "B" || e.key === "Escape") onExit();
       if ((e.key === "ArrowRight" || e.key === "n" || e.key === "N") && onNext) { e.preventDefault(); onNext(); }
@@ -147,7 +148,7 @@ export function AuditMode({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [handleSaveLabels, handleToggleStar, handleReject, onExit, onNext, onPrev]);
+  }, [handleSaveLabels, handleToggleStar, onExit, onNext, onPrev]);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-mono">
@@ -203,9 +204,6 @@ export function AuditMode({
                 <span className="text-xs font-bold uppercase tracking-wider">
                   &times; REJECT
                 </span>
-                <kbd className="text-[9px] font-normal opacity-40 border border-[var(--border)] px-1.5 py-0.5 rounded-sm">
-                  R
-                </kbd>
               </div>
             </button>
           </div>
@@ -250,12 +248,6 @@ export function AuditMode({
                   L
                 </kbd>
                 Save
-              </span>
-              <span>
-                <kbd className="text-[9px] opacity-50 border border-[var(--border)] px-1 py-0.5 rounded-sm mr-1">
-                  R
-                </kbd>
-                Reject
               </span>
               <span>
                 <kbd className="text-[9px] opacity-50 border border-[var(--border)] px-1 py-0.5 rounded-sm mr-1">

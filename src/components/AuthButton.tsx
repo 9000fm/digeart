@@ -6,6 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useTheme } from "./ThemeProvider";
 import { useTranslation } from "@/components/LanguageProvider";
 import { LOCALES } from "@/lib/i18n";
+import { usePathname } from "next/navigation";
 
 interface AuthButtonProps {
   onGoToSaved?: () => void;
@@ -16,6 +17,7 @@ interface AuthButtonProps {
 
 export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, onRunTutorial }: AuthButtonProps) {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -166,8 +168,8 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
               </div>
             </div>
 
-            {/* Curator panel link — curator only. Desktop + tablet. */}
-            {isCurator && (
+            {/* Curator panel link — curator only, and hidden when already on /curator. Desktop + tablet. */}
+            {isCurator && !pathname?.startsWith("/curator") && (
               <div className="py-1">
                 <a
                   href="/curator"

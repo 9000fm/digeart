@@ -250,12 +250,10 @@ export function ApprovedBrowser({
                       </span>
                     )}
                   </div>
-                  <div className="shrink-0 self-center">
-                    <ActivityDot tier={ch.activityTier} lastUploadAt={ch.lastUploadAt} size="xl" />
-                  </div>
+                  {/* Comment sits to the LEFT of the dot so the dot never shifts position. */}
                   {ch.notes && (
                     <span
-                      className="shrink-0 text-[var(--text-muted)]/50 hover:text-[var(--text-muted)] transition-colors"
+                      className="shrink-0 self-center text-[var(--text-muted)]/50 hover:text-[var(--text-muted)] transition-colors"
                       title={ch.notes}
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
@@ -263,6 +261,9 @@ export function ApprovedBrowser({
                       </svg>
                     </span>
                   )}
+                  <div className="shrink-0 self-center">
+                    <ActivityDot tier={ch.activityTier} lastUploadAt={ch.lastUploadAt} size="xl" />
+                  </div>
                 </div>
               </button>
             ))}

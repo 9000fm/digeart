@@ -24,6 +24,7 @@ interface ReviewChannel {
   id: string;
   origin?: string;
   importedAt?: string | null;
+  labels?: string[]; // existing tags — when re-reviewing a channel that already has them (e.g. rescued), pre-select so Approve preserves them
 }
 
 function CuratorAuthGate() {
@@ -305,7 +306,7 @@ function CuratorDashboard() {
   // Load a channel for review, auto-skipping if it gets auto-rejected (< 6 uploads)
   const loadChannelForReview = useCallback(
     async (ch: ReviewChannel, listLength: number) => {
-      setSelectedLabels(new Set());
+      setSelectedLabels(new Set(ch.labels || [])); // keep existing tags (rescued/re-reviewed channels) instead of wiping them on Approve
       setChannelNotes("");
       setPlayingVideoId(null);
 
