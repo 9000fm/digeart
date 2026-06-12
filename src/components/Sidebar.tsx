@@ -229,6 +229,7 @@ export default function Sidebar({
   const tickerRef = useRef<HTMLDivElement>(null);
   const tickerSpeedRef = useRef(1);            // current speed 0..1, read by the loop
   const tickerRampRafRef = useRef<number | null>(null); // brake/resume ramp handle
+  const tickerHalfRef = useRef(0); // cached half-track width; measured once (NOT per frame — reading scrollWidth every frame forces a layout reflow that stutters during card loads)
   // Banner copy width is measured so one copy always >= viewport (seamless, no empty gap).
   const [bannerReps, setBannerReps] = useState(4);
   const bannerText = useMemo(() => BANNER_SINGLE.repeat(bannerReps), [bannerReps]);
@@ -245,7 +246,7 @@ export default function Sidebar({
       if (!last) last = ts;
       const dt = (ts - last) / 1000;
       last = ts;
-      const half = el.scrollWidth / 2;
+      const half = tickerHalfRef.current; // cached — no per-frame reflow
       if (half > 0) {
         offset += dt * (half / SECONDS_PER_HALF) * tickerSpeedRef.current;
         if (offset >= half) offset -= half;
@@ -264,6 +265,7 @@ export default function Sidebar({
       const el = tickerRef.current;
       if (!el) return;
       const oneCopy = el.scrollWidth / 2;        // width of one BANNER_SINGLE.repeat(bannerReps)
+      tickerHalfRef.current = oneCopy;           // feed the marquee loop (so it never reads scrollWidth itself)
       const singleWidth = oneCopy / bannerReps;  // width of a single BANNER_SINGLE pass
       if (singleWidth <= 0) return;
       const needed = Math.max(4, Math.ceil(window.innerWidth / singleWidth) + 1);

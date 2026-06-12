@@ -23,6 +23,7 @@ interface MusicCardProps {
   onSave: () => void;
   onShare?: () => void;
   isAuthenticated?: boolean;
+  index?: number; // position in the grid → drives the staggered reveal order
 }
 
 function formatViewCount(count: number): string {
@@ -57,10 +58,12 @@ export default memo(function MusicCard({
   onSave,
   viewContext = "default",
   isAuthenticated = true,
+  index = 0,
 }: MusicCardProps) {
   const { t } = useTranslation();
   const [now] = useState(() => Date.now());
   const [imgError, setImgError] = useState(false);
+  const [turnReached, setTurnReached] = useState(false); // this card's slot in the reading-order ripple has arrived
   const [showInfo, setShowInfo] = useState(false);
   const [shareOpen, setShareOpen] = useState(false); // keep the card "hovered" while its share menu is open
   const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card.videoId, card.description);
@@ -87,6 +90,17 @@ export default memo(function MusicCard({
     return () => { clearTimeout(t); window.removeEventListener("mousedown", handleClick); window.removeEventListener("keydown", handleKey); };
   }, [showInfo]);
 
+  // Reading-order ripple: each card reveals purely on its index slot (index × step,
+  // wrapping every 30 so an infinite feed never waits seconds) — NOT gated on image
+  // load. Gating on decode is exactly what made cards pop in randomly (images decode
+  // in network order). A small reliable JPEG (below) is loaded by its slot, so the
+  // 400ms fade shows the real image with no pop.
+  useEffect(() => {
+    const id = setTimeout(() => setTurnReached(true), (index % 30) * 22);
+    return () => clearTimeout(id);
+  }, [index]);
+  const revealed = turnReached;
+
   const handlePlay = () => {
     onPlay();
   };
@@ -94,12 +108,12 @@ export default memo(function MusicCard({
   // HeartLikeButton has disabled={!isAuthenticated}, so onSave only fires when auth'd
   const handleHeartClick = useCallback(() => onSave(), [onSave]);
 
-  // Prefer YouTube's WebP thumbnail (~30% smaller, identical look). Works on
-  // already-cached JPEG URLs too; falls back to the original JPEG on error.
+  // Smaller JPEG thumbnail (mqdefault ~320px vs hqdefault ~480px) for fast, uniform
+  // loads. ONE request per card (no webp→jpg fallback dance) so every card loads at a
+  // similar speed and is ready by its reveal slot — that's what kills the random
+  // pop-in. At this size webp would save only ~2KB, not worth the fallback complexity.
   const rawImg = card.image || "/placeholder.svg";
-  const webpSrc = rawImg.includes("/vi/")
-    ? rawImg.replace("/vi/", "/vi_webp/").replace(/hqdefault\.jpg$/, "hqdefault.webp")
-    : rawImg;
+  const imgSrc = rawImg.replace(/\/hqdefault\.jpg$/, "/mqdefault.jpg");
 
   return (
     <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-100 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
@@ -128,31 +142,31 @@ export default memo(function MusicCard({
             <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-widest">DIGEART</span>
           </div>
         ) : (
-          <img
-            src={webpSrc}
-            alt={`${card.name} by ${card.artist}`}
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onClick={handlePlay}
-            onLoad={(e) => {
-              // YouTube returns a tiny (120px) grey placeholder at 200 OK when a
-              // video has no WebP variant — detect it and use the real JPEG.
-              const img = e.currentTarget;
-              if (img.naturalWidth <= 120 && img.src.endsWith(".webp") && card.image) {
-                img.src = card.image;
-              }
-            }}
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (img.src.endsWith(".webp") && card.image) {
-                img.src = card.image; // WebP 404 → original JPEG
-              } else {
-                setImgError(true);
-              }
-            }}
-            title="YouTube"
-          />
+          <>
+            {/* Static placeholder sits BEHIND the image, always rendered — so a
+                not-yet-painted thumb never flashes the card bg. STATIC (no animation)
+                so 30+ cards mounting at once don't repaint every frame. Theme-aware:
+                darker in light, lighter in dark (text-muted flips with the theme). */}
+            <div
+              className="absolute inset-0"
+              style={{ background: "color-mix(in srgb, var(--text-muted) 16%, var(--bg-alt))" }}
+            />
+            <img
+              src={imgSrc}
+              alt={`${card.name} by ${card.artist}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[400ms] ease-out ${revealed ? "opacity-100" : "opacity-0"}`}
+              loading={index < 15 ? "eager" : "lazy"}
+              decoding="async"
+              onClick={handlePlay}
+              onLoad={(e) => {
+                // YouTube serves a tiny (~120px) grey placeholder for videos with no
+                // real thumb → show the branded DIGEART mark instead.
+                if (e.currentTarget.naturalWidth <= 120) setImgError(true);
+              }}
+              onError={() => setImgError(true)}
+              title="YouTube"
+            />
+          </>
         )}
       </div>
 
@@ -385,4 +399,17 @@ export default memo(function MusicCard({
       </div>
     </motion.div>
   );
-})
+}, (prev, next) =>
+  // Re-render ONLY when data changes. The callback props (onPlay/onSave/onPlayNext/
+  // onShare) are fresh closures on every grid render but behaviorally stable — they
+  // wrap useCallback'd parent handlers + a fixed card.id (onShare is unused here).
+  // Ignoring them stops every mounted card re-rendering on each scroll-load.
+  prev.card === next.card &&
+  prev.saved === next.saved &&
+  prev.isGracePeriod === next.isGracePeriod &&
+  prev.isPlaying === next.isPlaying &&
+  prev.isAuthenticated === next.isAuthenticated &&
+  prev.viewContext === next.viewContext &&
+  prev.index === next.index &&
+  (prev.activeTagFilters || []).join() === (next.activeTagFilters || []).join()
+)

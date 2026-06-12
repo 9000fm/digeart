@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, startTransition } from "react";
 import MusicCard from "./MusicCard";
 import MaintenanceScreen from "./MaintenanceScreen";
 import { GENRE_PRESETS } from "./Sidebar";
@@ -48,6 +48,7 @@ export default function DiscoverGrid({
   const pageRef = useRef(0);
   const hasMore = useRef(true);
   const rotateRef = useRef(Math.floor(Math.random() * 100000));
+  const lastAutoLoadRef = useRef(0); // paces auto-loads: a zoom-out keeps the sentinel in view, which would otherwise chain-fire a burst of batches
 
   // Serialize arrays to stable strings for dependency tracking
   const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
@@ -76,10 +77,14 @@ export default function DiscoverGrid({
         hasMore.current = data.hasMore === true;
 
         if (append) {
-          setCards((prev) => {
-            const existingIds = new Set(prev.map((c) => c.id));
-            const unique = newCards.filter((c) => !existingIds.has(c.id));
-            return [...prev, ...unique];
+          // Low-priority render: appending ~20 cards is one heavy task; letting
+          // React yield keeps the ticker + scroll smooth while it commits.
+          startTransition(() => {
+            setCards((prev) => {
+              const existingIds = new Set(prev.map((c) => c.id));
+              const unique = newCards.filter((c) => !existingIds.has(c.id));
+              return [...prev, ...unique];
+            });
           });
         } else {
           setCards(newCards);
@@ -118,8 +123,10 @@ export default function DiscoverGrid({
           entries[0].isIntersecting &&
           !loading &&
           !loadingMore &&
-          cards.length > 0
+          cards.length > 0 &&
+          Date.now() - lastAutoLoadRef.current >= 300 // pace it (never blocks — just one batch per ~300ms, so zoom-out can't burst)
         ) {
+          lastAutoLoadRef.current = Date.now();
           fetchCards(activeGenre, tagKey, genreKey, true);
         }
       },
@@ -184,9 +191,10 @@ export default function DiscoverGrid({
             </div>
           ) : (
             <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
-              {displayCards.map((card) => (
+              {displayCards.map((card, i) => (
                 <MusicCard
                   key={card.id}
+                  index={i}
                   card={card}
                   saved={likedIds.has(card.id)}
                   isPlaying={playingId === card.id && isPlaying}
