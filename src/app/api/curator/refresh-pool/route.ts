@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireCurator } from "@/lib/requireCurator";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheDeleteByPrefix } from "@/lib/cache";
 import { rebuildDiscoverPool, rebuildMixesPool, rebuildSamplesPool } from "@/lib/youtube";
 import { after } from "next/server";
 
 export async function POST() {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
 
   // Mark all pools as stale by backdating updated_at (keeps old data serving)
   const staleDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

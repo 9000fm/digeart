@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireCurator } from "@/lib/requireCurator";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const API_KEY = process.env.YOUTUBE_API_KEY!;
@@ -43,10 +43,8 @@ function parseUrl(input: string): { type: "id"; value: string } | { type: "handl
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
 
   const { urls } = await req.json();
   if (!urls || typeof urls !== "string") {

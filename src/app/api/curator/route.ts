@@ -3,23 +3,7 @@ import { getChannelUploads, getChannelStats, getOldestUploadDate } from "@/lib/y
 import { classifyActivity } from "@/lib/curator-activity";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
-// Curator-only auth gate. Returns NextResponse if forbidden, null if allowed.
-async function requireCurator(): Promise<NextResponse | null> {
-  const session = await auth();
-  const curatorEmail = process.env.CURATOR_EMAIL;
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!curatorEmail) {
-    // Misconfigured server — fail closed
-    return NextResponse.json({ error: "Curator not configured" }, { status: 503 });
-  }
-  if (session.user.email !== curatorEmail) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  return null;
-}
+import { requireCurator } from "@/lib/requireCurator";
 
 // Simple in-memory rate limiter (per-process, resets on deploy)
 const rateLimitMap = new Map<string, number[]>();
@@ -46,6 +30,9 @@ function pickUploads(allUploads: Awaited<ReturnType<typeof getChannelUploads>>) 
 }
 
 export async function GET(req: NextRequest) {
+  const forbidden = await requireCurator();
+  if (forbidden) return forbidden;
+
   const mode = req.nextUrl.searchParams.get("mode");
   const rescan = req.nextUrl.searchParams.get("rescan");
   const rescanChannelId = req.nextUrl.searchParams.get("channelId");
