@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef, startTransition } from "react";
 import MusicCard from "./MusicCard";
 import MaintenanceScreen from "./MaintenanceScreen";
-import { GENRE_PRESETS } from "./Sidebar";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 
@@ -34,7 +33,6 @@ export default function DiscoverGrid({
   onPlayNext,
   onToggleSave,
   onToggleLike,
-  activeGenre,
   activeTagFilters = [],
   activeGenreLabels = [],
   onCardsLoaded,
@@ -51,20 +49,19 @@ export default function DiscoverGrid({
   const lastAutoLoadRef = useRef(0); // paces auto-loads: a zoom-out keeps the sentinel in view, which would otherwise chain-fire a burst of batches
 
   // Serialize arrays to stable strings for dependency tracking
-  const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
-  const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
+  const tagKey = activeTagFilters.length > 0 ? [...activeTagFilters].sort().join(",") : "all";
+  const genreKey = activeGenreLabels.length > 0 ? [...activeGenreLabels].sort().join(",") : "";
 
   const fetchCards = useCallback(
-    async (genreIndex: number, tagParam: string, genreParam: string, append = false) => {
+    async (tagParam: string, genreParam: string, append = false) => {
       if (append && !hasMore.current) return;
       if (append) setLoadingMore(true);
       else { setLoading(true); hasMore.current = true; }
 
       try {
         const limit = 30;
-        const genres = GENRE_PRESETS[genreIndex].genres.join(",");
         const offset = append ? pageRef.current * limit : 0;
-        let url = `/api/discover?genres=${genres}&limit=${limit}&offset=${offset}&tag=${tagParam}&rotate=${rotateRef.current}`;
+        let url = `/api/discover?limit=${limit}&offset=${offset}&tag=${tagParam}&rotate=${rotateRef.current}`;
         if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
@@ -108,13 +105,13 @@ export default function DiscoverGrid({
     if (prevTagRef.current !== tagKey || prevGenreLabelRef.current !== genreKey) {
       prevTagRef.current = tagKey;
       prevGenreLabelRef.current = genreKey;
-      fetchCards(activeGenre, tagKey, genreKey);
+      fetchCards(tagKey, genreKey);
     }
-  }, [tagKey, genreKey, activeGenre, fetchCards]);
+  }, [tagKey, genreKey, fetchCards]);
 
   useEffect(() => {
-    fetchCards(activeGenre, tagKey, genreKey);
-  }, [activeGenre, fetchCards]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchCards(tagKey, genreKey);
+  }, [fetchCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -127,7 +124,7 @@ export default function DiscoverGrid({
           Date.now() - lastAutoLoadRef.current >= 300 // pace it (never blocks — just one batch per ~300ms, so zoom-out can't burst)
         ) {
           lastAutoLoadRef.current = Date.now();
-          fetchCards(activeGenre, tagKey, genreKey, true);
+          fetchCards(tagKey, genreKey, true);
         }
       },
       { rootMargin: "1000px" }
@@ -138,7 +135,7 @@ export default function DiscoverGrid({
     return () => {
       if (el) observer.unobserve(el);
     };
-  }, [activeGenre, tagKey, genreKey, loading, loadingMore, cards.length, fetchCards]);
+  }, [tagKey, genreKey, loading, loadingMore, cards.length, fetchCards]);
 
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";

@@ -42,8 +42,8 @@ export default function MixesGrid({
   const hasMore = useRef(true);
   const rotateRef = useRef(Math.floor(Math.random() * 100000));
 
-  const tagKey = activeTagFilters.length > 0 ? activeTagFilters.sort().join(",") : "all";
-  const genreKey = activeGenreLabels.length > 0 ? activeGenreLabels.sort().join(",") : "";
+  const tagKey = activeTagFilters.length > 0 ? [...activeTagFilters].sort().join(",") : "all";
+  const genreKey = activeGenreLabels.length > 0 ? [...activeGenreLabels].sort().join(",") : "";
 
   const fetchMixes = useCallback(
     async (tagParam: string, genreParam: string, append = false) => {
