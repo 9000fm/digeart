@@ -1106,6 +1106,9 @@ export default function Home() {
           case "i":
             if (nowPlayingCard) document.dispatchEvent(new Event("info-toggle-keybind"));
             return;
+          case "a":
+            document.dispatchEvent(new Event("open-about-keybind"));
+            return;
         }
       }
 
@@ -1135,7 +1138,7 @@ export default function Home() {
           if (nowPlayingCard && canGoPrev) handlePrevTrack();
           break;
         case "?":
-          setShowAbout((v) => !v);
+          document.dispatchEvent(new Event("open-shortcuts-keybind"));
           break;
         case ",":
           document.dispatchEvent(new Event("open-settings-keybind"));

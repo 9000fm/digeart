@@ -216,6 +216,9 @@ export default function Sidebar({
   const mobileSheetRef = useRef<HTMLDivElement>(null);
   const aboutIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [aboutAnchor, setAboutAnchor] = useState<DOMRect | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [shortcutsAnchor, setShortcutsAnchor] = useState<{ left: number; bottom: string } | null>(null);
+  const shortcutsRef = useRef<HTMLDivElement>(null);
   const [initialPhrase] = useState(() => Math.floor(Math.random() * SEARCH_PHRASES.length));
   const phraseIndex = useRef(initialPhrase);
   const charIndex = useRef(0);
@@ -326,7 +329,7 @@ export default function Sidebar({
 
   // Close panels on resize to avoid positioning bugs
   useEffect(() => {
-    const onResize = () => { setShowAbout(false); setSettingsOpen(false); };
+    const onResize = () => { setShowAbout(false); setSettingsOpen(false); setShowShortcuts(false); };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -345,6 +348,67 @@ export default function Sidebar({
     document.addEventListener("open-settings-keybind", handler);
     return () => document.removeEventListener("open-settings-keybind", handler);
   }, []);
+
+  // About keybind ("A") — toggle the About panel, anchored to the book icon
+  useEffect(() => {
+    const handler = () => {
+      if (showAbout) { setShowAbout(false); return; }
+      const rect = aboutIconRef.current?.getBoundingClientRect();
+      if (rect) {
+        const playerEl = document.querySelector(".player-banner");
+        const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
+        setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+      }
+      setAboutSource("gear");
+      setShowShortcuts(false);
+      setSettingsOpen(false);
+      setShowAbout(true);
+    };
+    document.addEventListener("open-about-keybind", handler);
+    return () => document.removeEventListener("open-about-keybind", handler);
+  }, [showAbout, setShowAbout]);
+
+  // Shortcuts keybind ("?") — toggle the shortcuts popover, anchored to the book icon
+  useEffect(() => {
+    const handler = () => {
+      setShowShortcuts((open) => {
+        if (open) return false;
+        const rect = aboutIconRef.current?.getBoundingClientRect();
+        if (rect) {
+          const playerEl = document.querySelector(".player-banner");
+          const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
+          setShortcutsAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+        }
+        setShowAbout(false);
+        setSettingsOpen(false);
+        return true;
+      });
+    };
+    document.addEventListener("open-shortcuts-keybind", handler);
+    return () => document.removeEventListener("open-shortcuts-keybind", handler);
+  }, []);
+
+  // Close Shortcuts on outside click or Escape
+  useEffect(() => {
+    if (!showShortcuts) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (shortcutsRef.current?.contains(target)) return;
+      setShowShortcuts(false);
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowShortcuts(false);
+    };
+    const timer = setTimeout(() => {
+      window.addEventListener("mousedown", handleClick);
+      window.addEventListener("keydown", handleKey);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [showShortcuts]);
 
   // Close About on outside click or Escape
   useEffect(() => {
@@ -612,20 +676,21 @@ export default function Sidebar({
         </nav>
         {/* Bottom icons — Info + Settings */}
         <div className="flex flex-col items-center gap-4">
-        {/* Info button */}
-        <div className="relative group/info">
+        {/* About button (stacked vinyls icon) */}
+        <div className="relative group/about">
           <button
             ref={aboutIconRef}
             data-about-trigger
             onClick={() => {
               setAboutSource("gear");
-              const rect = gearRef.current?.getBoundingClientRect();
+              const rect = aboutIconRef.current?.getBoundingClientRect();
               if (rect) {
                 const playerEl = document.querySelector(".player-banner");
                 const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
                 setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
               }
               setShowAbout(!showAbout);
+              setShowShortcuts(false);
               setSettingsOpen(false);
             }}
             className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
@@ -635,21 +700,21 @@ export default function Sidebar({
             }`}
           >
             {showAbout ? (
-              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" fill="currentColor" />
-                <path d="M9.6 9.3a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1.1.85-1.1 1.7" fill="none" stroke="var(--bg)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="12" cy="16.6" r="1.1" fill="var(--bg)" />
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+                <path d="m2 17 10 5 10-5" fill="none" />
+                <path d="m2 12 10 5 10-5" fill="none" />
               </svg>
             ) : (
               <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.6 9.3a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1.1.85-1.1 1.7" />
-                <circle cx="12" cy="16.6" r="0.5" fill="currentColor" />
+                <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+                <path d="m2 17 10 5 10-5" />
+                <path d="m2 12 10 5 10-5" />
               </svg>
             )}
           </button>
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/info:opacity-100 transition-opacity duration-150 z-[90]">
-            {t("settings.about")} (?)
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/about:opacity-100 transition-opacity duration-150 z-[90]">
+            {t("settings.about")} (A)
           </div>
         </div>
         {/* Settings gear */}
@@ -839,11 +904,12 @@ export default function Sidebar({
         {showAbout && (
           <motion.div
             key="about-popover"
+            ref={aboutRef}
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
-            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[320px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[350px] max-h-[calc(100vh-120px)] overflow-y-auto"
             style={aboutSource === "gear" && gearAnchor ? {
               left: gearAnchor.left,
               bottom: gearAnchor.bottom,
@@ -865,31 +931,6 @@ export default function Sidebar({
                       <span className="font-mono text-[11px] text-[var(--text-muted)] font-bold tracking-wider">{tag.label}</span>
                     </span>
                     <span className="font-mono text-[11px] text-[var(--text-muted)]">{t(tag.descKey)}</span>
-                  </Fragment>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-2 pt-1.5 border-t border-[var(--border)]">
-              <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.shortcuts")}</p>
-              <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1">
-                {[
-                  [`${t("about.keySpace")} / K`, t("about.shortcutPlayPause")],
-                  ["N / \u2192", t("about.shortcutNext")],
-                  ["P / \u2190", t("about.shortcutPrev")],
-                  ["S", t("about.shortcutShuffle")],
-                  ["M", t("about.shortcutMute")],
-                  ["T", t("about.shortcutLocate")],
-                  ["L", t("about.shortcutLike")],
-                  ["Q", t("about.shortcutQueue")],
-                  ["1\u20134", t("about.shortcutTab")],
-                  ["?", t("settings.about")],
-                  ["I", t("about.shortcutPanel")],
-                  [",", t("about.shortcutSettings")],
-                ].map(([key, desc]) => (
-                  <Fragment key={key}>
-                    <kbd className="font-mono text-[var(--text)] bg-[var(--text)]/10 px-1.5 py-0.5 rounded text-center min-w-[16px]" style={{ fontSize: 11 }}>{key}</kbd>
-                    <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
                   </Fragment>
                 ))}
               </div>
@@ -935,6 +976,51 @@ export default function Sidebar({
                 </svg>
               </span>
               <span className="font-mono text-[11px] text-[var(--text-muted)]">v{process.env.APP_VERSION}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop Shortcuts popover — anchored next to the ? icon */}
+      <AnimatePresence>
+        {showShortcuts && (
+          <motion.div
+            key="shortcuts-popover"
+            ref={shortcutsRef}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="hidden min-[1152px]:block fixed z-[70] px-3 py-2.5 bg-[var(--bg)]/95 backdrop-blur-xl border border-[var(--border)]/60 rounded-xl shadow-2xl w-[300px] max-h-[calc(100vh-120px)] overflow-y-auto"
+            style={shortcutsAnchor ? {
+              left: shortcutsAnchor.left,
+              bottom: shortcutsAnchor.bottom,
+            } : {
+              right: 12,
+              top: "calc(var(--banner-height) + var(--header-height) + 8px)",
+            }}
+          >
+            <p className="font-mono font-bold uppercase tracking-widest mb-1" style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t("about.shortcuts")}</p>
+            <div className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1">
+              {[
+                [`${t("about.keySpace")} / K`, t("about.shortcutPlayPause")],
+                ["N / →", t("about.shortcutNext")],
+                ["P / ←", t("about.shortcutPrev")],
+                ["S", t("about.shortcutShuffle")],
+                ["M", t("about.shortcutMute")],
+                ["T", t("about.shortcutLocate")],
+                ["L", t("about.shortcutLike")],
+                ["Q", t("about.shortcutQueue")],
+                ["1–4", t("about.shortcutTab")],
+                ["?", t("about.shortcuts")],
+                ["I", t("about.shortcutPanel")],
+                [",", t("about.shortcutSettings")],
+              ].map(([key, desc]) => (
+                <Fragment key={key}>
+                  <kbd className="font-mono text-[var(--text)] bg-[var(--text)]/10 px-1.5 py-0.5 rounded text-center min-w-[16px]" style={{ fontSize: 11 }}>{key}</kbd>
+                  <span className="font-mono text-[11px] text-[var(--text-muted)]">{desc}</span>
+                </Fragment>
+              ))}
             </div>
           </motion.div>
         )}
