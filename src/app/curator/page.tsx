@@ -67,7 +67,15 @@ export default function CuratorPage() {
 
 function CuratorDashboard() {
   const { showToast } = useCuratorToast();
-  const [activeTab, setActiveTab] = useState<CuratorTab>("review");
+  const [activeTab, setActiveTab] = useState<CuratorTab>(() => {
+    if (typeof window === "undefined") return "review";
+    const saved = localStorage.getItem("curator-tab");
+    return saved === "approved" || saved === "review" || saved === "rejected" ? saved : "review";
+  });
+  // Remember the last tab across refreshes
+  useEffect(() => {
+    localStorage.setItem("curator-tab", activeTab);
+  }, [activeTab]);
   const [lastUndoable, setLastUndoable] = useState<{ id: string; name: string; decision: "approve" | "reject"; timestamp: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<Set<string>>(new Set());
   const [channelNotes, setChannelNotes] = useState("");
