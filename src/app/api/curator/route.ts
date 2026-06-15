@@ -413,24 +413,21 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
 
   if (decision === "approve") {
+    // Preserve the existing note when the client doesn't send one (re-approve);
+    // only overwrite when notes is explicitly provided (incl. "" to clear it).
+    const update: Record<string, unknown> = { status: "approved", labels: labels || [], reviewed_at: now };
+    if (notes !== undefined) update.notes = notes || null;
     const { error } = await supabaseAdmin()
       .from("curator_channels")
-      .update({
-        status: "approved",
-        labels: labels || [],
-        notes: notes || null,
-        reviewed_at: now,
-      })
+      .update(update)
       .eq("channel_id", channelId);
     if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   } else if (decision === "reject") {
+    const update: Record<string, unknown> = { status: "rejected", reviewed_at: now };
+    if (notes !== undefined) update.notes = notes || null;
     const { error } = await supabaseAdmin()
       .from("curator_channels")
-      .update({
-        status: "rejected",
-        reviewed_at: now,
-        notes: notes || null,
-      })
+      .update(update)
       .eq("channel_id", channelId);
     if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
