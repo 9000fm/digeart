@@ -14,6 +14,7 @@ interface DiscoverGridProps {
   isPlaying: boolean;
   onPlay: (id: string) => void;
   onPlayNext?: (id: string) => void;
+  onAddToQueue?: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeGenre: number;
@@ -31,6 +32,7 @@ export default function DiscoverGrid({
   isPlaying,
   onPlay,
   onPlayNext,
+  onAddToQueue,
   onToggleSave,
   onToggleLike,
   activeTagFilters = [],
@@ -199,6 +201,7 @@ export default function DiscoverGrid({
                   viewContext="home"
                   onPlay={() => onPlay(card.id)}
                   onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
+                  onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
                   onSave={() => onToggleLike(card.id)}
                   onShare={() => shareCard(card)}
                   isAuthenticated={isAuthenticated}

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
 import ShareButton from "./ShareButton";
+import TrackActionsMenu from "./TrackActionsMenu";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
@@ -20,6 +21,7 @@ interface MusicCardProps {
   viewContext?: string;
   onPlay: () => void;
   onPlayNext?: () => void;
+  onAddToQueue?: () => void;
   onSave: () => void;
   onShare?: () => void;
   isAuthenticated?: boolean;
@@ -55,6 +57,7 @@ export default memo(function MusicCard({
   activeTagFilters = [],
   onPlay,
   onPlayNext,
+  onAddToQueue,
   onSave,
   viewContext = "default",
   isAuthenticated = true,
@@ -270,6 +273,7 @@ export default memo(function MusicCard({
           channel={card.artist}
           youtubeUrl={card.youtubeUrl}
           size="md"
+          showTooltip={false}
           onOpenChange={setShareOpen}
           className="w-8 h-8 rounded-full text-white/80 hover:text-white opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
         />
@@ -277,9 +281,8 @@ export default memo(function MusicCard({
 
       {/* Action buttons — bottom right: INFO · PLAY-NEXT · LIKE */}
       <div className="absolute bottom-2 right-2 z-20 hidden sm:flex items-center gap-1.5">
-        {/* Info button — available to all users */}
-        <Tooltip label={t("card.info")} position="top" hideOnClick>
-          <button
+        {/* Info button — available to all users (no tooltip) */}
+        <button
             ref={infoBtnRef}
             onClick={(e) => { e.stopPropagation(); setShowInfo((v) => { if (!v) fetchDescription(); return !v; }); }}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] ${
@@ -298,29 +301,18 @@ export default memo(function MusicCard({
               </svg>
             )}
           </button>
-        </Tooltip>
 
-        {/* Play Next button — tablet + desktop, between Info and Like */}
-        {onPlayNext && (
-          <Tooltip label={t("card.playNext")} position="top" hideOnClick>
-            <button
-              onClick={(e) => { e.stopPropagation(); onPlayNext(); }}
-              aria-label={t("card.playNext")}
-              className="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100"
-            >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="7" x2="15" y2="7" />
-                <line x1="4" y1="12" x2="15" y2="12" />
-                <line x1="4" y1="17" x2="11" y2="17" />
-                <line x1="18" y1="13" x2="18" y2="21" />
-                <line x1="14" y1="17" x2="22" y2="17" />
-              </svg>
-            </button>
-          </Tooltip>
+        {/* Track actions (Play Next / Add to Queue / Add to Playlist) — tablet + desktop */}
+        {(onPlayNext || onAddToQueue) && (
+          <TrackActionsMenu
+            onPlayNext={onPlayNext}
+            onAddToQueue={onAddToQueue}
+            triggerClassName="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 cursor-pointer"
+          />
         )}
 
         {/* Like button */}
-        <Tooltip label={isAuthenticated ? (saved ? t("card.saved") : t("card.save")) : t("card.loginToSave")} position="top">
+        <Tooltip label={isAuthenticated ? "" : t("card.loginToSave")} position="top">
           <HeartLikeButton
             isLiked={saved}
             trackId={card.id}

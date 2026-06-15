@@ -12,6 +12,7 @@ interface SamplesGridProps {
   isPlaying: boolean;
   onPlay: (id: string) => void;
   onPlayNext?: (id: string) => void;
+  onAddToQueue?: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeTagFilters?: string[];
@@ -27,6 +28,7 @@ export default function SamplesGrid({
   isPlaying,
   onPlay,
   onPlayNext,
+  onAddToQueue,
   onToggleSave,
   onToggleLike,
   activeTagFilters = [],
@@ -175,6 +177,7 @@ export default function SamplesGrid({
             viewContext="samples"
             onPlay={() => onPlay(card.id)}
             onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
+            onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
             onSave={() => onToggleLike(card.id)}
             onShare={() => shareCard(card)}
             isAuthenticated={isAuthenticated}

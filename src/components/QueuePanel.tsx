@@ -14,23 +14,26 @@ interface QueuePanelProps {
   currentIndex: number;
   cardRegistry: Map<string, CardData>;
   onPlayIndex: (index: number) => void;
+  onRemove?: (index: number) => void;
   likedIds: Set<string>;
   onToggleLike: (id: string) => void;
 }
 
-function QueueRow({ card, isCurrent, dimmed, onClick, isLiked, onToggleLike, isMobile = false }: {
+function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggleLike, isMobile = false }: {
   card: CardData;
   isCurrent: boolean;
   dimmed: boolean;
   onClick: () => void;
+  onRemove?: () => void;
   isLiked: boolean;
   onToggleLike: () => void;
   isMobile?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+      className={`group/qrow w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
         isCurrent
           ? "bg-[var(--text)]/90 text-[var(--bg)]"
           : "hover:bg-[var(--bg-alt)]/60"
@@ -67,6 +70,20 @@ function QueueRow({ card, isCurrent, dimmed, onClick, isLiked, onToggleLike, isM
           </div>
         </div>
       )}
+      {onRemove && (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={t("queue.remove")}
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onRemove(); } }}
+          className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full opacity-0 group-hover/qrow:opacity-100 transition-all duration-100 active:scale-90 cursor-pointer ${
+            isCurrent ? "text-[var(--bg)]/60 hover:text-[var(--bg)] hover:bg-[var(--bg)]/15" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--text)]/10"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </span>
+      )}
       <span className="ml-auto shrink-0">
         <QueueHeart isLiked={isLiked} trackId={card.id} onToggleLike={onToggleLike} isCurrent={isCurrent} />
       </span>
@@ -101,6 +118,7 @@ export default function QueuePanel({
   currentIndex,
   cardRegistry,
   onPlayIndex,
+  onRemove,
   likedIds,
   onToggleLike,
 }: QueuePanelProps) {
@@ -232,6 +250,7 @@ export default function QueuePanel({
                   isCurrent={row.section === "current"}
                   dimmed={row.section === "prev"}
                   onClick={row.section === "current" ? () => {} : () => onPlayIndex(row.index)}
+                  onRemove={onRemove ? () => onRemove(row.index) : undefined}
                   isLiked={likedIds.has(row.id)}
                   onToggleLike={() => onToggleLike(row.id)}
                   isMobile={row.section === "current" ? isMobile : false}

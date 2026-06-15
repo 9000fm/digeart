@@ -27,6 +27,7 @@ import type { ViewType } from "@/components/Sidebar";
 import type { CardData } from "@/lib/types";
 import { stripCardForStorage, hydrateCardDefaults } from "@/lib/youtube";
 import { updatePlayback } from "@/lib/playbackProgress";
+import { recordPlay } from "@/lib/playHistory";
 
 /* ── YouTube IFrame API types ── */
 interface YTPlayer {
@@ -124,6 +125,10 @@ export default function Home() {
   const shuffleQueue = useRef<string[]>([]);
   const queueIndex = useRef(-1);
   const queueView = useRef<ViewType | null>(null);
+  // Layered queue: # of manual (Play Next / Add to Queue) items sitting right after
+  // the current track, before the source-based auto-continuation tail. Reset to 0 on
+  // any non-linear move (prev / jump / rebuild) to keep the invariant safe.
+  const manualAfter = useRef(0);
   // YT IFrame API refs
   const ytPlayerRef = useRef<YTPlayer | null>(null);
   const ytContainerRef = useRef<HTMLDivElement | null>(null);
@@ -510,6 +515,7 @@ export default function Home() {
     shuffleQueue.current = ids;
     queueIndex.current = 0;
     queueView.current = view;
+    manualAfter.current = 0;
     setCanGoPrev(false);
   }, []);
 
@@ -521,6 +527,7 @@ export default function Home() {
     updatePlayback({ progress: 0, duration: card.duration || 0 });
     setNowPlayingCard(card);
     setCanGoPrev(queueIndex.current > 0);
+    recordPlay(card); // log to listening history (separate from queue)
 
     if (card.source === "youtube" && card.videoId) {
       createYTPlayer(card.videoId);
@@ -554,12 +561,32 @@ export default function Home() {
   const handlePrevTrack = useCallback(() => {
     if (queueIndex.current <= 0) return;
     queueIndex.current--;
+    manualAfter.current = 0; // non-linear move → drop manual-block tracking
     const id = shuffleQueue.current[queueIndex.current];
     const card = cardRegistry.current.get(id);
     if (!card) return;
     playOriginView.current = cardViewMap.current.get(id) || null;
     handlePlayInternal(card);
   }, [handlePlayInternal]);
+
+  // Infinite refill — top up the auto-continuation tail from the ACTIVE source
+  // (queueView) when it runs low, so the queue never dries out. Manual items and
+  // history are untouched; only the source-based tail grows.
+  const REFILL_MIN = 8;
+  const maybeRefillAuto = useCallback(() => {
+    const q = shuffleQueue.current;
+    const autoStart = queueIndex.current + 1 + manualAfter.current;
+    if (q.length - autoStart >= REFILL_MIN) return;
+    const view = queueView.current || activeViewRef.current;
+    const have = new Set(q);
+    const fresh = Array.from(cardRegistry.current.entries())
+      .filter(([id]) => cardViewMap.current.get(id) === view && !have.has(id))
+      .map(([id]) => id);
+    if (fresh.length === 0) return;
+    if (autoPlayEnabledRef.current) fisherYatesShuffle(fresh);
+    q.push(...fresh);
+    bumpQueue((v) => v + 1);
+  }, []);
 
   // Next track — walk queue index forward
   const handleNextTrack = useCallback(() => {
@@ -572,7 +599,9 @@ export default function Home() {
       const card = cardRegistry.current.get(queue[nextIdx]);
       if (card) {
         queueIndex.current = nextIdx;
+        if (manualAfter.current > 0) manualAfter.current -= 1; // consumed a manual item
         playOriginView.current = cardViewMap.current.get(card.id) || null;
+        maybeRefillAuto();
         handlePlayInternal(card);
         return;
       }
@@ -591,12 +620,13 @@ export default function Home() {
     shuffleQueue.current = ids;
     queueIndex.current = 0;
     queueView.current = view;
+    manualAfter.current = 0;
     const card = cardRegistry.current.get(ids[0]);
     if (card) {
       playOriginView.current = cardViewMap.current.get(card.id) || null;
       handlePlayInternal(card);
     }
-  }, [handlePlayInternal]);
+  }, [handlePlayInternal, maybeRefillAuto]);
 
   // Stable ref for handleNextTrack (used in YT callbacks)
   const handleNextTrackRef = useRef(handleNextTrack);
@@ -631,13 +661,15 @@ export default function Home() {
     const card = cardRegistry.current.get(id);
     if (!card) return;
 
-    // Check if card is already in the current queue
+    // Direct play from a DIFFERENT source switches the active source (rebuild).
+    // Same-source card already queued → jump to it.
+    const cardSource = cardViewMap.current.get(id) || activeViewRef.current;
     const existingIdx = shuffleQueue.current.indexOf(id);
-    if (existingIdx !== -1) {
-      // Jump to its position in the queue
+    if (existingIdx !== -1 && cardSource === queueView.current) {
       queueIndex.current = existingIdx;
+      manualAfter.current = 0; // deliberate jump → drop manual-block tracking
     } else {
-      // Different view or not in queue — build a new queue starting from this card
+      // New source or not in queue — build a fresh queue from this card's source
       buildQueue(id, autoPlayEnabledRef.current);
     }
 
@@ -656,16 +688,66 @@ export default function Home() {
       handlePlay(id);
       return;
     }
-    // De-dupe: drop any existing occurrence, keeping queueIndex pointing at the
-    // still-playing track, then insert right after it.
+    // De-dupe: drop any existing occurrence, adjusting queueIndex / manual count,
+    // then insert immediately after the current track (front of the manual block).
     const existing = q.indexOf(id);
     if (existing !== -1) {
+      if (existing > queueIndex.current && existing <= queueIndex.current + manualAfter.current) manualAfter.current -= 1;
       q.splice(existing, 1);
       if (existing <= queueIndex.current) queueIndex.current -= 1;
     }
     q.splice(queueIndex.current + 1, 0, id);
+    manualAfter.current += 1;
     bumpQueue((v) => v + 1);
   }, [handlePlay]);
+
+  // Add to Queue — append this track to the END of the queue.
+  const handleAddToQueue = useCallback((id: string) => {
+    const card = cardRegistry.current.get(id);
+    if (!card) return;
+    const q = shuffleQueue.current;
+    // Nothing playing yet → just start it
+    if (!nowPlayingCardRef.current || queueIndex.current < 0 || q.length === 0) {
+      handlePlay(id);
+      return;
+    }
+    const existing = q.indexOf(id);
+    if (existing === queueIndex.current) return; // already the current track
+    if (existing !== -1) {
+      if (existing > queueIndex.current && existing <= queueIndex.current + manualAfter.current) manualAfter.current -= 1;
+      q.splice(existing, 1);
+      if (existing < queueIndex.current) queueIndex.current -= 1;
+    }
+    // Insert after the existing manual block, before the auto-continuation tail.
+    q.splice(queueIndex.current + 1 + manualAfter.current, 0, id);
+    manualAfter.current += 1;
+    bumpQueue((v) => v + 1);
+  }, [handlePlay]);
+
+  // Remove a track from the queue by index. Handles removing the current track
+  // (advances to whatever now sits at that slot) and keeps queueIndex correct.
+  const handleRemoveFromQueue = useCallback((index: number) => {
+    const q = shuffleQueue.current;
+    if (index < 0 || index >= q.length) return;
+    const isCurrent = index === queueIndex.current;
+    if (index > queueIndex.current && index <= queueIndex.current + manualAfter.current) manualAfter.current -= 1;
+    q.splice(index, 1);
+    if (index < queueIndex.current) {
+      queueIndex.current -= 1;
+    } else if (isCurrent) {
+      // Removed the playing track — play whatever shifted into this slot
+      // (the former "next"); if it was the last item, step back one.
+      if (queueIndex.current >= q.length) queueIndex.current = q.length - 1;
+      const id = q[queueIndex.current];
+      const card = id ? cardRegistry.current.get(id) : null;
+      if (card) {
+        playOriginView.current = cardViewMap.current.get(card.id) || null;
+        handlePlayInternal(card);
+      }
+    }
+    setCanGoPrev(queueIndex.current > 0);
+    bumpQueue((v) => v + 1);
+  }, [handlePlayInternal]);
 
   // Stable ref for handlePlay — used by shared-link auto-play
   const handlePlayRef = useRef(handlePlay);
@@ -1025,9 +1107,11 @@ export default function Home() {
     const card = cardRegistry.current.get(id);
     if (!card) return;
     queueIndex.current = index;
+    manualAfter.current = 0; // deliberate jump → drop manual-block tracking
     playOriginView.current = cardViewMap.current.get(id) || null;
+    maybeRefillAuto();
     handlePlayInternal(card);
-  }, [handlePlayInternal]);
+  }, [handlePlayInternal, maybeRefillAuto]);
 
   const handleToggleAutoPlay = useCallback(() => {
     setAutoPlayEnabled((prev) => {
@@ -1194,6 +1278,7 @@ export default function Home() {
           isPlaying={isPlaying}
           onPlay={handlePlay}
           onPlayNext={handlePlayNext}
+          onAddToQueue={handleAddToQueue}
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
           activeGenre={activeGenre}
@@ -1213,6 +1298,7 @@ export default function Home() {
             isPlaying={isPlaying}
             onPlay={handlePlay}
             onPlayNext={handlePlayNext}
+          onAddToQueue={handleAddToQueue}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1232,6 +1318,7 @@ export default function Home() {
             isPlaying={isPlaying}
             onPlay={handlePlay}
             onPlayNext={handlePlayNext}
+          onAddToQueue={handleAddToQueue}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1252,6 +1339,7 @@ export default function Home() {
           isPlaying={isPlaying}
           onPlay={handlePlay}
           onPlayNext={handlePlayNext}
+          onAddToQueue={handleAddToQueue}
           onToggleLike={toggleLike}
           activeTagFilters={activeTagFilters}
           isAuthenticated={isAuthenticated}
@@ -1309,6 +1397,7 @@ export default function Home() {
         currentIndex={queueIndex.current}
         cardRegistry={cardRegistry.current}
         onPlayIndex={handlePlayQueueIndex}
+        onRemove={handleRemoveFromQueue}
         likedIds={likedIds}
         onToggleLike={toggleLike}
       />
