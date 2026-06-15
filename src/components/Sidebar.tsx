@@ -219,6 +219,27 @@ export default function Sidebar({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [shortcutsAnchor, setShortcutsAnchor] = useState<{ left: number; bottom: string } | null>(null);
   const shortcutsRef = useRef<HTMLDivElement>(null);
+  // Short-height nav collapse (active icon + flyout)
+  const [navFlyoutOpen, setNavFlyoutOpen] = useState(false);
+  const navFlyoutRef = useRef<HTMLDivElement>(null);
+  // Drive the 4→1 collapse from JS so the swap can animate (CSS display can't tween)
+  const [isShortNav, setIsShortNav] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-height: 520px)");
+    const apply = () => { setIsShortNav(mq.matches); setNavFlyoutOpen(false); };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  // Collapsed-nav active icon = single directional cube flip (+1 down the list, -1 up)
+  const navActiveIdx = NAV_ITEMS.findIndex((n) => n.key === activeView);
+  // Cube-flip direction is set at click time (+1 down the list, -1 up)
+  const [navFlipDir, setNavFlipDir] = useState(1);
+  const navFlipVariants = {
+    enter: (d: number) => ({ rotateX: 80 * d, opacity: 0 }),
+    center: { rotateX: 0, opacity: 1 },
+    exit: (d: number) => ({ rotateX: -80 * d, opacity: 0 }),
+  };
   const [initialPhrase] = useState(() => Math.floor(Math.random() * SEARCH_PHRASES.length));
   const phraseIndex = useRef(initialPhrase);
   const charIndex = useRef(0);
@@ -367,6 +388,22 @@ export default function Sidebar({
     document.addEventListener("open-about-keybind", handler);
     return () => document.removeEventListener("open-about-keybind", handler);
   }, [showAbout, setShowAbout]);
+
+  // Close the short-height nav flyout on outside click / Escape
+  useEffect(() => {
+    if (!navFlyoutOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (navFlyoutRef.current?.contains(e.target as Node)) return;
+      setNavFlyoutOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavFlyoutOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navFlyoutOpen]);
 
   // Shortcuts keybind ("?") — toggle the shortcuts popover, anchored to the book icon
   useEffect(() => {
@@ -649,28 +686,109 @@ export default function Sidebar({
           height: "calc(100vh - var(--banner-height) - var(--header-height))",
         }}
       >
-        <nav className="flex flex-col items-center flex-1 gap-10">
+        {/* Nav: persistent 4-item column. On short height the active icon stays put
+            (same size/position) while the other 3 collapse away; position bars
+            fade in to its left and a click opens the flyout to the hidden views. */}
+        <nav ref={navFlyoutRef} className="relative flex flex-col items-center flex-1 w-full" style={{ perspective: 900 }}>
+          {/* Position indicator (static) — lives at nav level so it never inherits item 3D rotation.
+              Active pins to the top in short mode, so this sits beside that top icon. */}
+          {isShortNav && (
+            <span className="absolute left-[5px] top-[22px] -translate-y-1/2 z-[1] flex flex-col items-center justify-center gap-[3px]" aria-hidden>
+              {NAV_ITEMS.map((it) => {
+                const a = it.key === activeView;
+                return (
+                  <span
+                    key={it.key}
+                    className={`w-[3px] rounded-full ${a ? "bg-[var(--accent)]" : "bg-[var(--text-muted)]/40"}`}
+                    style={{ height: a ? 11 : 4 }}
+                  />
+                );
+              })}
+            </span>
+          )}
           {NAV_ITEMS.map((item, i) => {
             const isActive = activeView === item.key;
+            const isSlot = isShortNav ? i === 0 : isActive;   // the big/interactive slot
+            const collapsed = isShortNav && i !== 0;          // short: only slot 0 stays open
+            const pivotIdx = isShortNav ? 0 : navActiveIdx;
+            const above = i < pivotIdx;                        // wheel fold direction (resize only)
+            const activeItem = NAV_ITEMS.find((n) => n.key === activeView) ?? NAV_ITEMS[0];
             return (
-              <Fragment key={item.key}>
-              <div className="relative group/nav">
+              <motion.div
+                key={item.key}
+                initial={false}
+                animate={collapsed
+                  ? { height: 0, marginTop: 0, rotateX: above ? 90 : -90 }
+                  : { height: 44, marginTop: isShortNav ? 0 : (i === 0 ? 0 : 40), rotateX: 0 }}
+                transition={{ type: "spring", stiffness: 440, damping: 32, mass: 0.85, delay: collapsed ? 0.03 * ((NAV_ITEMS.length - 1) - Math.abs(i - pivotIdx)) : 0.03 * Math.abs(i - pivotIdx) }}
+                style={{ overflow: collapsed ? "hidden" : "visible", pointerEvents: collapsed ? "none" : "auto", transformOrigin: above ? "center bottom" : "center top", transformStyle: "preserve-3d" }}
+                className="relative group/nav"
+              >
                 <button
-                  onClick={() => { onViewChange(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
-                    isActive
+                  onClick={() => {
+                    if (isShortNav && i === 0) { setNavFlyoutOpen((v) => !v); return; }
+                    onViewChange(item.key);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  aria-haspopup={isShortNav && i === 0 ? "menu" : undefined}
+                  aria-expanded={isShortNav && i === 0 ? navFlyoutOpen : undefined}
+                  className={`w-11 h-11 flex items-center justify-center rounded-xl cursor-pointer transition-colors duration-200 [&_svg]:w-[26px] [&_svg]:h-[26px] ${
+                    isSlot
                       ? "text-[var(--text)] bg-[var(--accent)]/12"
                       : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
                   }`}
                 >
-                  {item.icon(isActive)}
+                  {isShortNav && i === 0 ? (
+                    <span className="relative w-full h-full flex items-center justify-center" style={{ perspective: 360 }}>
+                      <AnimatePresence custom={navFlipDir} initial={false}>
+                        <motion.span
+                          key={activeView}
+                          custom={navFlipDir}
+                          variants={navFlipVariants}
+                          initial="enter" animate="center" exit="exit"
+                          transition={{ type: "spring", stiffness: 420, damping: 30, mass: 0.8 }}
+                          style={{ transformOrigin: "center", backfaceVisibility: "hidden" }}
+                          className="absolute inset-0 flex items-center justify-center [&_svg]:w-[26px] [&_svg]:h-[26px]"
+                        >
+                          {activeItem.icon(true)}
+                        </motion.span>
+                      </AnimatePresence>
+                    </span>
+                  ) : (
+                    item.icon(isActive)
+                  )}
                 </button>
-                {/* Tooltip */}
-                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/nav:opacity-100 transition-opacity duration-150 z-50">
-                  {t(`nav.${item.key === "home" ? "forYou" : item.key}`)} ({i + 1})
-                </div>
-              </div>
-              </Fragment>
+                {/* Tooltip — tall mode only */}
+                {!isShortNav && (
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[var(--text)] text-[var(--bg)] rounded-md font-mono text-[11px] whitespace-nowrap opacity-0 pointer-events-none group-hover/nav:opacity-100 transition-opacity duration-150 z-50">
+                    {t(`nav.${item.key === "home" ? "forYou" : item.key}`)} ({i + 1})
+                  </div>
+                )}
+                {/* Flyout to the other three — short mode, top slot */}
+                {isShortNav && i === 0 && (
+                  <AnimatePresence>
+                    {navFlyoutOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -8, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -8, scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.7 }}
+                        className="absolute left-full ml-2 top-0 z-[80] flex flex-col gap-0.5 p-1.5 rounded-xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl"
+                      >
+                        {NAV_ITEMS.filter((it) => it.key !== activeView).map((it, idx) => (
+                          <motion.button
+                            key={it.key}
+                            initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: "spring", stiffness: 460, damping: 34, delay: 0.03 * idx }}
+                            onClick={() => { setNavFlipDir(NAV_ITEMS.findIndex((n) => n.key === it.key) >= navActiveIdx ? 1 : -1); onViewChange(it.key); window.scrollTo({ top: 0, behavior: "smooth" }); setNavFlyoutOpen(false); }}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-mono text-[11px] uppercase tracking-wider whitespace-nowrap cursor-pointer text-[var(--text)] hover:bg-[var(--accent)]/12 [&_svg]:w-4 [&_svg]:h-4"
+                          >
+                            {it.icon(false)}{t(`nav.${it.key === "home" ? "forYou" : it.key}`)}
+                          </motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                )}
+              </motion.div>
             );
           })}
         </nav>
