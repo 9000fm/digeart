@@ -39,21 +39,20 @@ function write(entries: PlayHistoryEntry[]): void {
  */
 export function recordPlay(card: CardData): void {
   if (!card?.id) return;
-  const entries = read();
-  const now = Date.now();
-  if (entries[0]?.card.id === card.id) {
-    entries[0] = { card, playedAt: now };
-  } else {
-    entries.unshift({ card, playedAt: now });
-    if (entries.length > MAX) entries.length = MAX;
-  }
+  // Dedupe: a replay MOVES the track to the top instead of stacking a duplicate,
+  // so the history stays a unique, most-recent-first list.
+  const entries = read().filter((e) => e.card.id !== card.id);
+  entries.unshift({ card, playedAt: Date.now() });
+  if (entries.length > MAX) entries.length = MAX;
   write(entries);
 }
 
+/** Most-recent-first listening history (for the Recently-played / History view). */
 export function getPlayHistory(): PlayHistoryEntry[] {
   return read();
 }
 
+/** Wipe the listening history. */
 export function clearPlayHistory(): void {
   if (typeof window === "undefined") return;
   try {

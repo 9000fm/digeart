@@ -63,7 +63,8 @@ const GENRE_PRESETS = [
   { label: "Disco", genres: ["disco", "funk"] },
 ];
 
-export type ViewType = "home" | "samples" | "mixes" | "saved";
+// "playlist" is a queue-source sentinel only (playing a playlist) — never a nav item.
+export type ViewType = "home" | "samples" | "mixes" | "saved" | "playlist";
 
 interface NavItem {
   key: ViewType;
@@ -378,7 +379,7 @@ export default function Sidebar({
       if (rect) {
         const playerEl = document.querySelector(".player-banner");
         const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
-        setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+        setGearAnchor({ left: rect.right + 18, bottom: `${bottomPx}px` });
       }
       setAboutSource("gear");
       setShowShortcuts(false);
@@ -414,7 +415,7 @@ export default function Sidebar({
         if (rect) {
           const playerEl = document.querySelector(".player-banner");
           const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
-          setShortcutsAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+          setShortcutsAnchor({ left: rect.right + 18, bottom: `${bottomPx}px` });
         }
         setShowAbout(false);
         setSettingsOpen(false);
@@ -771,7 +772,7 @@ export default function Sidebar({
                       <motion.div
                         initial={{ opacity: 0, x: -8, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -8, scale: 0.96 }}
                         transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.7 }}
-                        className="absolute left-full ml-2 top-0 z-[80] flex flex-col gap-0.5 p-1.5 rounded-xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl"
+                        className="absolute left-full ml-[18px] top-0 z-[80] flex flex-col gap-0.5 p-1.5 rounded-xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl"
                       >
                         {NAV_ITEMS.filter((it) => it.key !== activeView).map((it, idx) => (
                           <motion.button
@@ -805,7 +806,7 @@ export default function Sidebar({
               if (rect) {
                 const playerEl = document.querySelector(".player-banner");
                 const bottomPx = playerEl ? playerEl.getBoundingClientRect().height + 16 : 16;
-                setGearAnchor({ left: rect.right + 12, bottom: `${bottomPx}px` });
+                setGearAnchor({ left: rect.right + 18, bottom: `${bottomPx}px` });
               }
               setShowAbout(!showAbout);
               setShowShortcuts(false);
@@ -863,7 +864,7 @@ export default function Sidebar({
       {/* ===== MOBILE: Fixed header bar ===== */}
       <header
         data-mobile-header
-        className="flex min-[1152px]:hidden fixed left-0 right-0 z-50 h-[var(--header-height-mobile)] bg-[var(--bg)] border-b border-[var(--border)]/30 items-center px-3 gap-3"
+        className="flex min-[1152px]:hidden fixed left-0 right-0 z-50 h-[var(--header-height-mobile)] bg-[var(--bg)] items-center px-3 gap-3"
         style={{ top: "var(--banner-height)" }}
       >
         <span
@@ -1126,7 +1127,6 @@ export default function Sidebar({
                 ["P / ←", t("about.shortcutPrev")],
                 ["S", t("about.shortcutShuffle")],
                 ["M", t("about.shortcutMute")],
-                ["T", t("about.shortcutLocate")],
                 ["L", t("about.shortcutLike")],
                 ["Q", t("about.shortcutQueue")],
                 ["1–4", t("about.shortcutTab")],

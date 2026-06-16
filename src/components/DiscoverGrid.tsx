@@ -15,6 +15,7 @@ interface DiscoverGridProps {
   onPlay: (id: string) => void;
   onPlayNext?: (id: string) => void;
   onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeGenre: number;
@@ -33,6 +34,7 @@ export default function DiscoverGrid({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  onAddToPlaylist,
   onToggleSave,
   onToggleLike,
   activeTagFilters = [],
@@ -139,6 +141,18 @@ export default function DiscoverGrid({
     };
   }, [tagKey, genreKey, loading, loadingMore, cards.length, fetchCards]);
 
+  // Infinite queue: the player fires "queue-needs-more:home" when its up-next list runs
+  // low, so we fetch the next page even if the user hasn't scrolled the grid into view.
+  useEffect(() => {
+    const handler = () => {
+      if (!loading && !loadingMore && hasMore.current && cards.length > 0) {
+        fetchCards(tagKey, genreKey, true);
+      }
+    };
+    document.addEventListener("queue-needs-more:home", handler);
+    return () => document.removeEventListener("queue-needs-more:home", handler);
+  }, [loading, loadingMore, tagKey, genreKey, fetchCards, cards.length]);
+
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
     if (navigator.share) {
@@ -202,6 +216,7 @@ export default function DiscoverGrid({
                   onPlay={() => onPlay(card.id)}
                   onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
                   onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
+                  onAddToPlaylist={onAddToPlaylist ? () => onAddToPlaylist(card.id) : undefined}
                   onSave={() => onToggleLike(card.id)}
                   onShare={() => shareCard(card)}
                   isAuthenticated={isAuthenticated}

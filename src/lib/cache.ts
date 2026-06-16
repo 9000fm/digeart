@@ -28,10 +28,6 @@ export function cacheSet<T>(key: string, data: T, ttl = DEFAULT_TTL): void {
   store.set(key, { data, expiresAt: Date.now() + ttl });
 }
 
-export function cacheDelete(key: string): boolean {
-  return store.delete(key);
-}
-
 export function cacheDeleteByPrefix(prefix: string): number {
   let count = 0;
   for (const key of store.keys()) {

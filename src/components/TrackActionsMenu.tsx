@@ -22,7 +22,7 @@ export default function TrackActionsMenu({ onPlayNext, onAddToQueue, onAddToPlay
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const MENU_W = 184;
+  const MENU_W = 216;
 
   const openMenu = useCallback(() => {
     const rect = btnRef.current?.getBoundingClientRect();
@@ -61,7 +61,7 @@ export default function TrackActionsMenu({ onPlayNext, onAddToQueue, onAddToPlay
     fn?.();
   };
 
-  const rowClass = "w-full flex items-center gap-2.5 px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-left transition-colors";
+  const rowClass = "w-full flex items-center gap-2.5 px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-left whitespace-nowrap transition-colors";
 
   const menu = open && pos && typeof document !== "undefined"
     ? createPortal(

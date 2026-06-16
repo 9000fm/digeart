@@ -6,6 +6,17 @@ import { useCuratorToast } from "../hooks/useCuratorToast";
 
 interface CuratorStatsBarProps {
   stats: CuratorStats | null;
+  /** Bulk-rescan state (owned by the page, shared with the approved-list overlay). */
+  rescanRunning?: boolean;
+  rescanDone?: number;
+  rescanTotal?: number;
+  rescanFinishedMsg?: string | null;
+  /** Counts for the two rescan targets. */
+  allCount?: number;
+  staleCount?: number;
+  /** Triggers. */
+  onRescanAll?: () => void;
+  onRescanStale?: () => void;
 }
 
 function formatLastSaved(ts: number | null, now: number): string {
@@ -19,7 +30,17 @@ function formatLastSaved(ts: number | null, now: number): string {
   return `${hr}h ago`;
 }
 
-export function CuratorStatsBar({ stats }: CuratorStatsBarProps) {
+export function CuratorStatsBar({
+  stats,
+  rescanRunning = false,
+  rescanDone = 0,
+  rescanTotal = 0,
+  rescanFinishedMsg = null,
+  allCount = 0,
+  staleCount = 0,
+  onRescanAll,
+  onRescanStale,
+}: CuratorStatsBarProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   const { lastSavedAt } = useCuratorToast();
@@ -49,6 +70,19 @@ export function CuratorStatsBar({ stats }: CuratorStatsBarProps) {
     }
   }
 
+  function handleRescanAll() {
+    if (rescanRunning || allCount === 0) return;
+    if (!window.confirm(`Rescan all ${allCount} approved channels? Recomputes every activity tier. Takes a few minutes.`)) return;
+    onRescanAll?.();
+  }
+
+  function handleRescanStale() {
+    if (rescanRunning) return;
+    if (staleCount === 0) return;
+    if (!window.confirm(`Rescan ${staleCount} grey + stale channels (unscanned or 30+ days old)?`)) return;
+    onRescanStale?.();
+  }
+
   if (!stats) return null;
 
   return (
@@ -70,6 +104,32 @@ export function CuratorStatsBar({ stats }: CuratorStatsBarProps) {
       </button>
       {refreshMsg && (
         <span className="text-[var(--text)]">{refreshMsg}</span>
+      )}
+      <span className="opacity-30 mx-1">|</span>
+      {rescanRunning ? (
+        <span className="text-[var(--accent)] uppercase tabular-nums">scanning {rescanDone}/{rescanTotal}</span>
+      ) : (
+        <>
+          <button
+            onClick={handleRescanAll}
+            disabled={allCount === 0}
+            className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors uppercase disabled:opacity-40"
+          >
+            rescan all
+          </button>
+          <span className="opacity-30">·</span>
+          <button
+            onClick={handleRescanStale}
+            disabled={staleCount === 0}
+            className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors uppercase disabled:opacity-40"
+            title="grey + stale (unscanned or 30+ days old)"
+          >
+            rescan stale{staleCount > 0 ? ` (${staleCount})` : ""}
+          </button>
+        </>
+      )}
+      {rescanFinishedMsg && (
+        <span className="text-[var(--text)] lowercase">{rescanFinishedMsg}</span>
       )}
       <span className="opacity-30 mx-1">|</span>
       <span className="text-[var(--text-muted)] uppercase">

@@ -24,3 +24,21 @@ export interface CardData {
   isGem?: boolean; // editorial: curator-liked track (stamped server-side)
   isHot?: boolean; // top 10% most-viewed of the current pool (stamped server-side)
 }
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description: string | null;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  trackCount: number;
+  // First few track snapshots for the 2×2 collage cover (newest playlists first).
+  coverCards: Pick<CardData, "id" | "image" | "imageSmall">[];
+}
+
+export interface PlaylistTrack {
+  id: string;        // playlist_tracks row id (stable key for reorder)
+  position: number;
+  card: CardData;    // full denormalized snapshot from card_data
+}

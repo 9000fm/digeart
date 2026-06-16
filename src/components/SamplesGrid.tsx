@@ -13,6 +13,7 @@ interface SamplesGridProps {
   onPlay: (id: string) => void;
   onPlayNext?: (id: string) => void;
   onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
   onToggleSave: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeTagFilters?: string[];
@@ -29,6 +30,7 @@ export default function SamplesGrid({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  onAddToPlaylist,
   onToggleSave,
   onToggleLike,
   activeTagFilters = [],
@@ -125,6 +127,18 @@ export default function SamplesGrid({
     };
   }, [tagKey, genreKey, loading, loadingMore, cards.length, fetchSamples]);
 
+  // Infinite queue: the player fires "queue-needs-more:samples" when its up-next list runs
+  // low, so we fetch the next page even if the user hasn't scrolled the grid into view.
+  useEffect(() => {
+    const handler = () => {
+      if (!loading && !loadingMore && hasMore.current && cards.length > 0) {
+        fetchSamples(tagKey, genreKey, true);
+      }
+    };
+    document.addEventListener("queue-needs-more:samples", handler);
+    return () => document.removeEventListener("queue-needs-more:samples", handler);
+  }, [loading, loadingMore, tagKey, genreKey, fetchSamples, cards.length]);
+
   const shareCard = async (card: CardData) => {
     const url = card.youtubeUrl || "";
     if (navigator.share) {
@@ -178,6 +192,7 @@ export default function SamplesGrid({
             onPlay={() => onPlay(card.id)}
             onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
             onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
+            onAddToPlaylist={onAddToPlaylist ? () => onAddToPlaylist(card.id) : undefined}
             onSave={() => onToggleLike(card.id)}
             onShare={() => shareCard(card)}
             isAuthenticated={isAuthenticated}

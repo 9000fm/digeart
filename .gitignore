@@ -7,3 +7,4 @@ BRAND.md
 NEXT_STEPS.md
 tsconfig.tsbuildinfo
 screenshots/
+.playwright-mcp/

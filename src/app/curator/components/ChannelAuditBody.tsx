@@ -141,7 +141,7 @@ export function ChannelAuditBody({
       {/* Channel info card */}
       <div className="mb-3 p-4 bg-[var(--bg-alt)]/40 border border-[var(--border)] rounded-xl">
         <div className="flex items-center gap-3 mb-3">
-          <ActivityDot tier={meta.activityTier} lastUploadAt={meta.lastUploadAt} size="md" />
+          <ActivityDot tier={meta.activityTier} lastUploadAt={meta.lastUploadAt} size="md" starred={isStarred} />
           <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
           {onToggleStar && (
             <button

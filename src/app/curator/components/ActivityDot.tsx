@@ -7,12 +7,15 @@ interface ActivityDotProps {
   lastUploadAt?: string | null;
   showLabel?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
+  /** Starred channels are shown as epic (purple) regardless of computed tier. */
+  starred?: boolean;
 }
 
-export function ActivityDot({ tier, lastUploadAt, showLabel = false, size = "sm" }: ActivityDotProps) {
-  const color = tierColor(tier);
+export function ActivityDot({ tier, lastUploadAt, showLabel = false, size = "sm", starred = false }: ActivityDotProps) {
+  const effectiveTier: ActivityTier | null | undefined = starred ? "purple" : tier;
+  const color = tierColor(effectiveTier);
   const dim = size === "sm" ? 8 : size === "md" ? 10 : size === "lg" ? 14 : 22;
-  const label = tierLabel(tier);
+  const label = tierLabel(effectiveTier);
   const last = lastUploadAt ? formatLastUpload(lastUploadAt) : null;
   const title = last ? `${label} · ${last}` : label;
 
@@ -28,7 +31,7 @@ export function ActivityDot({ tier, lastUploadAt, showLabel = false, size = "sm"
           width: dim,
           height: dim,
           backgroundColor: color,
-          boxShadow: tier === "purple" ? `0 0 6px ${color}` : undefined,
+          boxShadow: effectiveTier === "purple" ? `0 0 6px ${color}` : undefined,
         }}
       />
       {showLabel && last && (

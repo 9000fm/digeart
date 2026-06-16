@@ -14,8 +14,10 @@ import { AnimatePresence } from "framer-motion";
 import DiscoverGrid from "@/components/DiscoverGrid";
 import MixesGrid from "@/components/MixesGrid";
 import SamplesGrid from "@/components/SamplesGrid";
-import SavedGrid from "@/components/SavedGrid";
-import { supabase } from "@/lib/supabase";
+import SavedSection from "@/components/SavedSection";
+import AddToPlaylistMenu from "@/components/AddToPlaylistMenu";
+import { usePlaylists } from "@/hooks/usePlaylists";
+import { fetchLikes, likeAction } from "@/lib/likesClient";
 import NowPlayingBanner from "@/components/NowPlayingBanner";
 import Sidebar from "@/components/Sidebar";
 import UndoToast from "@/components/UndoToast";
@@ -26,6 +28,7 @@ import WelcomeScreen from "@/components/WelcomeScreen";
 import type { ViewType } from "@/components/Sidebar";
 import type { CardData } from "@/lib/types";
 import { stripCardForStorage, hydrateCardDefaults } from "@/lib/youtube";
+import { MIX_MIN_SECONDS } from "@/lib/durations";
 import { updatePlayback } from "@/lib/playbackProgress";
 import { recordPlay } from "@/lib/playHistory";
 
@@ -61,6 +64,8 @@ interface YTPlayerEvent {
 export default function Home() {
   const { data: session } = useSession();
   const isAuthenticated = !!session;
+  const playlistsApi = usePlaylists(isAuthenticated);
+  const [addToPlaylistCard, setAddToPlaylistCard] = useState<CardData | null>(null);
   const [activeView, setActiveView] = useState<ViewType>("home");
   const [activeGenre, setActiveGenre] = useState(0);
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -125,6 +130,9 @@ export default function Home() {
   const shuffleQueue = useRef<string[]>([]);
   const queueIndex = useRef(-1);
   const queueView = useRef<ViewType | null>(null);
+  // When the queue source is a playlist, this holds its full ordered id list so
+  // shuffle-toggle (getOrderedIds) can rebuild from the whole playlist, not feed views.
+  const playlistQueueIds = useRef<string[]>([]);
   // Layered queue: # of manual (Play Next / Add to Queue) items sitting right after
   // the current track, before the source-based auto-continuation tail. Reset to 0 on
   // any non-linear move (prev / jump / rebuild) to keep the invariant safe.
@@ -251,22 +259,12 @@ export default function Home() {
     if (!session?.user?.email) return;
     const email = session.user.email;
     setSavedLoading(true);
-    supabase
-      .from("likes")
-      .select("video_id, card_data, deleted_at")
-      .eq("user_email", email)
-      .or("deleted_at.is.null,deleted_at.gte." + new Date(Date.now() - 7 * 86400000).toISOString())
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Failed to load likes:", error);
-          setSavedLoading(false);
-          return;
-        }
+    fetchLikes()
+      .then((data) => {
         const ids = new Set<string>();
         const activeCards: CardData[] = [];
         const removed: (CardData & { deletedAt: string })[] = [];
-        for (const row of data || []) {
+        for (const row of data) {
           if (row.deleted_at === null) {
             ids.add(row.video_id);
             activeCards.push(hydrateCardDefaults(row.card_data as Partial<CardData>));
@@ -278,6 +276,10 @@ export default function Home() {
         setSoftDeletedIds(new Set());
         setSavedCards(activeCards);
         setRecentlyRemoved(removed);
+        setSavedLoading(false);
+      })
+      .catch((error) => {
+        console.error("Failed to load likes:", error);
         setSavedLoading(false);
       });
   }, [session?.user?.email]);
@@ -297,9 +299,28 @@ export default function Home() {
     localStorage.setItem("digeart-welcome-seen", "1");
     setShowWelcome(false);
     if (!localStorage.getItem("digeart-onboarded")) {
-      // Small delay so the UI has rendered
-      const timer = setTimeout(() => { setShowAbout(false); setShowQueue(false); setShowOnboarding(true); }, 600);
-      return () => clearTimeout(timer);
+      // Wait until the first card AND its thumbnail have painted before starting,
+      // so step 1's spotlight always lands on a real card (not empty space during
+      // a cold pool load). Safety cap so it never hangs if cards never arrive.
+      let cancelled = false;
+      let timer: ReturnType<typeof setTimeout>;
+      const startedAt = Date.now();
+      const ready = () => {
+        const card = document.querySelector("[data-card-id]");
+        if (!card) return false;
+        const img = card.querySelector("img");
+        return !img || (img.complete && img.naturalWidth > 0);
+      };
+      const tick = () => {
+        if (cancelled) return;
+        if (ready() || Date.now() - startedAt > 5000) {
+          setShowAbout(false); setShowQueue(false); setShowOnboarding(true);
+          return;
+        }
+        timer = setTimeout(tick, 150);
+      };
+      timer = setTimeout(tick, 600); // initial settle, then poll
+      return () => { cancelled = true; clearTimeout(timer); };
     }
   }, [isAuthenticated]);
 
@@ -358,6 +379,11 @@ export default function Home() {
   const handleYTStateChange = useRef<((event: YTPlayerEvent) => void) | null>(null);
 
   const createYTPlayer = useCallback((videoId: string) => {
+    // Arm the advance guard until the NEW video confirms PLAYING (reset at state 1).
+    // Without this, on a track change the 250ms poller can read the OLD track's
+    // near-end time during the async load and fire a 2nd advance → skipped track
+    // (race widens under heavy render, e.g. loading more cards while playing).
+    hasAdvancedRef.current = true;
     if (!ytPlayerReady.current) {
       // Player not ready yet — queue for when onReady fires
       ytPendingVideoId.current = videoId;
@@ -439,10 +465,11 @@ export default function Home() {
         newIds.push(c.id);
       }
     }
-    // Silently append new cards (shuffled) to the END of the queue
-    // This keeps the visible "Up next" list stable — new cards appear after existing ones
+    // Silently append new cards to the END of the queue
+    // This keeps the visible "Up next" list stable — new cards appear after existing ones.
+    // Only randomize when shuffle (autoplay) is on; otherwise preserve grid/display order.
     if (newIds.length > 0 && shuffleQueue.current.length > 0) {
-      fisherYatesShuffle(newIds);
+      if (autoPlayEnabledRef.current) fisherYatesShuffle(newIds);
       shuffleQueue.current.push(...newIds);
     }
     // Deferred auto-play from shared ?t=<videoId> link
@@ -482,9 +509,12 @@ export default function Home() {
     return arr;
   };
 
-  // Build a queue of card IDs for a given view
-  const buildQueue = useCallback((startingCardId: string, shuffle: boolean) => {
-    const view = cardViewMap.current.get(startingCardId) || activeViewRef.current;
+  // Ordered card IDs for a view, in display (registry/feed) order, saved-filter applied.
+  const getOrderedIds = useCallback((view: ViewType) => {
+    // Playlist queues are bounded — their order lives in playlistQueueIds, not the
+    // feed-membership map, so shuffle-toggle rebuilds from the whole playlist.
+    if (view === "playlist") return [...playlistQueueIds.current];
+
     let ids = Array.from(cardRegistry.current.entries())
       .filter(([id]) => cardViewMap.current.get(id) === view)
       .map(([id]) => id);
@@ -495,35 +525,50 @@ export default function Home() {
       ids = ids.filter((id) => {
         const card = cardRegistry.current.get(id);
         if (!card?.duration) return filter === "tracks";
-        if (card.duration >= 2400) return filter === "mixes";
+        if (card.duration >= MIX_MIN_SECONDS) return filter === "mixes";
         if (card.duration <= 240) return filter === "samples";
         return filter === "tracks";
       });
     }
+    return ids;
+  }, []);
+
+  // Build a queue of card IDs for a given view
+  const buildQueue = useCallback((startingCardId: string, shuffle: boolean) => {
+    const view = cardViewMap.current.get(startingCardId) || activeViewRef.current;
+    const ids = getOrderedIds(view);
 
     if (shuffle) {
+      // Shuffle on → randomize, then pull the clicked card to the front
       fisherYatesShuffle(ids);
-    }
-
-    // Move starting card to front
-    const startIdx = ids.indexOf(startingCardId);
-    if (startIdx > 0) {
-      ids.splice(startIdx, 1);
-      ids.unshift(startingCardId);
+      const startIdx = ids.indexOf(startingCardId);
+      if (startIdx > 0) {
+        ids.splice(startIdx, 1);
+        ids.unshift(startingCardId);
+      }
+      queueIndex.current = 0;
+      setCanGoPrev(false);
+    } else {
+      // Shuffle off → keep feed order, just position at the clicked card so Next
+      // continues to the following card in the feed (never jumps back to the top).
+      const startIdx = ids.indexOf(startingCardId);
+      queueIndex.current = startIdx >= 0 ? startIdx : 0;
+      setCanGoPrev(queueIndex.current > 0);
     }
 
     shuffleQueue.current = ids;
-    queueIndex.current = 0;
     queueView.current = view;
     manualAfter.current = 0;
-    setCanGoPrev(false);
-  }, []);
+  }, [getOrderedIds]);
 
   // Internal play handler (simplified — no history/forward stack)
   const handlePlayInternal = useCallback((card: CardData) => {
     setPlayingId(card.id);
-    // Don't set isPlaying=true here — wait for YouTube state 1 (playing)
-    // This prevents EQ animating while video is still loading/cued
+    // Force isPlaying off on every track change so the EQ doesn't carry over from the
+    // previous track. Don't set it true here — wait for YouTube state 1 (PLAYING). This
+    // kills the show→hide→show flicker (stale-true EQ during the new video's load) and
+    // keeps the EQ from animating while the video is still loading/cued.
+    setIsPlaying(false);
     updatePlayback({ progress: 0, duration: card.duration || 0 });
     setNowPlayingCard(card);
     setCanGoPrev(queueIndex.current > 0);
@@ -582,10 +627,18 @@ export default function Home() {
     const fresh = Array.from(cardRegistry.current.entries())
       .filter(([id]) => cardViewMap.current.get(id) === view && !have.has(id))
       .map(([id]) => id);
-    if (fresh.length === 0) return;
-    if (autoPlayEnabledRef.current) fisherYatesShuffle(fresh);
-    q.push(...fresh);
-    bumpQueue((v) => v + 1);
+    if (fresh.length > 0) {
+      if (autoPlayEnabledRef.current) fisherYatesShuffle(fresh);
+      q.push(...fresh);
+      bumpQueue((v) => v + 1);
+    }
+    // Infinite queue: the active feed runs low → ask its grid to fetch the next page
+    // from the API even if the user hasn't scrolled. New cards register and get
+    // live-injected into this queue (guarded by the grid's loading flags + hasMore).
+    // View-scoped event name so only the matching grid (home/mixes/samples) fires.
+    if (view === "home" || view === "mixes" || view === "samples") {
+      document.dispatchEvent(new Event(`queue-needs-more:${view}`));
+    }
   }, []);
 
   // Next track — walk queue index forward
@@ -652,6 +705,51 @@ export default function Home() {
     }
   }, [isPlaying, nowPlayingCard, stopYTProgressPoller, startYTProgressPoller]);
 
+  // ── Media Session API — OS lock-screen / hardware media-key / Bluetooth controls ──
+  const handleTogglePlayRef = useRef(handleTogglePlay);
+  handleTogglePlayRef.current = handleTogglePlay;
+  const handlePrevTrackRef = useRef(handlePrevTrack);
+  handlePrevTrackRef.current = handlePrevTrack;
+
+  // Register action handlers once (use refs so we never churn them)
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    ms.setActionHandler("play", () => handleTogglePlayRef.current());
+    ms.setActionHandler("pause", () => handleTogglePlayRef.current());
+    ms.setActionHandler("previoustrack", () => handlePrevTrackRef.current());
+    ms.setActionHandler("nexttrack", () => handleNextTrackRef.current?.());
+    return () => {
+      ms.setActionHandler("play", null);
+      ms.setActionHandler("pause", null);
+      ms.setActionHandler("previoustrack", null);
+      ms.setActionHandler("nexttrack", null);
+    };
+  }, []);
+
+  // Metadata follows the current track (title / artist / artwork on the OS UI)
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    if (!nowPlayingCard) {
+      navigator.mediaSession.metadata = null;
+      return;
+    }
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: nowPlayingCard.name,
+      artist: nowPlayingCard.artist,
+      album: nowPlayingCard.album || "digeart",
+      artwork: nowPlayingCard.image
+        ? [{ src: nowPlayingCard.image, sizes: "480x360", type: "image/jpeg" }]
+        : [],
+    });
+  }, [nowPlayingCard]);
+
+  // Reflect play/pause state on the OS controls
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [isPlaying]);
+
   const handlePlay = useCallback((id: string) => {
     // If clicking the currently-playing card, toggle pause
     if (id === nowPlayingCardRef.current?.id) {
@@ -677,6 +775,63 @@ export default function Home() {
     playOriginView.current = activeViewRef.current;
     handlePlayInternal(card);
   }, [handlePlayInternal, handleTogglePlay, buildQueue]);
+
+  // Play a card directly (e.g. from History). History persists the FULL card, but a
+  // reload rebuilds the pool fresh — so a past track may not be in the registry. Register
+  // it first (under the active view) so it's playable even when it's no longer in the feed.
+  const handlePlayCard = useCallback((card: CardData) => {
+    if (!card?.id) return;
+    if (!cardRegistry.current.has(card.id)) {
+      cardRegistry.current.set(card.id, card);
+      if (!cardViewMap.current.has(card.id)) {
+        cardViewMap.current.set(card.id, activeViewRef.current);
+      }
+    }
+    handlePlay(card.id);
+  }, [handlePlay]);
+
+  // Play a playlist as a bounded queue source. Order lives in playlistQueueIds;
+  // existing feed memberships are NOT overwritten (so clicking the same card in
+  // its home feed later still builds a home queue). No infinite refill — finite.
+  const handlePlayPlaylist = useCallback((tracks: CardData[], startId: string) => {
+    if (tracks.length === 0) return;
+    for (const c of tracks) {
+      cardRegistry.current.set(c.id, c);
+      if (!cardViewMap.current.has(c.id)) cardViewMap.current.set(c.id, "playlist");
+    }
+    playlistQueueIds.current = tracks.map((t) => t.id);
+    const ids = [...playlistQueueIds.current];
+    if (autoPlayEnabledRef.current) {
+      fisherYatesShuffle(ids);
+      const i = ids.indexOf(startId);
+      if (i > 0) { ids.splice(i, 1); ids.unshift(startId); }
+      queueIndex.current = 0;
+      setCanGoPrev(false);
+    } else {
+      const i = ids.indexOf(startId);
+      queueIndex.current = i >= 0 ? i : 0;
+      setCanGoPrev(queueIndex.current > 0);
+    }
+    shuffleQueue.current = ids;
+    queueView.current = "playlist";
+    manualAfter.current = 0;
+    const startCard = cardRegistry.current.get(startId);
+    if (startCard) handlePlayInternal(startCard);
+  }, [handlePlayInternal]);
+
+  const handleOpenAddToPlaylist = useCallback((id: string) => {
+    const card = cardRegistry.current.get(id);
+    if (card) setAddToPlaylistCard(card);
+  }, []);
+
+  const shareCardGlobal = useCallback(async (card: CardData) => {
+    const url = card.youtubeUrl || "";
+    if (navigator.share) {
+      try { await navigator.share({ title: `${card.name} — ${card.artist}`, url }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  }, []);
 
   // Play Next — insert this track right after the currently-playing one.
   const handlePlayNext = useCallback((id: string) => {
@@ -749,6 +904,16 @@ export default function Home() {
     bumpQueue((v) => v + 1);
   }, [handlePlayInternal]);
 
+  // Drag-reorder the up-next list. Only the upcoming slice (after current) is reorderable;
+  // history + current stay put. The manual/auto split is dropped (a hand-reorder overrides it).
+  const handleReorderUpcoming = useCallback((newUpcoming: string[]) => {
+    const q = shuffleQueue.current;
+    const head = q.slice(0, queueIndex.current + 1); // previously-played + current
+    shuffleQueue.current = [...head, ...newUpcoming];
+    manualAfter.current = 0;
+    bumpQueue((v) => v + 1);
+  }, []);
+
   // Stable ref for handlePlay — used by shared-link auto-play
   const handlePlayRef = useRef(handlePlay);
   handlePlayRef.current = handlePlay;
@@ -781,16 +946,9 @@ export default function Home() {
     });
 
     // Clear deleted_at in Supabase (restore the row)
-    const email = session?.user?.email;
-    if (email) {
-      supabase
-        .from("likes")
-        .update({ deleted_at: null })
-        .eq("user_email", email)
-        .eq("video_id", item.trackId)
-        .then(({ error }) => {
-          if (error) console.error("Failed to restore like:", error);
-        });
+    if (session?.user?.email) {
+      likeAction("restore", { videoId: item.trackId })
+        .then((res) => { if (!res.ok) console.error("Failed to restore like:", res.status); });
     }
   }, [session?.user?.email]);
 
@@ -806,30 +964,27 @@ export default function Home() {
     setSavedCards((prev) => [card, ...prev]);
     setLikedIds((prev) => new Set(prev).add(id));
     // Clear deleted_at in Supabase
-    const email = session?.user?.email;
-    if (email) {
-      supabase.from("likes").update({ deleted_at: null }).eq("user_email", email).eq("video_id", id)
-        .then(({ error }) => { if (error) console.error("Failed to restore like:", error); });
+    if (session?.user?.email) {
+      likeAction("restore", { videoId: id })
+        .then((res) => { if (!res.ok) console.error("Failed to restore like:", res.status); });
     }
   }, [recentlyRemoved, session?.user?.email]);
 
   // Hard delete — permanently remove from DB
   const handleHardDelete = useCallback((id: string) => {
     setRecentlyRemoved((prev) => prev.filter((c) => c.id !== id));
-    const email = session?.user?.email;
-    if (email) {
-      supabase.from("likes").delete().eq("user_email", email).eq("video_id", id)
-        .then(({ error }) => { if (error) console.error("Failed to hard-delete like:", error); });
+    if (session?.user?.email) {
+      likeAction("hardDelete", { videoId: id })
+        .then((res) => { if (!res.ok) console.error("Failed to hard-delete like:", res.status); });
     }
   }, [session?.user?.email]);
 
   // Clear all recently removed
   const handleClearAllRemoved = useCallback(() => {
     setRecentlyRemoved([]);
-    const email = session?.user?.email;
-    if (email) {
-      supabase.from("likes").delete().eq("user_email", email).not("deleted_at", "is", null)
-        .then(({ error }) => { if (error) console.error("Failed to clear removed:", error); });
+    if (session?.user?.email) {
+      likeAction("clearRemoved")
+        .then((res) => { if (!res.ok) console.error("Failed to clear removed:", res.status); });
     }
   }, [session?.user?.email]);
 
@@ -876,14 +1031,8 @@ export default function Home() {
 
     if (wasLiked) {
       // Soft-delete: set deleted_at instead of DELETE
-      supabase
-        .from("likes")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("user_email", email)
-        .eq("video_id", id)
-        .then(({ error }) => {
-          if (error) console.error("Failed to soft-delete like:", error);
-        });
+      likeAction("unlike", { videoId: id })
+        .then((res) => { if (!res.ok) console.error("Failed to soft-delete like:", res.status); });
 
       // Show undo toast with 5s window — after expiry, move card to recently removed
       const deletedAt = new Date().toISOString();
@@ -902,15 +1051,8 @@ export default function Home() {
       setUndoItems((prev) => [...prev, { id: undoId, trackId: id, trackName: card.name || "Track", createdAt: now }]);
     } else {
       // Liking — upsert with deleted_at cleared (handles re-liking a soft-deleted row)
-      supabase
-        .from("likes")
-        .upsert(
-          { user_email: email, video_id: id, card_data: stripCardForStorage(card), deleted_at: null },
-          { onConflict: "user_email,video_id" }
-        )
-        .then(({ error }) => {
-          if (error) console.error("Failed to upsert like:", error);
-        });
+      likeAction("save", { videoId: id, cardData: stripCardForStorage(card) })
+        .then((res) => { if (!res.ok) console.error("Failed to upsert like:", res.status); });
     }
   }, [likedIds, softDeletedIds, session?.user?.email, commitPendingUnlike, savedCards]);
 
@@ -947,75 +1089,6 @@ export default function Home() {
     });
   }, [activeView]);
 
-  // Locate card — with 3s poll (30 × 100ms) + failure feedback
-  const handleLocateCard = useCallback(() => {
-    if (!nowPlayingCard || showOnboarding) return;
-    document.dispatchEvent(new Event("locate-triggered"));
-
-    const tryScroll = () => {
-      const els = document.querySelectorAll(`[data-card-id="${nowPlayingCard.id}"]`);
-      const el = Array.from(els).find(e => (e as HTMLElement).offsetParent !== null);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        const observer = new IntersectionObserver(([entry]) => {
-          if (entry.isIntersecting) {
-            observer.disconnect();
-            el.classList.add("locate-highlight");
-            setTimeout(() => el.classList.remove("locate-highlight"), 1800);
-          }
-        }, { threshold: 0.8 });
-        observer.observe(el);
-        setTimeout(() => observer.disconnect(), 3000);
-        return true;
-      }
-      return false;
-    };
-
-    // Shake the locate button to signal failure
-    const pulseLocateBtn = () => {
-      const btn = document.querySelector(".locate-btn");
-      if (btn) {
-        btn.classList.add("locate-pulse");
-        setTimeout(() => btn.classList.remove("locate-pulse"), 400);
-      }
-    };
-
-    if (tryScroll()) return;
-
-    const originView = playOriginView.current;
-    const mapView = cardViewMap.current.get(nowPlayingCard.id);
-
-    // Build list of views to try (deduped, excluding current)
-    const viewsToTry: ViewType[] = [];
-    if (originView && originView !== activeView) viewsToTry.push(originView);
-    if (mapView && mapView !== activeView && mapView !== originView) viewsToTry.push(mapView);
-
-    if (viewsToTry.length > 0) {
-      let viewIdx = 0;
-      const tryNextView = () => {
-        if (viewIdx >= viewsToTry.length) {
-          pulseLocateBtn();
-          return;
-        }
-        setActiveView(viewsToTry[viewIdx]);
-        let attempts = 0;
-        const poll = setInterval(() => {
-          attempts++;
-          if (tryScroll()) {
-            clearInterval(poll);
-          } else if (attempts > 30) {
-            clearInterval(poll);
-            viewIdx++;
-            tryNextView();
-          }
-        }, 100);
-      };
-      tryNextView();
-    } else {
-      pulseLocateBtn();
-    }
-  }, [nowPlayingCard, activeView, showOnboarding]);
-
   // Seek — uses YT.Player.seekTo() directly
   const handleSeek = useCallback((seconds: number) => {
     if (ytPlayerRef.current) {
@@ -1043,7 +1116,7 @@ export default function Home() {
       localStorage.setItem("digeart-muted", "1");
       if (ytPlayerRef.current) try { ytPlayerRef.current.mute(); } catch { /* ignore */ }
     }
-    // Throttled state + localStorage update (every 150ms instead of every pixel)
+    // Throttled state + localStorage update (every 50ms instead of every pixel)
     if (!volumeThrottleRef.current) {
       volumeThrottleRef.current = setTimeout(() => {
         setVolume(volumeRef.current);
@@ -1120,26 +1193,33 @@ export default function Home() {
       const queue = shuffleQueue.current;
 
       if (currentIdx >= 0 && queue.length > 0) {
-        // Preserve history (everything up to and including current track)
-        const history = queue.slice(0, currentIdx + 1);
-        const upcoming = queue.slice(currentIdx + 1);
-
+        const curId = queue[currentIdx];
         if (next) {
-          // Shuffle on → randomize upcoming
+          // Shuffle on → keep ONLY the current track, shuffle the WHOLE pool for the
+          // view after it (incl. first-page tracks). Excluding everything-before-index
+          // wrongly skipped early tracks whenever you'd jumped deep into the feed.
+          const view = queueView.current || activeViewRef.current;
+          const upcoming = getOrderedIds(view).filter((id) => id !== curId);
           fisherYatesShuffle(upcoming);
+          shuffleQueue.current = [curId, ...upcoming];
+          queueIndex.current = 0;
+          setCanGoPrev(false);
         } else {
-          // Shuffle off → sort upcoming by registry insertion order
-          const registryOrder = Array.from(cardRegistry.current.keys());
-          upcoming.sort((a, b) => registryOrder.indexOf(a) - registryOrder.indexOf(b));
+          // Shuffle off → rebuild the linear feed order, positioned AT the current
+          // track, so Next continues forward (no jumping back to the top).
+          const view = queueView.current || activeViewRef.current;
+          const ordered = getOrderedIds(view);
+          const curPos = ordered.indexOf(curId);
+          shuffleQueue.current = ordered;
+          queueIndex.current = curPos >= 0 ? curPos : 0;
+          setCanGoPrev(queueIndex.current > 0);
         }
-
-        shuffleQueue.current = [...history, ...upcoming];
-        // queueIndex stays the same — history preserved
+        manualAfter.current = 0;
       }
 
       return next;
     });
-  }, []);
+  }, [getOrderedIds]);
 
   // ── Keyboard shortcuts ──
   // Use e.code for letter/digit keys (physical position) so shortcuts work
@@ -1173,9 +1253,6 @@ export default function Home() {
             return;
           case "l":
             if (nowPlayingCard) document.dispatchEvent(new Event("heart-like-keybind"));
-            return;
-          case "t":
-            if (nowPlayingCard) handleLocateCard();
             return;
           case "f":
             if (document.fullscreenElement) {
@@ -1238,7 +1315,7 @@ export default function Home() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, canGoPrev, handleToggleMute, handleLocateCard, handleViewChange, volume, handleVolumeChange, toggleLike]);
+  }, [nowPlayingCard, handleTogglePlay, handleNextTrack, handlePrevTrack, handleToggleAutoPlay, canGoPrev, handleToggleMute, handleViewChange, volume, handleVolumeChange, toggleLike]);
 
   const hasPlayer = !!nowPlayingCard;
 
@@ -1279,6 +1356,7 @@ export default function Home() {
           onPlay={handlePlay}
           onPlayNext={handlePlayNext}
           onAddToQueue={handleAddToQueue}
+          onAddToPlaylist={handleOpenAddToPlaylist}
           onToggleSave={toggleLike}
           onToggleLike={toggleLike}
           activeGenre={activeGenre}
@@ -1299,6 +1377,7 @@ export default function Home() {
             onPlay={handlePlay}
             onPlayNext={handlePlayNext}
           onAddToQueue={handleAddToQueue}
+            onAddToPlaylist={handleOpenAddToPlaylist}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1319,6 +1398,7 @@ export default function Home() {
             onPlay={handlePlay}
             onPlayNext={handlePlayNext}
           onAddToQueue={handleAddToQueue}
+            onAddToPlaylist={handleOpenAddToPlaylist}
             onToggleSave={toggleLike}
             onToggleLike={toggleLike}
             activeTagFilters={activeTagFilters}
@@ -1330,7 +1410,7 @@ export default function Home() {
       </div>
 
       <div style={{ display: activeView === "saved" ? undefined : "none" }}>
-        <SavedGrid
+        <SavedSection
           cards={savedCards}
           loading={savedLoading}
           likedIds={likedIds}
@@ -1340,6 +1420,7 @@ export default function Home() {
           onPlay={handlePlay}
           onPlayNext={handlePlayNext}
           onAddToQueue={handleAddToQueue}
+          onAddToPlaylist={handleOpenAddToPlaylist}
           onToggleLike={toggleLike}
           activeTagFilters={activeTagFilters}
           isAuthenticated={isAuthenticated}
@@ -1349,6 +1430,13 @@ export default function Home() {
           onHardDelete={handleHardDelete}
           onClearAllRemoved={handleClearAllRemoved}
           onFilterChange={(f) => { savedFilterRef.current = f; }}
+          playlists={playlistsApi.playlists}
+          createPlaylist={playlistsApi.create}
+          renamePlaylist={playlistsApi.rename}
+          deletePlaylist={playlistsApi.remove}
+          removeTrackFromPlaylist={playlistsApi.removeTrack}
+          onPlayPlaylist={handlePlayPlaylist}
+          onShareCard={shareCardGlobal}
         />
       </div>
 
@@ -1365,7 +1453,6 @@ export default function Home() {
             isUnavailable={skippingUnavailable}
             onTogglePlay={handleTogglePlay}
             onClose={handleClosePlayer}
-            onLocate={handleLocateCard}
             onPrevTrack={handlePrevTrack}
             onNextTrack={handleNextTrack}
             hasPrev={canGoPrev}
@@ -1379,6 +1466,7 @@ export default function Home() {
             onToggleMute={handleToggleMute}
             isLiked={likedIds.has(nowPlayingCard.id)}
             onToggleLike={() => toggleLike(nowPlayingCard.id)}
+            onAddToPlaylist={() => handleOpenAddToPlaylist(nowPlayingCard.id)}
             isAuthenticated={isAuthenticated}
             showQueue={showQueue}
             onToggleQueue={() => setShowQueue((v) => !v)}
@@ -1397,9 +1485,19 @@ export default function Home() {
         currentIndex={queueIndex.current}
         cardRegistry={cardRegistry.current}
         onPlayIndex={handlePlayQueueIndex}
+        onPlayTrack={handlePlayCard}
         onRemove={handleRemoveFromQueue}
+        onReorderUpcoming={handleReorderUpcoming}
         likedIds={likedIds}
         onToggleLike={toggleLike}
+      />
+
+      <AddToPlaylistMenu
+        card={addToPlaylistCard}
+        playlists={playlistsApi.playlists}
+        onAdd={playlistsApi.addTrack}
+        onCreate={playlistsApi.create}
+        onClose={() => setAddToPlaylistCard(null)}
       />
 
       <WelcomeScreen show={showWelcome} onDismiss={handleWelcomeDismiss} />

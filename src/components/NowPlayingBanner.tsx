@@ -28,7 +28,6 @@ interface NowPlayingBannerProps {
   isUnavailable?: boolean;
   onTogglePlay: () => void;
   onClose: () => void;
-  onLocate?: () => void;
   onPrevTrack?: () => void;
   onNextTrack?: () => void;
   hasPrev?: boolean;
@@ -42,6 +41,7 @@ interface NowPlayingBannerProps {
   onToggleMute?: () => void;
   isLiked?: boolean;
   onToggleLike?: () => void;
+  onAddToPlaylist?: () => void;
   isAuthenticated?: boolean;
   showQueue?: boolean;
   onToggleQueue?: () => void;
@@ -64,7 +64,6 @@ export default function NowPlayingBanner({
   isUnavailable = false,
   onTogglePlay,
   onClose,
-  onLocate,
   onPrevTrack,
   onNextTrack,
   hasPrev = false,
@@ -78,6 +77,7 @@ export default function NowPlayingBanner({
   onToggleMute,
   isLiked = false,
   onToggleLike,
+  onAddToPlaylist,
   isAuthenticated = true,
   showQueue = false,
   onToggleQueue,
@@ -209,7 +209,6 @@ export default function NowPlayingBanner({
   // Mobile minimize state
   const [isMinimized, setIsMinimized] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const expandedHeightRef = useRef(168);
 
   // Info popover
   const [showInfo, setShowInfo] = useState(false);
@@ -342,17 +341,10 @@ export default function NowPlayingBanner({
   // Mobile viewport detection — reset minimize on desktop resize
   useEffect(() => {
     const update = () => {
-      const mobile = window.innerWidth < 1152;
+      const mobile = window.innerWidth < 500;
       setIsMobile(mobile);
       if (!mobile) setIsMinimized(false);
       setShowVolumeFader(false);
-      // Read CSS-defined expanded height (temporarily remove inline override)
-      const el = document.documentElement;
-      const inlineVal = el.style.getPropertyValue('--player-height');
-      if (inlineVal) el.style.removeProperty('--player-height');
-      const val = parseInt(getComputedStyle(el).getPropertyValue('--player-height'), 10);
-      if (val > 0) expandedHeightRef.current = val;
-      if (inlineVal) el.style.setProperty('--player-height', inlineVal);
     };
     update();
     window.addEventListener('resize', update);
@@ -450,13 +442,20 @@ export default function NowPlayingBanner({
     </Tooltip>
   ) : null;
 
-  // Locate button — also triggers on custom "locate-triggered" event (from keyboard shortcut)
-  const [locateSpin, setLocateSpin] = useState(false);
-  useEffect(() => {
-    const handler = () => { setLocateSpin(true); };
-    document.addEventListener("locate-triggered", handler);
-    return () => document.removeEventListener("locate-triggered", handler);
-  }, []);
+  // Add-to-playlist (+) — plain plus, sits right of shuffle in the transport row.
+  const addToPlaylistButton = () => onAddToPlaylist ? (
+    <Tooltip label={t("card.addToPlaylist")} position="top">
+      <button
+        onClick={(e) => { e.stopPropagation(); onAddToPlaylist(); }}
+        aria-label={t("card.addToPlaylist")}
+        className="shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 ease-out active:scale-95 text-[var(--text-secondary)] hover:text-[var(--text)]"
+      >
+        <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+    </Tooltip>
+  ) : null;
 
   // "I" keyboard shortcut toggles the now-playing track's info — click the visible info button
   // (there are several across breakpoints; pick the one that's actually on screen).
@@ -468,34 +467,6 @@ export default function NowPlayingBanner({
     document.addEventListener("info-toggle-keybind", handler);
     return () => document.removeEventListener("info-toggle-keybind", handler);
   }, []);
-  const locateButton = (size: "sm" | "md" = "md") => onLocate ? (
-    <Tooltip label={t("player.locate")} position="top" hideOnClick>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setLocateSpin(true);
-          onLocate();
-        }}
-        className={`locate-btn shrink-0 flex items-center justify-center hover:text-[var(--text)] transition-all duration-200 ease-out active:scale-95 ${
-          locateSpin ? "text-[var(--text)]" : "text-[var(--text-secondary)]"
-        } ${size === "sm" ? "w-7 h-7" : "w-7 h-7"}`}
-      >
-        <svg
-          className={`${size === "sm" ? "w-4 h-4" : "w-4 h-4"} ${locateSpin ? "animate-[locate-spin_0.5s_ease-in-out]" : ""}`}
-          onAnimationEnd={() => setLocateSpin(false)}
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
-        >
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-          <line x1="12" y1="1" x2="12" y2="7" />
-          <line x1="12" y1="17" x2="12" y2="23" />
-          <line x1="1" y1="12" x2="7" y2="12" />
-          <line x1="17" y1="12" x2="23" y2="12" />
-        </svg>
-      </button>
-    </Tooltip>
-  ) : null;
-
   // Fullscreen toggle (desktop only)
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
@@ -1142,17 +1113,11 @@ export default function NowPlayingBanner({
   return (
     <motion.div
       initial={{ y: "100%", opacity: 0.5 }}
-      /* eslint-disable react-hooks/refs -- framer-motion animate prop reads ref safely */
-      animate={{
-        y: 0,
-        opacity: 1,
-        ...(isMobile ? { height: isMinimized ? 64 : expandedHeightRef.current } : {}),
-      }}
-      /* eslint-enable react-hooks/refs */
+      animate={{ y: 0, opacity: 1 }}
       exit={{ y: "100%", opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={`group player-banner fixed left-0 right-0 min-[1152px]:left-[var(--sidebar-width)] bg-[var(--bg-alt)]/85 backdrop-blur-2xl backdrop-saturate-150 border-t border-[var(--border)]/50 overflow-visible`}
-      style={{ bottom: 0, ...(!isMobile ? { height: "var(--player-height)" } : {}) }}
+      style={{ bottom: 0, height: "var(--player-height)" }}
     >
       {/* Corner tab close — desktop only */}
       {closeButton}
@@ -1205,16 +1170,15 @@ export default function NowPlayingBanner({
 
         {/* CENTER: Two rows — controls on top, seek bar below */}
         <div className="flex flex-col items-center justify-center gap-0.5 min-w-0 w-full">
-          {/* Row 1: info, heart, transport, shuffle, locate */}
+          {/* Row 1: info, heart, transport, shuffle */}
           <div className="flex items-center gap-1.5">
-            <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
             {infoButton("md")}
             {likeButton("sm")}
             {hasPrev ? <Tooltip label={t("player.previous")} position="top">{prevButton(32)}</Tooltip> : prevButton(32)}
             <Tooltip label={isPlaying ? t("player.pause") : t("player.play")} position="top">{playPauseButton(38, 16)}</Tooltip>
             <Tooltip label={t("player.next")} position="top">{nextButton(32)}</Tooltip>
             {autoPlayButton}
-            {locateButton("md")}
+            {addToPlaylistButton()}
             {pitchFader}
           </div>
           {/* Row 2: Seek bar */}
@@ -1225,8 +1189,9 @@ export default function NowPlayingBanner({
           </div>
         </div>
 
-        {/* RIGHT: Queue ··· Volume + Fullscreen */}
-        <div className="flex items-center w-full relative z-10">
+        {/* RIGHT: Share · Queue ··· Volume + Fullscreen */}
+        <div className="flex items-center gap-1.5 w-full relative z-10">
+          <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
           {queueButton}
           <div className="flex items-center gap-2.5 ml-auto">
             {volumeControl(volTrackRef, "hidden min-[1350px]:flex", desktopVolFaderRef)}
@@ -1235,8 +1200,62 @@ export default function NowPlayingBanner({
         </div>
       </div>
 
-      {/* ===== MOBILE layout ===== */}
-      <div className="h-full min-[1152px]:hidden">
+      {/* ===== TABLET layout (500-1152px): Spotify-style 2-row — title gets a roomy row, never truncates ===== */}
+      <div className="h-full hidden min-[500px]:flex min-[1152px]:hidden flex-col justify-center gap-1 px-3">
+        {/* Row 1: art + title/artist (flex) + transport/controls (collapsed volume) */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          {thumbUrl && (
+            <a
+              href={card.source === "youtube" && card.youtubeUrl ? card.youtubeUrl : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              key={card.id}
+              className={`shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-[var(--bg)] shadow-md animate-art-in transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!card.youtubeUrl) e.preventDefault();
+              }}
+            >
+              <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+            </a>
+          )}
+          <div className="flex-1 min-w-0 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
+            {isUnavailable ? (
+              <p className="font-mono text-sm text-[var(--text-muted)] uppercase truncate leading-tight">
+                {t("player.unavailable")}
+              </p>
+            ) : (
+              <>
+                <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
+                  {card.name}
+                </p>
+                <p className="font-mono text-[11px] text-[var(--text-secondary)] uppercase truncate leading-tight">
+                  {card.artist}
+                </p>
+              </>
+            )}
+          </div>
+          <div className="shrink-0 flex items-center gap-1">
+            {likeButton("sm")}
+            {prevButton(30)}
+            {playPauseButton(36, 15)}
+            {nextButton(30)}
+            {autoPlayButton}
+            {addToPlaylistButton()}
+            {queueButton}
+            {volumeControl(volTrackTabletRef, "hidden", tabletVolFaderRef)}
+          </div>
+        </div>
+        {/* Row 2: Seek bar */}
+        <div className="flex items-center gap-1.5">
+          {mobileElapsedLabel}
+          {seekBar(tabletProgressBarRef)}
+          {mobileRemainingLabel}
+        </div>
+      </div>
+
+      {/* ===== MOBILE layout (<500px) ===== */}
+      <div className="h-full min-[500px]:hidden">
         {isMinimized ? (
           /* Minimized Spotify-style bar: art + title/artist + heart + play/pause, progress at bottom */
           <div
@@ -1283,8 +1302,8 @@ export default function NowPlayingBanner({
           </div>
         ) : (
           <>
-          {/* Expanded 3-row layout — narrow mobile (<500px) */}
-          <div className="h-full flex flex-col justify-between px-4 pt-1.5 pb-0 min-[500px]:hidden">
+          {/* Expanded 3-row layout — mobile only (<500px) */}
+          <div className="h-full flex flex-col justify-between px-4 pt-1.5 pb-0">
             {/* Row 1: Chevron + Art + Info */}
             <div className="flex items-center gap-2.5 min-w-0">
               <button
@@ -1376,103 +1395,6 @@ export default function NowPlayingBanner({
             <div className="flex items-center gap-1.5">
               {mobileElapsedLabel}
               {seekBar(mobileProgressBarRef)}
-              {mobileRemainingLabel}
-            </div>
-          </div>
-
-          {/* Expanded 2-row layout — tablet (500-1023px) */}
-          <div className="h-full hidden min-[500px]:flex flex-col justify-between px-3 pt-2 pb-0">
-            {/* Row 1: art + controls */}
-            <div className="grid items-center gap-2" style={{ gridTemplateColumns: "minmax(150px, 1fr) auto minmax(80px, 1fr)" }}>
-              {/* Left: chevron + art + track info */}
-              <div className="flex items-center gap-1.5 min-w-0" style={{ maxWidth: "clamp(280px, 38vw, 420px)" }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setIsMinimized(true); }}
-                  className="shrink-0 w-5 h-7 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-all duration-200 active:scale-95"
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                {thumbUrl && (
-                  <a
-                    href={card.source === "youtube" && card.youtubeUrl ? card.youtubeUrl : undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    key={card.id}
-                    className={`shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-[var(--bg)] shadow-md animate-art-in relative group/art transition-opacity duration-300 ${isUnavailable ? "opacity-40" : ""}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!card.youtubeUrl) e.preventDefault();
-                    }}
-                  >
-                    <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
-                  </a>
-                )}
-                <div className="min-w-0 flex-1 cursor-pointer" onClick={isUnavailable ? undefined : copyTitle}>
-                  {isUnavailable ? (
-                    <p className="font-mono text-xs text-[var(--text-muted)] uppercase truncate leading-tight">
-                      {t("player.unavailable")}
-                    </p>
-                  ) : (
-                    <>
-                      <p className="font-mono text-sm text-[var(--text)] uppercase truncate leading-tight font-bold hover:text-[var(--accent)] transition-colors">
-                        {card.name}
-                      </p>
-                      <p className="font-mono text-[11px] text-[var(--text-secondary)] uppercase truncate leading-tight">
-                        {card.artist}
-                      </p>
-                    </>
-                  )}
-                </div>
-                <div className="shrink-0 ml-auto">
-                  {eqBars}
-                </div>
-              </div>
-              {/* Center: info, heart, transport, shuffle, locate */}
-              <div className="flex items-center justify-center gap-1">
-                <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="sm" />
-                {infoButton("sm")}
-                {likeButton("sm")}
-                {prevButton(28)}
-                {playPauseButton(34, 14)}
-                {nextButton(28)}
-                {onToggleAutoPlay && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleAutoPlay();
-                    }}
-                    className={`relative shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 ease-out active:scale-95 ${
-                      autoPlay
-                        ? "text-[var(--text)]"
-                        : "text-[var(--text-muted)] hover:text-[var(--text)]"
-                    }`}
-                  >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={autoPlay ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 3h5v5" />
-                      <path d="M4 20L21 3" />
-                      <path d="M21 16v5h-5" />
-                      <path d="M15 15l6 6" />
-                      <path d="M4 4l5 5" />
-                    </svg>
-                    <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current transition-opacity duration-200 ${autoPlay ? "opacity-100" : "opacity-0"}`} />
-                  </button>
-                )}
-              </div>
-              {/* Right: queue ··· volume + fullscreen */}
-              <div className="flex items-center w-full relative z-10">
-                {queueButton}
-                <div className="flex items-center gap-3 ml-auto mr-0.5">
-                  {volumeControl(volTrackTabletRef, "hidden md:flex", tabletVolFaderRef)}
-                  {fullscreenButton}
-                </div>
-              </div>
-            </div>
-            {/* Row 2: Seek bar */}
-            <div className="flex items-center gap-1.5">
-              {mobileElapsedLabel}
-              {seekBar(tabletProgressBarRef)}
               {mobileRemainingLabel}
             </div>
           </div>

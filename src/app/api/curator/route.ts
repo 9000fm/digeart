@@ -138,11 +138,12 @@ export async function GET(req: NextRequest) {
       subscriber_count?: number | null;
       curator_notes?: string | null;
       boost_state?: string | null;
+      activity_computed_at?: string | null;
     };
     let channels: ApprovedRow[] | null = null;
     const withMeta = await supabaseAdmin()
       .from("curator_channels")
-      .select("channel_id, name, labels, starred, reviewed_at, notes, activity_tier, last_upload_at, total_uploads, subscriber_count, curator_notes, boost_state")
+      .select("channel_id, name, labels, starred, reviewed_at, notes, activity_tier, last_upload_at, total_uploads, subscriber_count, curator_notes, boost_state, activity_computed_at")
       .eq("status", "approved")
       .order("name");
     if (withMeta.error) {
@@ -171,6 +172,7 @@ export async function GET(req: NextRequest) {
         subscriberCount: c.subscriber_count ?? null,
         curatorNotes: c.curator_notes ?? null,
         boostState: c.boost_state ?? "default",
+        activityComputedAt: c.activity_computed_at ?? null,
       })),
     });
   }

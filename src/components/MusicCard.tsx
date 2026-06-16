@@ -11,6 +11,7 @@ import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
 import { TAGS, TAG_BY_ID, type TagId } from "@/lib/tags";
+import { MIX_MIN_SECONDS } from "@/lib/durations";
 
 interface MusicCardProps {
   card: CardData;
@@ -22,6 +23,7 @@ interface MusicCardProps {
   onPlay: () => void;
   onPlayNext?: () => void;
   onAddToQueue?: () => void;
+  onAddToPlaylist?: () => void;
   onSave: () => void;
   onShare?: () => void;
   isAuthenticated?: boolean;
@@ -58,6 +60,7 @@ export default memo(function MusicCard({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  onAddToPlaylist,
   onSave,
   viewContext = "default",
   isAuthenticated = true,
@@ -176,7 +179,7 @@ export default memo(function MusicCard({
       {/* Duration pill — MOBILE ONLY here (top-left). On sm+ it renders inside the
            top-right stack ABOVE the tags (see below) so it never clashes with the
            bottom-left share button. */}
-      {card.duration && card.duration > 2400 && (
+      {card.duration && card.duration >= MIX_MIN_SECONDS && (
         <span className="sm:hidden absolute top-2 left-2 z-10 px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
           {formatDuration(card.duration)}
         </span>
@@ -184,44 +187,40 @@ export default memo(function MusicCard({
 
       {/* Status tags — top right */}
       {(() => {
-        const isNew = card.publishedAt ? (now - new Date(card.publishedAt).getTime()) / 86400000 <= 100 : false;
+        const isNew = card.publishedAt ? (now - new Date(card.publishedAt).getTime()) / 86400000 <= 60 : false;
         const isHot = !!card.isHot; // top 10% by views (stamped server-side)
         const isGem = !!card.isGem; // editorial: curator-liked track
         const matches: Record<TagId, boolean> = { hot: isHot, gem: isGem, new: isNew };
 
-        const tags: { label: string; color: string }[] = [];
-        const pushTag = (id: TagId) => {
-          const { label, color } = TAG_BY_ID[id];
-          tags.push({ label, color });
-        };
-
-        // When specific filters are active, trust the API — show matching badges
+        // Which tags qualify — filter-driven when a filter is active, else from card data
+        let ids: TagId[];
         if (activeTagFilters.length > 0) {
-          for (const tag of TAGS) {
-            if (activeTagFilters.includes(tag.id)) pushTag(tag.id);
-          }
-          // If no specific tags matched above but filters are set, still compute from data
-          if (tags.length === 0) {
-            for (const tag of TAGS) if (matches[tag.id]) pushTag(tag.id);
-          }
+          ids = TAGS.filter((t) => activeTagFilters.includes(t.id)).map((t) => t.id);
+          if (ids.length === 0) ids = TAGS.filter((t) => matches[t.id]).map((t) => t.id);
         } else {
-          // No filter — compute from card data
-          for (const tag of TAGS) if (matches[tag.id]) pushTag(tag.id);
+          ids = TAGS.filter((t) => matches[t.id]).map((t) => t.id);
         }
+
+        // Cap to 2 status tags — keep the highest-priority (Gem = human pick > Hot >
+        // New), rendered in the usual TAGS order. The duration pill is separate (always
+        // shown for long mixes), so this only limits the colored status tags.
+        const PRIORITY: TagId[] = ["gem", "hot", "new"];
+        const keep = new Set(PRIORITY.filter((id) => ids.includes(id)).slice(0, 2));
+        const tags = TAGS.filter((t) => keep.has(t.id)).map((t) => TAG_BY_ID[t.id]);
 
         // On sm+ the always-on duration pill lives at the TOP of this top-right stack,
         // above any status tags. (Mobile shows it top-left instead — see above.)
-        const hasDuration = !!(card.duration && card.duration > 2400);
+        const hasDuration = !!(card.duration && card.duration >= MIX_MIN_SECONDS);
         if (tags.length === 0 && !hasDuration) return null;
         return (
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end transition-opacity duration-100">
-            {card.duration && card.duration > 2400 && (
+            {card.duration && card.duration >= MIX_MIN_SECONDS && (
               <span className="hidden sm:block px-2.5 py-1 bg-[var(--bg)]/95 text-[var(--text)] border border-[var(--border)]/60 font-mono font-bold text-[10px] rounded-full backdrop-blur-sm shadow-sm">
                 {formatDuration(card.duration)}
               </span>
             )}
             {tags.map((tag) => (
-              <span key={tag.label} className={`px-2.5 py-1 ${tag.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-md shadow-sm`}>
+              <span key={tag.label} className={`px-2.5 py-1 ${tag.color} text-white font-mono text-[10px] font-bold tracking-wider rounded-full shadow-sm`}>
                 {tag.label}
               </span>
             ))}
@@ -303,10 +302,11 @@ export default memo(function MusicCard({
           </button>
 
         {/* Track actions (Play Next / Add to Queue / Add to Playlist) — tablet + desktop */}
-        {(onPlayNext || onAddToQueue) && (
+        {(onPlayNext || onAddToQueue || onAddToPlaylist) && (
           <TrackActionsMenu
             onPlayNext={onPlayNext}
             onAddToQueue={onAddToQueue}
+            onAddToPlaylist={onAddToPlaylist}
             triggerClassName="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 cursor-pointer"
           />
         )}

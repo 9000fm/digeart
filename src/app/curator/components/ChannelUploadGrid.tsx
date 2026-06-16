@@ -1,6 +1,7 @@
 "use client";
 
 import type { Upload } from "../types";
+import { MIX_MIN_SECONDS } from "@/lib/durations";
 
 interface ChannelUploadGridProps {
   uploads: Upload[];
@@ -108,7 +109,7 @@ export function ChannelUploadGrid({
                       TOP
                     </span>
                   )}
-                  {upload.duration != null && upload.duration > 2700 && (
+                  {upload.duration != null && upload.duration >= MIX_MIN_SECONDS && (
                     <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 bg-[var(--text)] text-[var(--bg)] font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm" style={upload.isTopViewed ? { top: 28 } : undefined}>
                       MIXES
                     </span>

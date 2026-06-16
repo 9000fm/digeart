@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeartLikeButton from "./HeartLikeButton";
 import ShareButton from "./ShareButton";
+import TrackActionsMenu from "./TrackActionsMenu";
 import Tooltip from "./Tooltip";
 import { useTranslation } from "./LanguageProvider";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
@@ -18,6 +19,9 @@ interface MusicRowProps {
   onPlay: () => void;
   onSave: () => void;
   onShare?: () => void;
+  onPlayNext?: () => void;
+  onAddToQueue?: () => void;
+  onAddToPlaylist?: () => void;
   isAuthenticated?: boolean;
 }
 
@@ -48,6 +52,9 @@ export default memo(function MusicRow({
   viewContext = "default",
   onPlay,
   onSave,
+  onPlayNext,
+  onAddToQueue,
+  onAddToPlaylist,
   isAuthenticated = true,
 }: MusicRowProps) {
   const { t } = useTranslation();
@@ -136,15 +143,7 @@ export default memo(function MusicRow({
         className="relative shrink-0 flex items-center gap-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <ShareButton
-          trackId={card.id}
-          trackName={card.name}
-          channel={card.artist}
-          youtubeUrl={card.youtubeUrl}
-          size="sm"
-          className="w-6 h-6 rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
-        />
-
+        {/* Order: Info · Share · Like · More(⋯) — overflow menu sits last (before duration) */}
         {/* Info button */}
         <Tooltip label={t("card.info")} position="top" hideOnClick>
           <button
@@ -168,6 +167,15 @@ export default memo(function MusicRow({
             )}
           </button>
         </Tooltip>
+
+        <ShareButton
+          trackId={card.id}
+          trackName={card.name}
+          channel={card.artist}
+          youtubeUrl={card.youtubeUrl}
+          size="sm"
+          className="w-6 h-6 rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
+        />
 
         <Tooltip
           label={
@@ -200,6 +208,15 @@ export default memo(function MusicRow({
             }`}
           />
         </Tooltip>
+
+        {(onPlayNext || onAddToQueue || onAddToPlaylist) && (
+          <TrackActionsMenu
+            onPlayNext={onPlayNext}
+            onAddToQueue={onAddToQueue}
+            onAddToPlaylist={onAddToPlaylist}
+            triggerClassName="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)] [&>svg]:w-4 [&>svg]:h-4 cursor-pointer"
+          />
+        )}
 
         {/* Duration — always visible, fixed-width tabular */}
         {card.duration != null && card.duration > 0 && (

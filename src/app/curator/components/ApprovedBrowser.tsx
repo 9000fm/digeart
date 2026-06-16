@@ -10,12 +10,19 @@ interface ApprovedBrowserProps {
   channels: ApprovedChannel[];
   loading: boolean;
   onEnterAudit: (ch: ApprovedChannel) => void;
+  /** Bulk-rescan progress — dims the list + shows an overlay while running. */
+  scanning?: boolean;
+  scanDone?: number;
+  scanTotal?: number;
 }
 
 export function ApprovedBrowser({
   channels,
   loading,
   onEnterAudit,
+  scanning = false,
+  scanDone = 0,
+  scanTotal = 0,
 }: ApprovedBrowserProps) {
   const [search, setSearch] = useState("");
   const [genreFilter, setGenreFilter] = useState<string | null>(null);
@@ -91,9 +98,11 @@ export function ApprovedBrowser({
       // desc = purple → green → yellow → red → unknown (epic first)
       // asc  = unknown → red → yellow → green → purple (abandoned first)
       const tierOrder: Record<string, number> = { purple: 0, green: 1, yellow: 2, red: 3 };
+      // Starred channels are treated as epic (purple) so they sort to the top.
+      const orderOf = (c: (typeof result)[number]) => (c.isStarred ? 0 : c.activityTier ? (tierOrder[c.activityTier] ?? 4) : 4);
       result = [...result].sort((a, b) => {
-        const aOrder = a.activityTier ? (tierOrder[a.activityTier] ?? 4) : 4;
-        const bOrder = b.activityTier ? (tierOrder[b.activityTier] ?? 4) : 4;
+        const aOrder = orderOf(a);
+        const bOrder = orderOf(b);
         if (aOrder !== bOrder) return (aOrder - bOrder) * flip;
         return a.name.localeCompare(b.name);
       });
@@ -104,7 +113,8 @@ export function ApprovedBrowser({
   // Always show filtered (which includes sorting) — no separate "default" view
 
   return (
-    <>
+    <div className="relative">
+      <div className={scanning ? "opacity-40 pointer-events-none select-none transition-opacity duration-200" : "transition-opacity duration-200"}>
       {/* Search + sort */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
@@ -262,7 +272,7 @@ export function ApprovedBrowser({
                     </span>
                   )}
                   <div className="shrink-0 self-center">
-                    <ActivityDot tier={ch.activityTier} lastUploadAt={ch.lastUploadAt} size="xl" />
+                    <ActivityDot tier={ch.activityTier} lastUploadAt={ch.lastUploadAt} size="xl" starred={ch.isStarred} />
                   </div>
                 </div>
               </button>
@@ -280,6 +290,24 @@ export function ApprovedBrowser({
       <div className="text-center text-[var(--text-muted)] text-[11px] tracking-wider uppercase py-4">
         {channels.length} approved &middot; {starredCount} starred &middot; {untaggedCount} untagged
       </div>
-    </>
+      </div>
+
+      {/* Bulk-rescan overlay */}
+      {scanning && (
+        <div className="absolute inset-0 z-20 flex items-start justify-center pt-32">
+          <div className="flex flex-col items-center gap-3 px-8 py-6 rounded-2xl bg-[var(--bg)]/90 border border-[var(--border)] backdrop-blur-sm shadow-2xl">
+            <p className="font-mono text-[13px] uppercase tracking-widest text-[var(--text)] tabular-nums">
+              scanning {scanDone} / {scanTotal}
+            </p>
+            <div className="w-56 h-1.5 rounded-full bg-[var(--bg-alt)] overflow-hidden">
+              <div
+                className="h-full bg-[var(--accent)] transition-all duration-200"
+                style={{ width: `${scanTotal ? (scanDone / scanTotal) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

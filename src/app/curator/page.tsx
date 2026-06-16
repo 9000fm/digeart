@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { CuratorTab, ApprovedChannel, ApprovedView } from "./types";
 import { useCuratorData } from "./hooks/useCuratorData";
 import { useCuratorActions } from "./hooks/useCuratorActions";
+import { useBulkRescan } from "./hooks/useBulkRescan";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { CuratorStatsBar } from "./components/CuratorStatsBar";
 import { CuratorTabBar } from "./components/CuratorTabBar";
@@ -109,6 +110,18 @@ function CuratorDashboard() {
     ...filteredChannels.map((c) => ({ name: c.name, id: c.id, origin: "auto-filtered", importedAt: c.importedAt })),
   ], [pendingChannels, filteredChannels]);
   reviewListRef.current = reviewChannels;
+
+  // Bulk rescan (shared by stats-bar buttons + approved-list overlay)
+  const rescanOnComplete = useCallback(() => { fetchApproved(); fetchStats(); }, [fetchApproved, fetchStats]);
+  const bulkRescan = useBulkRescan(rescanOnComplete);
+  const allRescanIds = useMemo(() => approvedChannels.map((c) => c.id), [approvedChannels]);
+  const staleRescanIds = useMemo(() => {
+    const THIRTY_D = 30 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    return approvedChannels
+      .filter((c) => !c.activityTier || !c.activityComputedAt || now - new Date(c.activityComputedAt).getTime() > THIRTY_D)
+      .map((c) => c.id);
+  }, [approvedChannels]);
 
   const {
     acting, history, rescanning,
@@ -690,7 +703,17 @@ function CuratorDashboard() {
           </div>
         </div>
 
-        <CuratorStatsBar stats={stats} />
+        <CuratorStatsBar
+          stats={stats}
+          rescanRunning={bulkRescan.running}
+          rescanDone={bulkRescan.done}
+          rescanTotal={bulkRescan.total}
+          rescanFinishedMsg={bulkRescan.finishedMsg}
+          allCount={allRescanIds.length}
+          staleCount={staleRescanIds.length}
+          onRescanAll={() => bulkRescan.start(allRescanIds)}
+          onRescanStale={() => bulkRescan.start(staleRescanIds)}
+        />
         <CuratorTabBar
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -704,6 +727,9 @@ function CuratorDashboard() {
             channels={approvedChannels}
             loading={approvedLoading}
             onEnterAudit={handleEnterAudit}
+            scanning={bulkRescan.running}
+            scanDone={bulkRescan.done}
+            scanTotal={bulkRescan.total}
           />
         )}
 

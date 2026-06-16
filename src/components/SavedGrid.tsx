@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MusicCard from "./MusicCard";
 import MusicRow from "./MusicRow";
@@ -8,11 +8,12 @@ import MaintenanceScreen from "./MaintenanceScreen";
 import { useTranslation } from "./LanguageProvider";
 import { usePreferences } from "./PreferencesProvider";
 import type { CardData } from "@/lib/types";
+import { MIX_MIN_SECONDS } from "@/lib/durations";
 
 type SavedFilterType = "all" | "tracks" | "samples" | "mixes" | "deleted";
 
 function inferTrackType(card: CardData): "tracks" | "samples" | "mixes" {
-  if (card.duration && card.duration >= 2400) return "mixes";
+  if (card.duration && card.duration >= MIX_MIN_SECONDS) return "mixes";
   if (card.duration && card.duration <= 240) return "samples";
   return "tracks";
 }
@@ -27,6 +28,7 @@ interface SavedGridProps {
   onPlay: (id: string) => void;
   onPlayNext?: (id: string) => void;
   onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
   onToggleLike: (id: string) => void;
   activeTagFilters?: string[];
   isAuthenticated?: boolean;
@@ -36,6 +38,9 @@ interface SavedGridProps {
   onHardDelete?: (id: string) => void;
   onClearAllRemoved?: () => void;
   onFilterChange?: (filter: SavedFilterType) => void;
+  // Optional back breadcrumb, rendered INSIDE the sticky bar so it pins with the filters.
+  onBack?: () => void;
+  backLabel?: string;
 }
 
 function daysLeft(deletedAt: string): string {
@@ -56,6 +61,7 @@ export default function SavedGrid({
   onPlay,
   onPlayNext,
   onAddToQueue,
+  onAddToPlaylist,
   onToggleLike,
   activeTagFilters = [],
   isAuthenticated = true,
@@ -65,11 +71,30 @@ export default function SavedGrid({
   onHardDelete,
   onClearAllRemoved,
   onFilterChange,
+  onBack,
+  backLabel,
 }: SavedGridProps) {
   const { t } = useTranslation();
   const { savedViewMode, setSavedViewMode } = usePreferences();
   const [removedOpen, setRemovedOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SavedFilterType>("all");
+
+  // Lazy reveal: render the first PAGE cards, grow on scroll (the saved list can be
+  // hundreds of items — mounting them all at once is the lag when opening Liked).
+  const PAGE = 30;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { setVisibleCount(PAGE); }, [activeFilter, savedViewMode]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) setVisibleCount((c) => c + PAGE); },
+      { rootMargin: "600px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [activeFilter, savedViewMode]);
 
   const tracks = cards.filter((c) => inferTrackType(c) === "tracks");
   const samples = cards.filter((c) => inferTrackType(c) === "samples");
@@ -136,9 +161,10 @@ export default function SavedGrid({
   }
 
   const renderGrid = (items: CardData[]) => (
+    <>
     <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
       <AnimatePresence>
-        {items.map((card) => (
+        {items.slice(0, visibleCount).map((card) => (
           <motion.div
             key={card.id}
             layout
@@ -155,6 +181,7 @@ export default function SavedGrid({
               onPlay={() => onPlay(card.id)}
               onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
               onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
+              onAddToPlaylist={onAddToPlaylist ? () => onAddToPlaylist(card.id) : undefined}
               onSave={() => onToggleLike(card.id)}
               onShare={() => shareCard(card)}
               isAuthenticated={isAuthenticated}
@@ -163,12 +190,15 @@ export default function SavedGrid({
         ))}
       </AnimatePresence>
     </div>
+    {items.length > visibleCount && <div ref={sentinelRef} className="h-1" />}
+    </>
   );
 
   const renderList = (items: CardData[]) => (
+    <>
     <div className="flex flex-col gap-0.5 px-1 sm:px-[7px] py-2">
       <AnimatePresence>
-        {items.map((card) => (
+        {items.slice(0, visibleCount).map((card) => (
           <motion.div
             key={card.id}
             layout
@@ -184,12 +214,17 @@ export default function SavedGrid({
               onPlay={() => onPlay(card.id)}
               onSave={() => onToggleLike(card.id)}
               onShare={() => shareCard(card)}
+              onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
+              onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
+              onAddToPlaylist={onAddToPlaylist ? () => onAddToPlaylist(card.id) : undefined}
               isAuthenticated={isAuthenticated}
             />
           </motion.div>
         ))}
       </AnimatePresence>
     </div>
+    {items.length > visibleCount && <div ref={sentinelRef} className="h-1" />}
+    </>
   );
 
   const render = savedViewMode === "list" ? renderList : renderGrid;
@@ -205,7 +240,14 @@ export default function SavedGrid({
     <div>
       {/* Sub-tabs — sticky below banner+header (and mobile nav strip) */}
       {cards.length > 0 && (
-        <div className="sticky z-30 bg-[var(--bg)] flex items-center gap-1.5 px-2 sm:px-[11px] pt-2 pb-2 top-[calc(var(--banner-height)+var(--header-height-mobile)+var(--nav-height-mobile))] min-[1152px]:top-[calc(var(--banner-height)+var(--header-height))]">
+        <div className="sticky z-30 bg-[var(--bg-alt)]/85 backdrop-blur-md backdrop-saturate-150 top-[calc(var(--banner-height)+var(--header-height-mobile)+var(--nav-height-mobile))] min-[1152px]:top-[calc(var(--banner-height)+var(--header-height))]">
+          {onBack && (
+            <button onClick={onBack} aria-label={backLabel} className="flex items-center gap-2 px-2 sm:px-[11px] pt-2 font-mono text-[11px] uppercase tracking-wider text-[var(--text)]/75 hover:text-[var(--text)] transition-colors cursor-pointer">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              {backLabel}
+            </button>
+          )}
+          <div className="flex items-center gap-1.5 px-2 sm:px-[11px] pt-2 pb-2">
           {filterTabs.map((tab) => (
             <button
               key={tab.key}
@@ -223,16 +265,13 @@ export default function SavedGrid({
           {recentlyRemoved.length > 0 && (
             <button
               onClick={() => handleFilterChange("deleted")}
-              className={`px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer ${
                 activeFilter === "deleted"
                   ? "bg-[var(--text)] text-[var(--bg)] font-bold"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-alt)]"
               }`}
             >
-              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" /><path d="M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-              </svg>
-              ({recentlyRemoved.length})
+              {t("saved.deleted")} ({recentlyRemoved.length})
             </button>
           )}
           {/* View mode toggle (grid / list) — pushed right; disabled on trash */}
@@ -280,16 +319,15 @@ export default function SavedGrid({
               </svg>
             </button>
           </div>
+          </div>
         </div>
       )}
 
       {/* Content */}
       {cards.length > 0 && activeFilter === "all" ? (
-        <>
-          {tracks.length > 0 && render(tracks)}
-          {mixes.length > 0 && render(mixes)}
-          {samples.length > 0 && render(samples)}
-        </>
+        // One chronological feed (newest-first) — recently liked on top,
+        // regardless of type. Per-type tabs still group/filter below.
+        render(cards)
       ) : cards.length > 0 && filteredCards.length > 0 ? (
         render(filteredCards)
       ) : activeFilter !== "all" && activeFilter !== "deleted" && filteredCards.length === 0 ? (

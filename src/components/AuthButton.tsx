@@ -316,9 +316,6 @@ export default function AuthButton({ onGoToSaved, onOpenSettings, onOpenInfo, on
               </svg>
               {t("auth.signInWithGoogle")}
             </button>
-            <p className="font-mono text-[var(--text-muted)] text-center mt-2" style={{ fontSize: 12 }}>
-              {t("auth.saveTracksSync")}
-            </p>
           </div>
         </div>
       )}

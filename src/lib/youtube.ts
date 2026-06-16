@@ -1,5 +1,6 @@
 import { cacheGet, cacheSet } from "./cache";
 import { supabaseAdmin } from "./supabaseAdmin";
+import { MIX_MIN_SECONDS } from "./durations";
 import type { CardData } from "./types";
 
 const API_KEY = process.env.YOUTUBE_API_KEY!;
@@ -67,6 +68,9 @@ type ApprovedChannel = {
  *   boost:  BOOST 1.7 / DEFAULT 1.0 / BURY 0.3
  *   tier:   purple 1.5 / green 1.2 / yellow 1.0 / red 0.6 / null 1.0
  *   star:   starred 1.5 / not 1.0
+ *
+ * Starred channels are treated as epic (purple tier) regardless of their
+ * computed activity tier — a manual star outranks the automatic classification.
  */
 export function computeChannelWeight(
   boost: BoostState | null | undefined,
@@ -74,10 +78,11 @@ export function computeChannelWeight(
   starred: boolean
 ): number {
   const boostMul = boost === "boost" ? 1.7 : boost === "bury" ? 0.3 : 1.0;
+  const effectiveTier = starred ? "purple" : tier;
   const tierMul =
-    tier === "purple" ? 1.5 :
-    tier === "green" ? 1.2 :
-    tier === "red" ? 0.6 :
+    effectiveTier === "purple" ? 1.5 :
+    effectiveTier === "green" ? 1.2 :
+    effectiveTier === "red" ? 0.6 :
     1.0;
   const starMul = starred ? 1.5 : 1.0;
   return boostMul * tierMul * starMul;
@@ -429,7 +434,7 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
   // No filter needed
   if (tags.length === 0 || (tags.length === 1 && tags[0] === "all")) return pool;
 
-  const hundredDaysMs = 100 * 86_400_000;
+  const newWindowMs = 60 * 86_400_000; // "New" = uploaded within 60 days
   const now = Date.now();
 
   return pool.filter((c) => {
@@ -438,7 +443,7 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
       // HOT/GEM are stamped server-side before filtering (top-10% views / curator-liked).
       if (t === "hot" && c.isHot) return true;
       if (t === "gem" && c.isGem) return true;
-      if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= hundredDaysMs) return true;
+      if (t === "new" && c.publishedAt && now - new Date(c.publishedAt).getTime() <= newWindowMs) return true;
     }
     return false;
   });
@@ -1068,7 +1073,7 @@ export async function discoverFromYouTube(
 /** Mix video filter — duration > 45 min, no shorts, music-related */
 function isValidMixVideo(v: YouTubeVideo): boolean {
   if (v.title === "Private video" || v.title === "Deleted video") return false;
-  if (!v.duration || v.duration < 2700) return false; // 45 min threshold (Part C)
+  if (!v.duration || v.duration < MIX_MIN_SECONDS) return false; // a mix is MIX_MIN_SECONDS or longer
   const lower = v.title.toLowerCase();
   if (lower.includes("#shorts") || lower.includes("#short")) return false;
   if (!titleContainsAny(v.title, MIX_TITLE_KEYWORDS)) {
@@ -1103,7 +1108,7 @@ async function buildMixesPool(): Promise<CardData[]> {
     ) ?? false;
   const filtered = combined.filter((rv) => {
     const dur = rv.video.duration ?? 0;
-    if (dur > 2700 && isSampleLabeled(rv.labels)) return false;
+    if (dur >= MIX_MIN_SECONDS && isSampleLabeled(rv.labels)) return false;
     return true;
   });
 
@@ -1180,7 +1185,7 @@ const STRICT_SAMPLE_LABELS = [
 /** Full YouTube rebuild for samples pool */
 function isValidSampleVideo(v: YouTubeVideo): boolean {
   if (v.title === "Private video" || v.title === "Deleted video") return false;
-  if (!v.duration || v.duration > 2700 || v.duration < 30) return false;
+  if (!v.duration || v.duration >= MIX_MIN_SECONDS || v.duration < 30) return false; // sample must sit below the mix floor
   const lower = v.title.toLowerCase();
   if (lower.includes("#shorts") || lower.includes("#short")) return false;
   if (lower.includes("shorts") && lower.length < 80) return false;

@@ -72,7 +72,7 @@ export default function SettingsPanel({ open, onClose, anchorRect, onRunTutorial
                     }
                   : {
                       top: anchorRect.top - 8,
-                      left: anchorRect.right + 12,
+                      left: anchorRect.right + 18,
                       transform: "translateY(-100%)",
                     }
                 : {

@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import HeartLikeButton from "./HeartLikeButton";
 import { useTheme } from "./ThemeProvider";
 import { useTranslation } from "./LanguageProvider";
+import { getPlayHistory, type PlayHistoryEntry } from "@/lib/playHistory";
 import type { CardData } from "@/lib/types";
 
 interface QueuePanelProps {
@@ -14,12 +15,14 @@ interface QueuePanelProps {
   currentIndex: number;
   cardRegistry: Map<string, CardData>;
   onPlayIndex: (index: number) => void;
+  onPlayTrack?: (card: CardData) => void;
   onRemove?: (index: number) => void;
+  onReorderUpcoming?: (ids: string[]) => void;
   likedIds: Set<string>;
   onToggleLike: (id: string) => void;
 }
 
-function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggleLike, isMobile = false }: {
+function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggleLike, isMobile = false, hoverBg = true }: {
   card: CardData;
   isCurrent: boolean;
   dimmed: boolean;
@@ -28,23 +31,24 @@ function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggl
   isLiked: boolean;
   onToggleLike: () => void;
   isMobile?: boolean;
+  hoverBg?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <button
       onClick={onClick}
-      className={`group/qrow w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+      className={`group/qrow w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-75 cursor-pointer ${
         isCurrent
           ? "bg-[var(--text)]/90 text-[var(--bg)]"
-          : "hover:bg-[var(--bg-alt)]/60"
-      } ${dimmed ? "opacity-50" : ""}`}
+          : (hoverBg ? "hover:bg-[var(--bg-alt)]/60" : "")
+      }`}
     >
       <img
         src={card.imageSmall || card.image}
         alt=""
-        className="w-9 h-9 rounded-md object-cover shrink-0"
+        className={`w-9 h-9 rounded-md object-cover shrink-0 ${dimmed ? "opacity-50" : ""}`}
       />
-      <div className={`min-w-0 text-left ${isCurrent && isMobile ? "" : "flex-1"}`}>
+      <div className={`min-w-0 text-left ${dimmed ? "opacity-50" : ""} ${isCurrent && isMobile ? "" : "flex-1"}`}>
         <p className={`font-mono text-[13px] uppercase truncate leading-tight font-bold ${
           isCurrent ? "text-[var(--bg)]" : "text-[var(--text)]"
         }`}>
@@ -111,6 +115,51 @@ function QueueHeart({ isLiked, trackId, onToggleLike, isCurrent }: { isLiked: bo
   );
 }
 
+/** Up-next row — draggable via a grip handle (handle-only drag so the panel can still scroll). */
+function UpNextRow({ id, card, onPlay, onRemove, isLiked, onToggleLike }: {
+  id: string;
+  card: CardData;
+  onPlay: () => void;
+  onRemove?: () => void;
+  isLiked: boolean;
+  onToggleLike: () => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={id}
+      dragListener={false}
+      dragControls={controls}
+      whileDrag={{ zIndex: 1 }}
+      className="list-none flex items-center rounded-lg hover:bg-[var(--bg-alt)]/60 transition-colors duration-75"
+    >
+      <button
+        aria-label="Reorder"
+        onPointerDown={(e) => { e.preventDefault(); controls.start(e); }}
+        className="shrink-0 h-9 flex items-center justify-center pl-3 pr-2 cursor-grab active:cursor-grabbing text-[var(--text)]/60 touch-none"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+      </button>
+      <div className="flex-1 min-w-0">
+        <QueueRow
+          card={card}
+          isCurrent={false}
+          dimmed={false}
+          onClick={onPlay}
+          onRemove={onRemove}
+          isLiked={isLiked}
+          onToggleLike={onToggleLike}
+          hoverBg={false}
+        />
+      </div>
+    </Reorder.Item>
+  );
+}
+
 export default function QueuePanel({
   isOpen,
   onClose,
@@ -118,15 +167,19 @@ export default function QueuePanel({
   currentIndex,
   cardRegistry,
   onPlayIndex,
+  onPlayTrack,
   onRemove,
+  onReorderUpcoming,
   likedIds,
   onToggleLike,
 }: QueuePanelProps) {
   const { t } = useTranslation();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const currentRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [panelRight, setPanelRight] = useState<number | null>(null);
+  const [tab, setTab] = useState<"queue" | "history">("queue");
+  const [history, setHistory] = useState<PlayHistoryEntry[]>([]);
+  const currentRowRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentId = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1152);
@@ -135,20 +188,11 @@ export default function QueuePanel({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Position desktop panel above the queue button (layoutEffect to avoid slide)
-  useLayoutEffect(() => {
-    if (!isOpen || isMobile) return;
-    const btn = document.querySelector("[data-queue-btn]") as HTMLElement | null;
-    if (!btn) return;
-    const update = () => {
-      const rect = btn.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      setPanelRight(Math.max(16, window.innerWidth - centerX - 180));
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [isOpen, isMobile]);
+  // Read persistent listening history when the History tab is shown — and refresh it
+  // whenever the playing track changes, so a new play shows up live.
+  useEffect(() => {
+    if (isOpen && tab === "history") setHistory(getPlayHistory());
+  }, [isOpen, tab, currentId]);
 
   // Close on Escape
   useEffect(() => {
@@ -160,18 +204,18 @@ export default function QueuePanel({
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
-  // Auto-dismiss after 10s of inactivity (desktop/tablet only)
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resetIdleTimer = useCallback(() => {
-    if (isMobile) return;
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => onClose(), 10000);
-  }, [isMobile, onClose]);
-
+  // On open / tab switch / new track: Queue → keep the current track in view;
+  // History → jump to the top (the just-played track is now first).
   useEffect(() => {
-    if (isOpen && !isMobile) resetIdleTimer();
-    return () => { if (idleTimer.current) clearTimeout(idleTimer.current); };
-  }, [isOpen, isMobile, resetIdleTimer, queue, currentIndex]);
+    if (!isOpen) return;
+    requestAnimationFrame(() => {
+      if (tab === "history") {
+        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      } else {
+        currentRowRef.current?.scrollIntoView({ block: "center" });
+      }
+    });
+  }, [isOpen, tab, currentId]);
 
   // Lock body scroll when mobile sheet is open (iOS Safari-safe)
   useEffect(() => {
@@ -191,83 +235,127 @@ export default function QueuePanel({
     }
   }, [isOpen, isMobile]);
 
-  // Desktop: 4 prev + 1 current + 5 next. Mobile: 3 prev + 1 current + 4 next.
-  const prevCount = isMobile ? 2 : 4;
-  const nextCount = isMobile ? 3 : 5;
+  // Full queue — every track, scrollable (previously-played dimmed, then current, then up next)
+  const queueRows = queue
+    .map((id, index) => ({ id, index, card: cardRegistry.get(id) }))
+    .filter((r): r is { id: string; index: number; card: CardData } => !!r.card);
 
-  const previousTracks = queue.slice(Math.max(0, currentIndex - prevCount), currentIndex).map((id, i) => ({ id, index: Math.max(0, currentIndex - prevCount) + i, card: cardRegistry.get(id) })).filter(t => t.card);
-  const currentTrack = currentIndex >= 0 && currentIndex < queue.length ? { id: queue[currentIndex], card: cardRegistry.get(queue[currentIndex]) } : null;
-  const upNextTracks = queue.slice(currentIndex + 1, currentIndex + 1 + nextCount).map((id, i) => ({ id, index: currentIndex + 1 + i, card: cardRegistry.get(id) })).filter(t => t.card);
+  const headRows = queueRows.filter((r) => r.index <= currentIndex);   // previously-played + current (static)
+  const upcomingRows = queueRows.filter((r) => r.index > currentIndex); // up next (draggable)
+  const upcomingIds = upcomingRows.map((r) => r.id);
+  const headerClass = "font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1";
 
-  // Asymmetric warm: previous fades more, up next holds bright, edges dip
-  const prevOpacities = isMobile ? [0.22, 0.85] : [0.22, 0.77, 0.85, 0.92];
-  const nextOpacities = isMobile ? [0.95, 0.85, 0.40] : [0.98, 0.95, 0.95, 0.85, 0.40];
-  const prevFade = (dist: number) => prevOpacities[prevCount - dist] ?? 0.80;
-  const nextFade = (dist: number) => nextOpacities[dist - 1] ?? 0.80;
-
-  const layoutAnim = { type: "spring" as const, stiffness: 300, damping: 24, mass: 1.2 };
-
-  // Build one flat list so framer-motion can track each track across sections
-  const rows: { id: string; index: number; card: CardData; section: "prev" | "current" | "next"; dist: number }[] = [];
-  for (const t of previousTracks) {
-    rows.push({ id: t.id, index: t.index, card: t.card!, section: "prev", dist: previousTracks.length - previousTracks.indexOf(t) });
-  }
-  if (currentTrack?.card) {
-    rows.push({ id: currentTrack.id, index: currentIndex, card: currentTrack.card, section: "current", dist: 0 });
-  }
-  for (const t of upNextTracks) {
-    rows.push({ id: t.id, index: t.index, card: t.card!, section: "next", dist: upNextTracks.indexOf(t) + 1 });
-  }
-
-  const content = (
-    <div ref={scrollRef} className="overflow-hidden px-2 py-2">
-      {rows.map((row, i) => {
-        // Insert section headers at boundaries
-        const prevRow = rows[i - 1];
-        const showPrevHeader = row.section === "prev" && (!prevRow || prevRow.section !== "prev");
-        const showCurrentHeader = row.section === "current";
-        const showNextHeader = row.section === "next" && prevRow?.section !== "next";
-
-        const opacity = row.section === "prev" ? prevFade(row.dist)
-          : row.section === "next" ? nextFade(row.dist)
-          : 1;
-
+  const queueContent = (
+    <div className="px-2 py-2">
+      {/* Previously played + current — fixed (not reorderable) */}
+      {headRows.map((row) => {
+        const isPrev = row.index < currentIndex;
+        const isCurrent = row.index === currentIndex;
         return (
-          <Fragment key={row.id}>
-            {showPrevHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pb-1 relative z-[1]">{t("queue.previouslyPlayed")}</p>
-            )}
-            {showCurrentHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">{t("queue.nowPlaying")}</p>
-            )}
-            {showNextHeader && (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text)]/70 font-bold px-3 pt-1.5 pb-1 relative z-[1]">{t("queue.upNext")}</p>
-            )}
-            <motion.div layout transition={layoutAnim}>
-              <div style={{ opacity }}>
-                <QueueRow
-                  card={row.card}
-                  isCurrent={row.section === "current"}
-                  dimmed={row.section === "prev"}
-                  onClick={row.section === "current" ? () => {} : () => onPlayIndex(row.index)}
-                  onRemove={onRemove ? () => onRemove(row.index) : undefined}
-                  isLiked={likedIds.has(row.id)}
-                  onToggleLike={() => onToggleLike(row.id)}
-                  isMobile={row.section === "current" ? isMobile : false}
-                />
-              </div>
-            </motion.div>
-          </Fragment>
+          <div key={row.id} ref={isCurrent ? currentRowRef : undefined}>
+            {isPrev && row.index === 0 && <p className={`${headerClass} pt-0`}>{t("queue.previouslyPlayed")}</p>}
+            {isCurrent && <p className={headerClass}>{t("queue.nowPlaying")}</p>}
+            <QueueRow
+              card={row.card}
+              isCurrent={isCurrent}
+              dimmed={isPrev}
+              onClick={isCurrent ? () => {} : () => onPlayIndex(row.index)}
+              onRemove={onRemove && !isCurrent ? () => onRemove(row.index) : undefined}
+              isLiked={likedIds.has(row.id)}
+              onToggleLike={() => onToggleLike(row.id)}
+              isMobile={isCurrent ? isMobile : false}
+            />
+          </div>
         );
       })}
 
-      {queue.length === 0 && (
+      {/* Up next — drag to reorder (handle only) */}
+      {upcomingRows.length > 0 && (
+        <>
+          <p className={headerClass}>{t("queue.upNext")}</p>
+          {onReorderUpcoming ? (
+            <Reorder.Group axis="y" values={upcomingIds} onReorder={onReorderUpcoming} className="list-none m-0 p-0">
+              {upcomingRows.map((row) => (
+                <UpNextRow
+                  key={row.id}
+                  id={row.id}
+                  card={row.card}
+                  onPlay={() => onPlayIndex(row.index)}
+                  onRemove={onRemove ? () => onRemove(row.index) : undefined}
+                  isLiked={likedIds.has(row.id)}
+                  onToggleLike={() => onToggleLike(row.id)}
+                />
+              ))}
+            </Reorder.Group>
+          ) : (
+            upcomingRows.map((row) => (
+              <QueueRow
+                key={row.id}
+                card={row.card}
+                isCurrent={false}
+                dimmed={false}
+                onClick={() => onPlayIndex(row.index)}
+                onRemove={onRemove ? () => onRemove(row.index) : undefined}
+                isLiked={likedIds.has(row.id)}
+                onToggleLike={() => onToggleLike(row.id)}
+              />
+            ))
+          )}
+        </>
+      )}
+
+      {queueRows.length === 0 && (
         <div className="flex items-center justify-center py-8">
           <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t("queue.empty")}</p>
         </div>
       )}
     </div>
   );
+
+  const historyContent = (
+    <div className="px-2 py-2">
+      {history.length === 0 ? (
+        <div className="flex items-center justify-center py-8">
+          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{t("queue.empty")}</p>
+        </div>
+      ) : (
+        history.map((entry, i) => (
+          <QueueRow
+            key={`${entry.playedAt}-${entry.card.id}-${i}`}
+            card={entry.card}
+            isCurrent={entry.card.id === currentId}
+            dimmed={entry.card.id !== currentId}
+            onClick={() => onPlayTrack?.(entry.card)}
+            isLiked={likedIds.has(entry.card.id)}
+            onToggleLike={() => onToggleLike(entry.card.id)}
+          />
+        ))
+      )}
+    </div>
+  );
+
+  const tabToggle = (
+    <div className="flex items-center gap-1">
+      {([
+        { id: "queue" as const, label: t("queue.title") },
+        { id: "history" as const, label: t("queue.previouslyPlayed") },
+      ]).map((tb) => (
+        <button
+          key={tb.id}
+          onClick={() => setTab(tb.id)}
+          className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+            tab === tb.id
+              ? "bg-[var(--text)]/10 text-[var(--text)] font-bold"
+              : "text-[var(--text)]/45 hover:text-[var(--text)]"
+          }`}
+        >
+          {tb.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const content = tab === "queue" ? queueContent : historyContent;
 
   // Mobile: bottom sheet
   if (isMobile) {
@@ -285,6 +373,7 @@ export default function QueuePanel({
               onClick={(e) => { e.stopPropagation(); onClose(); }}
             />
             <motion.div
+              ref={scrollRef}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -298,7 +387,7 @@ export default function QueuePanel({
                 <div className="w-8 h-1 rounded-full bg-[var(--text-muted)]/30" />
               </div>
               <div className="px-1 pb-2">
-                <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold px-4 py-2">{t("queue.title")}</p>
+                <div className="px-3 py-2">{tabToggle}</div>
                 {content}
               </div>
             </motion.div>
@@ -308,27 +397,29 @@ export default function QueuePanel({
     );
   }
 
-  // Desktop: anchored panel — non-modal, player stays interactive
+  // Desktop: tall right-docked panel — sits between the top nav and the player
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="fixed w-[360px] z-[60] bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
-          style={{ bottom: "calc(var(--player-height) + 8px)", right: panelRight != null ? `${panelRight}px` : 64 }}
-          onMouseEnter={resetIdleTimer}
-          onMouseMove={resetIdleTimer}
+          className="fixed w-[400px] z-[60] flex flex-col bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
+          style={{
+            top: "calc(var(--banner-height) + var(--header-height) + 8px)",
+            bottom: "calc(var(--player-height) + 8px)",
+            right: "16px",
+          }}
         >
-          <div className="px-1 py-2">
-            <div className="flex items-center justify-between px-4 py-1.5">
-              <p className="font-mono text-xs uppercase tracking-wider text-[var(--text)] font-bold">{t("queue.title")}</p>
-              <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text)]/50 hover:bg-[var(--text)]/10 hover:text-[var(--text)] active:scale-90 transition-all duration-75 cursor-pointer" aria-label={t("queue.close")}>
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
-            </div>
+          <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
+            {tabToggle}
+            <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text)]/50 hover:bg-[var(--text)]/10 hover:text-[var(--text)] active:scale-90 transition-all duration-75 cursor-pointer" aria-label={t("queue.close")}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
             {content}
           </div>
         </motion.div>

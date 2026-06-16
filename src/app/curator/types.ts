@@ -46,6 +46,7 @@ export interface ApprovedChannel {
   subscriberCount?: number | null;
   curatorNotes?: string | null;
   boostState?: BoostState | null;
+  activityComputedAt?: string | null;
 }
 
 export interface CuratorStats {

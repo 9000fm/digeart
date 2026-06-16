@@ -18,6 +18,13 @@ html {
   }
 }
 
+/* Make --player-height animatable so the player + page padding ease together */
+@property --player-height {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 148px;
+}
+
 :root {
   --sidebar-width: 68px;
   --banner-height: 28px;
@@ -25,6 +32,7 @@ html {
   --header-height-mobile: 64px;
   --nav-height-mobile: 52px;
   --player-height: 148px;
+  transition: --player-height 220ms ease;
 
   /* Light theme (default) */
   --bg: #ffffff;
@@ -55,6 +63,11 @@ html {
 }
 
 html {
+  /* Horizontal-overflow guard lives ONLY on html — which IS the document scroll
+     container (document.scrollingElement). Do NOT also put overflow-x on body: that
+     makes body a SECOND scroll container, and position:sticky inside it then binds to
+     body (which never scrolls) instead of the window → sticky silently dies. Verified
+     in-browser. (clip would be cleaner but LightningCSS downgrades it to hidden.) */
   overflow-x: hidden;
 }
 
@@ -62,7 +75,6 @@ body {
   background: var(--bg);
   color: var(--text);
   color-scheme: light;
-  overflow-x: hidden;
 }
 [data-theme="dark"] body {
   color-scheme: dark;
@@ -95,16 +107,6 @@ body {
 .sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
-}
-
-/* Filter icon pulse on toggle */
-@keyframes filter-icon-pulse {
-  0%   { opacity: 1; }
-  30%  { opacity: 0.4; }
-  100% { opacity: 1; }
-}
-.filter-icon-pulse {
-  animation: filter-icon-pulse 0.25s ease-out;
 }
 
 /* Locate button Y-axis spin */
@@ -457,17 +459,9 @@ body {
   animation: locate-flash 1.6s ease-in-out;
 }
 
-/* Now-playing banner scrolling text */
-.nowplaying-track {
-  animation: marquee-scroll 25s linear infinite;
-  will-change: transform;
-}
-
-/* Responsive player height */
+/* Responsive player height — mobile 3-row player <500px (148px default),
+   desktop single-row player ≥500px (used on BOTH tablet and desktop). */
 @media (min-width: 500px) {
-  :root { --player-height: 96px; }
-}
-@media (min-width: 1152px) {
   :root { --player-height: 90px; }
 }
 
@@ -594,10 +588,6 @@ body {
   height: 16px !important;
 }
 
-/* Close wedge tab — subtle edge highlight on the clipped shape */
-.close-wedge-edge {
-  filter: drop-shadow(0 0 0.5px var(--border));
-}
 
 /* Album art track-change animation */
 @keyframes art-fade-in {
