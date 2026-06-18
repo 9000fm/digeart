@@ -173,7 +173,9 @@ export default function DiscoverGrid({
     <>
       {loading ? (
         <div className="dot-grid grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-[11px] p-2 sm:p-[11px]">
-          {Array.from({ length: 25 }).map((_, i) => (
+          {/* 35 = 5×7: fills complete rows at the wide breakpoints so the last row
+              never shows a half-empty gap during the skeleton flash. */}
+          {Array.from({ length: 35 }).map((_, i) => (
             <div
               key={i}
               className="aspect-square skeleton-shimmer rounded-md"

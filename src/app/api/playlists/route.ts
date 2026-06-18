@@ -155,11 +155,14 @@ export async function POST(req: NextRequest) {
       const { playlistId, videoId, cardData } = body ?? {};
       if (!playlistId || !videoId || !cardData) return NextResponse.json({ error: "Bad request" }, { status: 400 });
       if (!(await owns(playlistId))) return NextResponse.json({ error: "Not found" }, { status: 404 });
-      // Append to the end: next position = current track count.
-      const { count } = await db.from("playlist_tracks")
-        .select("id", { count: "exact", head: true }).eq("playlist_id", playlistId);
+      // Append to the end: next position = max(position)+1. Using max (not count) stays
+      // correct after removals leave gaps — count could collide with an existing position.
+      const { data: last } = await db.from("playlist_tracks")
+        .select("position").eq("playlist_id", playlistId)
+        .order("position", { ascending: false }).limit(1).maybeSingle();
+      const nextPos = (last?.position ?? -1) + 1;
       const { error } = await db.from("playlist_tracks").upsert(
-        { playlist_id: playlistId, video_id: videoId, position: count ?? 0, card_data: cardData },
+        { playlist_id: playlistId, video_id: videoId, position: nextPos, card_data: cardData },
         { onConflict: "playlist_id,video_id", ignoreDuplicates: true }
       );
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -180,9 +183,11 @@ export async function POST(req: NextRequest) {
       if (!playlistId || !Array.isArray(orderedVideoIds)) return NextResponse.json({ error: "Bad request" }, { status: 400 });
       if (!(await owns(playlistId))) return NextResponse.json({ error: "Not found" }, { status: 404 });
       // Rewrite positions to match the new order. Small N (personal playlists).
+      // Surface any failure so the client can re-sync instead of trusting a half-written order.
       for (let i = 0; i < orderedVideoIds.length; i++) {
-        await db.from("playlist_tracks").update({ position: i })
+        const { error } = await db.from("playlist_tracks").update({ position: i })
           .eq("playlist_id", playlistId).eq("video_id", orderedVideoIds[i]);
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       }
       await touch(playlistId);
       return NextResponse.json({ ok: true });

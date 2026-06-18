@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFloating, autoUpdate, offset, flip, shift, size, type ReferenceType } from "@floating-ui/react";
 import { useTranslation } from "./LanguageProvider";
 import PlaylistCover from "./PlaylistCover";
 import type { CardData, Playlist } from "@/lib/types";
@@ -11,12 +12,14 @@ import type { CardData, Playlist } from "@/lib/types";
 // Mounted once in page.tsx; opened by setting the card (null = closed).
 export default function AddToPlaylistMenu({
   card,
+  anchor,
   playlists,
   onAdd,
   onCreate,
   onClose,
 }: {
   card: CardData | null;
+  anchor?: { x: number; y: number; el: HTMLElement | null } | null;
   playlists: Playlist[];
   onAdd: (playlistId: string, card: CardData) => Promise<boolean> | void;
   onCreate: (name: string) => Promise<Playlist | null>;
@@ -28,8 +31,11 @@ export default function AddToPlaylistMenu({
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Reset the create-form when the menu closes (card cleared) — in cleanup so the
+  // setState isn't synchronous in the effect body.
   useEffect(() => {
-    if (!card) { setCreating(false); setName(""); setBusy(false); }
+    if (!card) return;
+    return () => { setCreating(false); setName(""); setBusy(false); };
   }, [card]);
 
   useEffect(() => {
@@ -59,23 +65,66 @@ export default function AddToPlaylistMenu({
     onClose();
   };
 
+  const MENU_W = 300;
+
+  // Reference = the trigger element (so the popup follows it on resize/scroll), or a
+  // virtual element at the click point if the trigger is gone (opened from the ⋮ menu,
+  // which closes itself). Floating UI handles flip (open up near the bottom edge),
+  // shift (stay in viewport) and size (cap height) — no hand-rolled positioning.
+  const reference = useMemo<ReferenceType | null>(() => {
+    if (!anchor) return null;
+    if (anchor.el && typeof document !== "undefined" && document.contains(anchor.el)) return anchor.el;
+    const { x, y } = anchor;
+    return { getBoundingClientRect: () => ({ width: 0, height: 0, x, y, top: y, left: x, right: x, bottom: y }) as DOMRect };
+  }, [anchor]);
+
+  const { refs, floatingStyles } = useFloating<ReferenceType>({
+    open: !!card,
+    strategy: "fixed",
+    // top/left positioning (not transform) so framer-motion's scale animation on the
+    // same element doesn't overwrite Floating UI's translate and drop it to 0,0.
+    transform: false,
+    placement: "bottom-start",
+    middleware: [
+      offset(8),
+      flip({ padding: 8 }),
+      shift({ padding: 8 }),
+      size({
+        padding: 8,
+        apply({ availableHeight, elements }) {
+          elements.floating.style.maxHeight = `${Math.min(availableHeight, Math.round(window.innerHeight * 0.7))}px`;
+        },
+      }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+
+  // setReference (not setPositionReference) so whileElementsMounted=autoUpdate fires
+  // and the popup actually positions. With <ReferenceType> it accepts a real element
+  // OR the virtual click-point element (fallback when opened from the ⋮ menu).
+  useEffect(() => { refs.setReference(reference); }, [reference, refs]);
+  // Floating UI's refs are stable setter callbacks, not React refs — the rule misfires.
+   
+  const { setFloating } = refs;
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
     <AnimatePresence>
       {card && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100]"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.12 }}
           onClick={onClose}
         >
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <motion.div
+            ref={setFloating}
             onClick={(e) => e.stopPropagation()}
-            initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            className="relative w-full max-w-[340px] max-h-[70vh] flex flex-col rounded-2xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
+            style={{ ...floatingStyles, width: MENU_W }}
+            className="flex flex-col rounded-xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl overflow-hidden"
           >
             <div className="px-4 pt-4 pb-3 flex items-center gap-3 border-b border-[var(--border)]/40">
               <img src={card.imageSmall || card.image} alt="" className="w-10 h-10 rounded-md object-cover shrink-0" />
@@ -111,7 +160,7 @@ export default function AddToPlaylistMenu({
                   onClick={() => setCreating(true)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--accent)]/12 transition-colors cursor-pointer"
                 >
-                  <span className="w-10 h-10 rounded-md bg-[var(--bg)] border border-dashed border-[var(--border)] flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 rounded-md bg-[var(--bg)] border border-[var(--border)]/60 flex items-center justify-center shrink-0">
                     <svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                   </span>
                   <span className="font-mono text-[12px] uppercase tracking-wider text-[var(--text)] font-bold">{t("playlist.new")}</span>

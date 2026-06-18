@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Space_Mono, Big_Shoulders } from "next/font/google";
+import { Space_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { SessionProvider } from "next-auth/react";
 import ThemeProvider from "@/components/ThemeProvider";
@@ -20,11 +20,14 @@ function detectLocaleFromHeader(header: string | null): Locale {
 }
 
 const spaceMono = Space_Mono({ subsets: ["latin"], weight: ["400", "700"] });
-const bigShoulders = Big_Shoulders({
-  subsets: ["latin"],
+// Self-hosted (was next/font/google) — kills the dev-only "Failed to find font
+// override values for 'Big Shoulders'" warning Next emits when its metrics DB
+// lacks the renamed family. Same 700-weight latin face, no external fetch.
+const bigShoulders = localFont({
+  src: "./fonts/BigShoulders-Bold.woff2",
   weight: "700",
   variable: "--font-banner",
-  adjustFontFallback: false,
+  display: "swap",
 });
 const displayFont = localFont({
   src: "./fonts/FlexingDemoRegular.ttf",

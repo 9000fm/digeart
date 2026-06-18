@@ -21,6 +21,9 @@ interface PlaylistDetailProps {
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   isAuthenticated?: boolean;
+  // Changes when this playlist is mutated elsewhere (e.g. add-to-playlist from the
+  // player) so the open detail refetches instead of showing a stale track list.
+  refreshSignal?: string;
 }
 
 // One draggable list row (handle-only drag so the page can still scroll).
@@ -76,6 +79,7 @@ function TrackRow({ track, isCurrent, isLiked, onPlay, onRemove, onToggleLike }:
 export default function PlaylistDetail({
   playlistId, onBack, playingId, isPlaying, likedIds,
   onPlayPlaylist, onToggleLike, onShare, onRemoveTrack, onRename, onDelete, isAuthenticated = true,
+  refreshSignal,
 }: PlaylistDetailProps) {
   const { t } = useTranslation();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
@@ -88,15 +92,21 @@ export default function PlaylistDetail({
   const [draftName, setDraftName] = useState("");
   const renameRef = useRef<HTMLInputElement>(null);
 
+  // Show the skeleton only on a true (re)open — a refreshSignal-triggered refetch
+  // updates the list silently, no loading flash.
+  const loadedPlaylistRef = useRef<string | null>(null);
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    // Shows the skeleton only on a true (re)open, not on a silent refetch; intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (loadedPlaylistRef.current !== playlistId) setLoading(true);
+    loadedPlaylistRef.current = playlistId;
     fetchPlaylist(playlistId)
       .then(({ playlist, tracks }) => { if (alive) { setPlaylist(playlist); setTracks(tracks); } })
       .catch(() => { /* ignore */ })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [playlistId]);
+  }, [playlistId, refreshSignal]);
 
   useEffect(() => { if (renaming) renameRef.current?.focus(); }, [renaming]);
 

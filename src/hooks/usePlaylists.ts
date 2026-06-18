@@ -42,13 +42,17 @@ export function usePlaylists(isAuthenticated: boolean) {
   }, []);
 
   const rename = useCallback(async (id: string, name: string) => {
-    setPlaylists((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
-    await apiRename(id, name);
+    let snapshot: Playlist[] = [];
+    setPlaylists((prev) => { snapshot = prev; return prev.map((p) => (p.id === id ? { ...p, name } : p)); });
+    const res = await apiRename(id, name);
+    if (!res.ok) setPlaylists(snapshot); // roll back — the save didn't stick
   }, []);
 
   const remove = useCallback(async (id: string) => {
-    setPlaylists((prev) => prev.filter((p) => p.id !== id));
-    await apiDelete(id);
+    let snapshot: Playlist[] = [];
+    setPlaylists((prev) => { snapshot = prev; return prev.filter((p) => p.id !== id); });
+    const res = await apiDelete(id);
+    if (!res.ok) setPlaylists(snapshot); // roll back — the delete didn't stick
   }, []);
 
   const addTrack = useCallback(async (id: string, card: CardData) => {

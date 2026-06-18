@@ -72,6 +72,7 @@ export default memo(function MusicCard({
   const [turnReached, setTurnReached] = useState(false); // this card's slot in the reading-order ripple has arrived
   const [showInfo, setShowInfo] = useState(false);
   const [shareOpen, setShareOpen] = useState(false); // keep the card "hovered" while its share menu is open
+  const [menuOpen, setMenuOpen] = useState(false); // keep the card "hovered" while its actions menu is open
   const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card.videoId, card.description);
   const infoRef = useRef<HTMLDivElement>(null);
   const infoBtnRef = useRef<HTMLButtonElement>(null);
@@ -122,7 +123,7 @@ export default memo(function MusicCard({
   const imgSrc = rawImg.replace(/\/hqdefault\.jpg$/, "/mqdefault.jpg");
 
   return (
-    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-100 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
+    <motion.div layout layoutId={`${viewContext}-${card.id}`} transition={{ type: "spring", stiffness: 300, damping: 28 }} data-card-id={card.id} className={`group relative aspect-square cursor-pointer bg-[var(--bg-alt)] rounded-2xl transition-[opacity,box-shadow] duration-100 hover:z-10 hover:ring-1 hover:ring-[var(--text-muted)]/20 ${shareOpen || menuOpen ? "share-active z-10" : ""} ${isGracePeriod ? "opacity-75" : ""}`}
       onMouseLeave={() => {
         if (showInfo) {
           infoTimerRef.current = setTimeout(() => setShowInfo(false), 400);
@@ -307,6 +308,7 @@ export default memo(function MusicCard({
             onPlayNext={onPlayNext}
             onAddToQueue={onAddToQueue}
             onAddToPlaylist={onAddToPlaylist}
+            onOpenChange={setMenuOpen}
             triggerClassName="hidden sm:flex w-8 h-8 rounded-full items-center justify-center transition-all duration-100 text-white/80 hover:text-white active:scale-95 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] opacity-0 group-hover:opacity-100 group-[.share-active]:opacity-100 cursor-pointer"
           />
         )}

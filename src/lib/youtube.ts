@@ -994,6 +994,20 @@ function isValidHomepageVideo(v: YouTubeVideo): boolean {
   return true;
 }
 
+// Last-resort static feed: a baked snapshot (scripts/export-pool.mjs) served when the
+// memory cache is cold AND Supabase is empty/slow/unreachable — so the grid is NEVER
+// blank on a DB blip. Stored as stripped CardData per pool key; rehydrated on read.
+// Empty until the first snapshot is captured (then behaviour is identical to before).
+async function staticFallbackPool(key: "discover" | "mixes" | "samples"): Promise<CardData[]> {
+  try {
+    const mod = await import("@/data/fallback-pool.json");
+    const raw = ((mod.default as unknown as Record<string, CardData[]>)[key]) ?? [];
+    return raw.map((c) => hydrateCardDefaults(c));
+  } catch {
+    return [];
+  }
+}
+
 async function getDiscoverPool(): Promise<{ pool: CardData[]; needsRebuild: boolean }> {
   const memoryCacheKey = "pool-discover";
 
@@ -1009,8 +1023,8 @@ async function getDiscoverPool(): Promise<{ pool: CardData[]; needsRebuild: bool
     return { pool: hydrated, needsRebuild: sbCached.isStale };
   }
 
-  // Layer 3: no cached data at all — signal rebuild but don't block the response
-  return { pool: [], needsRebuild: true };
+  // Layer 3: DB unreachable/empty — serve the baked snapshot so the feed is never blank.
+  return { pool: await staticFallbackPool("discover"), needsRebuild: true };
 }
 
 async function buildDiscoverPool(): Promise<CardData[]> {
@@ -1156,7 +1170,7 @@ export async function discoverMixes(
 
   if (!pool || pool.length === 0) {
     needsRebuild = true;
-    pool = [];
+    pool = await staticFallbackPool("mixes"); // never blank on a DB blip
   }
 
   const gemIds = await getCuratorGemIds();
@@ -1240,7 +1254,7 @@ export async function discoverSamples(
 
   if (!pool || pool.length === 0) {
     needsRebuild = true;
-    pool = [];
+    pool = await staticFallbackPool("samples"); // never blank on a DB blip
   }
 
   const gemIds = await getCuratorGemIds();

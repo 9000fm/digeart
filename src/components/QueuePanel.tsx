@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import HeartLikeButton from "./HeartLikeButton";
+import TrackActionsMenu from "./TrackActionsMenu";
 import { useTheme } from "./ThemeProvider";
 import { useTranslation } from "./LanguageProvider";
 import { getPlayHistory, type PlayHistoryEntry } from "@/lib/playHistory";
@@ -20,9 +21,12 @@ interface QueuePanelProps {
   onReorderUpcoming?: (ids: string[]) => void;
   likedIds: Set<string>;
   onToggleLike: (id: string) => void;
+  onPlayNext?: (id: string) => void;
+  onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
 }
 
-function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggleLike, isMobile = false, hoverBg = true }: {
+function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggleLike, isMobile = false, hoverBg = true, onPlayNext, onAddToQueue, onAddToPlaylist }: {
   card: CardData;
   isCurrent: boolean;
   dimmed: boolean;
@@ -32,11 +36,17 @@ function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggl
   onToggleLike: () => void;
   isMobile?: boolean;
   hoverBg?: boolean;
+  onPlayNext?: (id: string) => void;
+  onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={`group/qrow w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-75 cursor-pointer ${
         isCurrent
           ? "bg-[var(--text)]/90 text-[var(--bg)]"
@@ -74,24 +84,25 @@ function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggl
           </div>
         </div>
       )}
-      {onRemove && (
-        <span
-          role="button"
-          tabIndex={0}
-          aria-label={t("queue.remove")}
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onRemove(); } }}
-          className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-full opacity-0 group-hover/qrow:opacity-100 transition-all duration-100 active:scale-90 cursor-pointer ${
-            isCurrent ? "text-[var(--bg)]/60 hover:text-[var(--bg)] hover:bg-[var(--bg)]/15" : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--text)]/10"
-          }`}
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-        </span>
-      )}
-      <span className="ml-auto shrink-0">
+      <div className="ml-auto shrink-0 flex items-center gap-0.5">
         <QueueHeart isLiked={isLiked} trackId={card.id} onToggleLike={onToggleLike} isCurrent={isCurrent} />
-      </span>
-    </button>
+        {(onPlayNext || onAddToQueue || onAddToPlaylist || onRemove) && (
+          <span onClick={(e) => e.stopPropagation()}>
+            <TrackActionsMenu
+              onPlayNext={onPlayNext ? () => onPlayNext(card.id) : undefined}
+              onAddToQueue={onAddToQueue ? () => onAddToQueue(card.id) : undefined}
+              onAddToPlaylist={onAddToPlaylist ? () => onAddToPlaylist(card.id) : undefined}
+              onRemove={onRemove}
+              removeLabel={t("queue.remove")}
+              triggerIcon="dots"
+              triggerClassName={`shrink-0 w-6 h-6 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 cursor-pointer transition-colors duration-75 ${
+                isCurrent ? "text-[var(--bg)]/50 hover:text-[var(--bg)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
+            />
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -116,13 +127,16 @@ function QueueHeart({ isLiked, trackId, onToggleLike, isCurrent }: { isLiked: bo
 }
 
 /** Up-next row — draggable via a grip handle (handle-only drag so the panel can still scroll). */
-function UpNextRow({ id, card, onPlay, onRemove, isLiked, onToggleLike }: {
+function UpNextRow({ id, card, onPlay, onRemove, isLiked, onToggleLike, onPlayNext, onAddToQueue, onAddToPlaylist }: {
   id: string;
   card: CardData;
   onPlay: () => void;
   onRemove?: () => void;
   isLiked: boolean;
   onToggleLike: () => void;
+  onPlayNext?: (id: string) => void;
+  onAddToQueue?: (id: string) => void;
+  onAddToPlaylist?: (id: string) => void;
 }) {
   const controls = useDragControls();
   return (
@@ -154,6 +168,9 @@ function UpNextRow({ id, card, onPlay, onRemove, isLiked, onToggleLike }: {
           isLiked={isLiked}
           onToggleLike={onToggleLike}
           hoverBg={false}
+          onPlayNext={onPlayNext}
+          onAddToQueue={onAddToQueue}
+          onAddToPlaylist={onAddToPlaylist}
         />
       </div>
     </Reorder.Item>
@@ -172,17 +189,25 @@ export default function QueuePanel({
   onReorderUpcoming,
   likedIds,
   onToggleLike,
+  onPlayNext,
+  onAddToQueue,
+  onAddToPlaylist,
 }: QueuePanelProps) {
   const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(false);
   const [tab, setTab] = useState<"queue" | "history">("queue");
   const [history, setHistory] = useState<PlayHistoryEntry[]>([]);
+  // Defer mounting the (potentially long) row list by one frame after open, so the
+  // panel's enter animation runs on its own frame instead of sharing it with a big
+  // synchronous commit (which would starve the top marquee's rAF → visible stutter).
+  const [rowsReady, setRowsReady] = useState(false);
   const currentRowRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentId = currentIndex >= 0 && currentIndex < queue.length ? queue[currentIndex] : null;
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1152);
+    // Phone only (<500). Tablet (500-1152) uses the docked panel so it never covers the player.
+    const check = () => setIsMobile(window.innerWidth < 500);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -191,6 +216,8 @@ export default function QueuePanel({
   // Read persistent listening history when the History tab is shown — and refresh it
   // whenever the playing track changes, so a new play shows up live.
   useEffect(() => {
+    // Reads play history from localStorage when the History tab opens; a correct effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isOpen && tab === "history") setHistory(getPlayHistory());
   }, [isOpen, tab, currentId]);
 
@@ -204,10 +231,19 @@ export default function QueuePanel({
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
-  // On open / tab switch / new track: Queue → keep the current track in view;
-  // History → jump to the top (the just-played track is now first).
+  // Mount rows one frame after open; reset on close via cleanup (keeps both
+  // setState calls inside callbacks, never synchronous in the effect body).
   useEffect(() => {
     if (!isOpen) return;
+    const r = requestAnimationFrame(() => setRowsReady(true));
+    return () => { cancelAnimationFrame(r); setRowsReady(false); };
+  }, [isOpen]);
+
+  // On open / tab switch / new track: Queue → keep the current track in view;
+  // History → jump to the top (the just-played track is now first).
+  // Waits for rowsReady so the target row actually exists before scrolling.
+  useEffect(() => {
+    if (!isOpen || !rowsReady) return;
     requestAnimationFrame(() => {
       if (tab === "history") {
         if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -215,7 +251,7 @@ export default function QueuePanel({
         currentRowRef.current?.scrollIntoView({ block: "center" });
       }
     });
-  }, [isOpen, tab, currentId]);
+  }, [isOpen, tab, currentId, rowsReady]);
 
   // Lock body scroll when mobile sheet is open (iOS Safari-safe)
   useEffect(() => {
@@ -264,6 +300,9 @@ export default function QueuePanel({
               isLiked={likedIds.has(row.id)}
               onToggleLike={() => onToggleLike(row.id)}
               isMobile={isCurrent ? isMobile : false}
+              onPlayNext={onPlayNext}
+              onAddToQueue={onAddToQueue}
+              onAddToPlaylist={onAddToPlaylist}
             />
           </div>
         );
@@ -284,6 +323,9 @@ export default function QueuePanel({
                   onRemove={onRemove ? () => onRemove(row.index) : undefined}
                   isLiked={likedIds.has(row.id)}
                   onToggleLike={() => onToggleLike(row.id)}
+                  onPlayNext={onPlayNext}
+                  onAddToQueue={onAddToQueue}
+                  onAddToPlaylist={onAddToPlaylist}
                 />
               ))}
             </Reorder.Group>
@@ -298,6 +340,9 @@ export default function QueuePanel({
                 onRemove={onRemove ? () => onRemove(row.index) : undefined}
                 isLiked={likedIds.has(row.id)}
                 onToggleLike={() => onToggleLike(row.id)}
+                onPlayNext={onPlayNext}
+                onAddToQueue={onAddToQueue}
+                onAddToPlaylist={onAddToPlaylist}
               />
             ))
           )}
@@ -328,6 +373,9 @@ export default function QueuePanel({
             onClick={() => onPlayTrack?.(entry.card)}
             isLiked={likedIds.has(entry.card.id)}
             onToggleLike={() => onToggleLike(entry.card.id)}
+            onPlayNext={onPlayNext}
+            onAddToQueue={onAddToQueue}
+            onAddToPlaylist={onAddToPlaylist}
           />
         ))
       )}
@@ -338,7 +386,7 @@ export default function QueuePanel({
     <div className="flex items-center gap-1">
       {([
         { id: "queue" as const, label: t("queue.title") },
-        { id: "history" as const, label: t("queue.previouslyPlayed") },
+        { id: "history" as const, label: t("queue.history") },
       ]).map((tb) => (
         <button
           key={tb.id}
@@ -355,9 +403,10 @@ export default function QueuePanel({
     </div>
   );
 
-  const content = tab === "queue" ? queueContent : historyContent;
+  // null until rowsReady → the open animation gets a clean frame; rows pop in next frame.
+  const content = !rowsReady ? null : tab === "queue" ? queueContent : historyContent;
 
-  // Mobile: bottom sheet
+  // Phone (<500px): bottom sheet
   if (isMobile) {
     return (
       <AnimatePresence>
@@ -382,12 +431,15 @@ export default function QueuePanel({
               style={{ maxHeight: "65vh", touchAction: "pan-y" }}
               onTouchMove={(e) => e.stopPropagation()}
             >
-              {/* Drag handle */}
-              <div className="flex justify-center pt-2.5 pb-1 cursor-pointer" onClick={onClose}>
-                <div className="w-8 h-1 rounded-full bg-[var(--text-muted)]/30" />
+              {/* Sticky header: drag handle + tabs, with a subtle fade into the scrolling list below */}
+              <div className="sticky top-0 z-10 bg-[var(--bg-alt)]">
+                <div className="flex justify-center pt-2.5 pb-1 cursor-pointer" onClick={onClose}>
+                  <div className="w-8 h-1 rounded-full bg-[var(--text-muted)]/30" />
+                </div>
+                <div className="px-3 py-2">{tabToggle}</div>
+                <div className="absolute left-0 right-0 top-full h-5 bg-gradient-to-b from-[var(--bg-alt)] to-transparent pointer-events-none" />
               </div>
               <div className="px-1 pb-2">
-                <div className="px-3 py-2">{tabToggle}</div>
                 {content}
               </div>
             </motion.div>
@@ -397,16 +449,16 @@ export default function QueuePanel({
     );
   }
 
-  // Desktop: tall right-docked panel — sits between the top nav and the player
+  // Tablet + desktop (≥500px): tall right-docked panel — sits between the top nav and the player
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 28 }}
-          className="fixed w-[400px] z-[60] flex flex-col bg-[var(--bg-alt)]/40 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="fixed w-[400px] z-[60] flex flex-col bg-[var(--bg-alt)]/97 rounded-xl shadow-2xl overflow-hidden"
           style={{
             top: "calc(var(--banner-height) + var(--header-height) + 8px)",
             bottom: "calc(var(--player-height) + 8px)",
@@ -415,7 +467,7 @@ export default function QueuePanel({
         >
           <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
             {tabToggle}
-            <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-full text-[var(--text)]/50 hover:bg-[var(--text)]/10 hover:text-[var(--text)] active:scale-90 transition-all duration-75 cursor-pointer" aria-label={t("queue.close")}>
+            <button onClick={onClose} className="w-6 h-6 flex items-center justify-center text-[var(--text)]/50 hover:text-[var(--text)] cursor-pointer" aria-label={t("queue.close")}>
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>

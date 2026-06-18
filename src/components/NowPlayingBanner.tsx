@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Tooltip from "./Tooltip";
 import HeartLikeButton from "./HeartLikeButton";
 import ShareButton from "./ShareButton";
+import TrackActionsMenu from "./TrackActionsMenu";
+import { useShareActions } from "./share/useShareActions";
 import { useTranslation } from "./LanguageProvider";
 import type { CardData } from "@/lib/types";
 import { useVideoDescription } from "@/hooks/useVideoDescription";
@@ -113,10 +115,12 @@ export default function NowPlayingBanner({
   }, [card.name, card.artist]);
 
   // Delayed close button reveal
-  const [showClose, setShowClose] = useState(false);
+  // Derived: true only once the 1.2s reveal timer for the CURRENT track has fired,
+  // so it resets to false on track change with no synchronous setState in-effect.
+  const [closeReadyId, setCloseReadyId] = useState<string | null>(null);
+  const showClose = closeReadyId === card.id;
   useEffect(() => {
-    setShowClose(false);
-    const timer = setTimeout(() => setShowClose(true), 1200);
+    const timer = setTimeout(() => setCloseReadyId(card.id), 1200);
     return () => clearTimeout(timer);
   }, [card.id]);
 
@@ -195,6 +199,8 @@ export default function NowPlayingBanner({
   // Sync drag volume with prop when not dragging
   useEffect(() => {
     if (!isDraggingVolRef.current) {
+      // Syncs the visual slider to the volume prop only while NOT dragging; one-way mirror.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDragVolume(volume);
       dragVolumeRef.current = volume;
     }
@@ -212,6 +218,7 @@ export default function NowPlayingBanner({
 
   // Info popover
   const [showInfo, setShowInfo] = useState(false);
+  const [infoForId, setInfoForId] = useState(card.id); // tracks the track the popover state belongs to
   const { description: cardDescription, loading: loadingDesc, fetchDescription } = useVideoDescription(card?.videoId, card?.description);
   const infoRef = useRef<HTMLDivElement>(null);
   const infoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -228,6 +235,16 @@ export default function NowPlayingBanner({
   const cancelInfoDismissTimer = useCallback(() => {
     if (infoTimerRef.current) { clearTimeout(infoTimerRef.current); infoTimerRef.current = null; }
   }, []);
+
+  // Mobile ⋮ menu actions: native share sheet + open the info popover (bottom-left
+  // fallback anchor, since the trigger menu closes on click).
+  const { openNativeShare } = useShareActions(card.id, card.name, card.artist, card.youtubeUrl);
+  const handleMenuInfo = useCallback(() => {
+    setInfoAnchor(null);
+    setShowInfo(true);
+    fetchDescription();
+    startInfoDismissTimer();
+  }, [fetchDescription, startInfoDismissTimer]);
 
   const hasDuration = audioDuration > 0;
 
@@ -268,6 +285,8 @@ export default function NowPlayingBanner({
         });
       });
 
+      // Flips state after kicking off the imperative EQ collapse; refactoring desyncs it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEqActive(false);
     } else if (isPlaying) {
       // Clear all inline overrides, let CSS animation take over
@@ -332,11 +351,14 @@ export default function NowPlayingBanner({
     return () => document.removeEventListener("pointerdown", handler);
   }, [showInfo]);
 
-  // Close info when track changes + clear timer
-  useEffect(() => {
+  // Close the info popover when the track changes — during-render reset (no
+  // synchronous setState in-effect). The dismiss timer is cancelled in the
+  // effect cleanup, which fires at the same moment (track change / unmount).
+  if (infoForId !== card.id) {
+    setInfoForId(card.id);
     setShowInfo(false);
-    cancelInfoDismissTimer();
-  }, [card.id, cancelInfoDismissTimer]);
+  }
+  useEffect(() => cancelInfoDismissTimer, [card.id, cancelInfoDismissTimer]);
 
   // Mobile viewport detection — reset minimize on desktop resize
   useEffect(() => {
@@ -1357,38 +1379,21 @@ export default function NowPlayingBanner({
               </div>
             </div>
 
-            {/* Row 2: Transport controls — centered */}
+            {/* Row 2: Transport controls — centered. Secondary actions (share/info/
+                add-to-playlist) collapse into the ⋮ menu to keep the row uncluttered. */}
             <div className="flex items-center justify-center gap-3">
-              <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="md" />
-              {infoButton("md")}
-              {likeButton("md")}
+              <TrackActionsMenu
+                triggerIcon="dots"
+                triggerClassName="shrink-0 w-7 h-7 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] active:scale-95 transition-all"
+                onAddToPlaylist={onAddToPlaylist}
+                onShare={openNativeShare}
+                onInfo={isAuthenticated ? handleMenuInfo : undefined}
+              />
               {prevButton(32)}
               {playPauseButton(40, 16)}
               {nextButton(32)}
-              {onToggleAutoPlay && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleAutoPlay();
-                  }}
-                  className={`relative shrink-0 w-7 h-7 flex items-center justify-center transition-all duration-200 ease-out active:scale-95 ${
-                    autoPlay
-                      ? "text-[var(--text)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill={autoPlay ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 3h5v5" />
-                    <path d="M4 20L21 3" />
-                    <path d="M21 16v5h-5" />
-                    <path d="M15 15l6 6" />
-                    <path d="M4 4l5 5" />
-                  </svg>
-                  <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current transition-opacity duration-200 ${autoPlay ? "opacity-100" : "opacity-0"}`} />
-                </button>
-              )}
+              {likeButton("md")}
               {queueButton}
-              {mobileVolumeToggle()}
             </div>
 
             {/* Row 3: Seek bar */}

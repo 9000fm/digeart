@@ -52,9 +52,11 @@ export default function SavedSection(props: SavedSectionProps) {
   }
 
   if (screen.kind === "playlist") {
+    const open = props.playlists.find((p) => p.id === screen.id);
     return (
       <PlaylistDetail
         playlistId={screen.id}
+        refreshSignal={open ? `${open.updatedAt}:${open.trackCount}` : undefined}
         onBack={() => setScreen({ kind: "hub" })}
         playingId={props.playingId}
         isPlaying={props.isPlaying}

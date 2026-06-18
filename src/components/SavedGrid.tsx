@@ -84,7 +84,14 @@ export default function SavedGrid({
   const PAGE = 30;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => { setVisibleCount(PAGE); }, [activeFilter, savedViewMode]);
+  // Reset the reveal window when the filter/view changes — during-render reset
+  // idiom (avoids a setState-in-effect cascade).
+  const revealKey = `${activeFilter}|${savedViewMode}`;
+  const [seenRevealKey, setSeenRevealKey] = useState(revealKey);
+  if (seenRevealKey !== revealKey) {
+    setSeenRevealKey(revealKey);
+    setVisibleCount(PAGE);
+  }
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;

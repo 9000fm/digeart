@@ -9,7 +9,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Para ti",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Me gusta",
+    "nav.saved": "Guardados",
 
     // Settings
     "settings.title": "AJUSTES",
@@ -61,7 +61,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "queue.empty": "Cola vacía",
     "queue.nowPlaying": "Reproduciendo",
     "queue.upNext": "Siguiente",
-    "queue.previouslyPlayed": "Reproducido",
+    "queue.previouslyPlayed": "Anterior",
+    "queue.history": "Historial",
     "queue.remove": "Quitar",
 
     // Cards
@@ -70,6 +71,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.playNext": "Reproducir siguiente",
     "card.addToQueue": "Añadir a la cola",
     "card.addToPlaylist": "Añadir a playlist",
+    "card.hide": "Ocultar",
     "card.moreActions": "Más acciones",
     "card.soon": "Pronto",
     "card.saved": "¡Te gusta!",
@@ -191,7 +193,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "For You",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Liked",
+    "nav.saved": "Saved",
 
     // Settings
     "settings.title": "SETTINGS",
@@ -243,7 +245,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "queue.empty": "No queue",
     "queue.nowPlaying": "Now playing",
     "queue.upNext": "Up next",
-    "queue.previouslyPlayed": "Previously played",
+    "queue.previouslyPlayed": "Previous",
+    "queue.history": "History",
     "queue.remove": "Remove",
 
     // Cards
@@ -252,6 +255,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.playNext": "Play next",
     "card.addToQueue": "Add to queue",
     "card.addToPlaylist": "Add to playlist",
+    "card.hide": "Hide",
     "card.moreActions": "More actions",
     "card.soon": "Soon",
     "card.saved": "Liked!",
@@ -373,7 +377,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Pour toi",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "J'aime",
+    "nav.saved": "Enregistrés",
 
     // Settings
     "settings.title": "RÉGLAGES",
@@ -425,7 +429,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "queue.empty": "Queue vide",
     "queue.nowPlaying": "En lecture",
     "queue.upNext": "Suivant",
-    "queue.previouslyPlayed": "Déjà joué",
+    "queue.previouslyPlayed": "Précédent",
+    "queue.history": "Historique",
     "queue.remove": "Retirer",
 
     // Cards
@@ -434,6 +439,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.playNext": "Lire ensuite",
     "card.addToQueue": "Ajouter à la file",
     "card.addToPlaylist": "Ajouter à la playlist",
+    "card.hide": "Masquer",
     "card.moreActions": "Plus d'actions",
     "card.soon": "Bientôt",
     "card.saved": "J'aime !",
@@ -555,7 +561,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "おすすめ",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "いいね",
+    "nav.saved": "保存済み",
 
     // Settings
     "settings.title": "設定",
@@ -607,7 +613,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "queue.empty": "キューは空です",
     "queue.nowPlaying": "再生中",
     "queue.upNext": "次に再生",
-    "queue.previouslyPlayed": "再生済み",
+    "queue.previouslyPlayed": "前の曲",
+    "queue.history": "履歴",
     "queue.remove": "削除",
 
     // Cards
@@ -616,6 +623,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.playNext": "次に再生",
     "card.addToQueue": "キューに追加",
     "card.addToPlaylist": "プレイリストに追加",
+    "card.hide": "非表示",
     "card.moreActions": "その他の操作",
     "card.soon": "近日",
     "card.saved": "いいね!",
@@ -737,7 +745,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Для тебя",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Нравится",
+    "nav.saved": "Сохранённые",
 
     // Settings
     "settings.title": "НАСТРОЙКИ",
@@ -789,7 +797,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     "queue.empty": "Очередь пуста",
     "queue.nowPlaying": "Сейчас играет",
     "queue.upNext": "Далее",
-    "queue.previouslyPlayed": "Уже играло",
+    "queue.previouslyPlayed": "Предыдущее",
+    "queue.history": "История",
     "queue.remove": "Удалить",
 
     // Cards
@@ -798,6 +807,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "card.playNext": "Воспроизвести далее",
     "card.addToQueue": "Добавить в очередь",
     "card.addToPlaylist": "Добавить в плейлист",
+    "card.hide": "Скрыть",
     "card.moreActions": "Ещё",
     "card.soon": "Скоро",
     "card.saved": "Нравится!",

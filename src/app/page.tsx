@@ -66,6 +66,8 @@ export default function Home() {
   const isAuthenticated = !!session;
   const playlistsApi = usePlaylists(isAuthenticated);
   const [addToPlaylistCard, setAddToPlaylistCard] = useState<CardData | null>(null);
+  const [addToPlaylistAnchor, setAddToPlaylistAnchor] = useState<{ x: number; y: number; el: HTMLElement | null } | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number; el: HTMLElement | null } | null>(null); // last click → anchors the add-to-playlist popup to its trigger
   const [activeView, setActiveView] = useState<ViewType>("home");
   const [activeGenre, setActiveGenre] = useState(0);
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
@@ -179,6 +181,8 @@ export default function Home() {
               if (ytPendingVideoId.current) {
                 event.target.loadVideoById(ytPendingVideoId.current);
                 ytPendingVideoId.current = null;
+                // Async YT callback fires after the fn is declared below; runtime-safe.
+                // eslint-disable-next-line react-hooks/immutability
                 startYTProgressPoller();
               }
             },
@@ -409,6 +413,8 @@ export default function Home() {
 
   // Keep handleYTStateChange in sync
   useEffect(() => {
+    // Latest handler stored on a ref so YT callbacks call the current closure; standard.
+    // eslint-disable-next-line react-hooks/immutability
     handleYTStateChange.current = (event: YTPlayerEvent) => {
       if (event.data === 0 && !hasAdvancedRef.current) {
         // ENDED
@@ -469,6 +475,8 @@ export default function Home() {
     // This keeps the visible "Up next" list stable — new cards appear after existing ones.
     // Only randomize when shuffle (autoplay) is on; otherwise preserve grid/display order.
     if (newIds.length > 0 && shuffleQueue.current.length > 0) {
+      // Helper declared later in the module; this call runs at runtime, after declaration.
+      // eslint-disable-next-line react-hooks/immutability
       if (autoPlayEnabledRef.current) fisherYatesShuffle(newIds);
       shuffleQueue.current.push(...newIds);
     }
@@ -683,6 +691,8 @@ export default function Home() {
 
   // Stable ref for handleNextTrack (used in YT callbacks)
   const handleNextTrackRef = useRef(handleNextTrack);
+  // Keep the ref on the latest callback for YT auto-advance; an effect would stale it.
+  // eslint-disable-next-line react-hooks/immutability
   handleNextTrackRef.current = handleNextTrack;
 
   const handleTogglePlay = useCallback(() => {
@@ -819,9 +829,21 @@ export default function Home() {
     if (startCard) handlePlayInternal(startCard);
   }, [handlePlayInternal]);
 
+  // Track the last click point so the add-to-playlist popup opens there (anchored,
+  // like the queue ⋮ menu) instead of dead-center. Capture phase = fires before
+  // the trigger's own click handler.
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.("button, [role='button']") as HTMLElement | null;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY, el: el ?? null };
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, []);
+
   const handleOpenAddToPlaylist = useCallback((id: string) => {
     const card = cardRegistry.current.get(id);
-    if (card) setAddToPlaylistCard(card);
+    if (card) { setAddToPlaylistAnchor(lastPointerRef.current); setAddToPlaylistCard(card); }
   }, []);
 
   const shareCardGlobal = useCallback(async (card: CardData) => {
@@ -916,6 +938,8 @@ export default function Home() {
 
   // Stable ref for handlePlay — used by shared-link auto-play
   const handlePlayRef = useRef(handlePlay);
+  // Keep the ref on the latest callback for shared-link auto-play; effect would stale it.
+  // eslint-disable-next-line react-hooks/immutability
   handlePlayRef.current = handlePlay;
 
   // Commit all pending unlikes (soft-deletes stay, just dismiss toasts)
@@ -1490,10 +1514,14 @@ export default function Home() {
         onReorderUpcoming={handleReorderUpcoming}
         likedIds={likedIds}
         onToggleLike={toggleLike}
+        onPlayNext={handlePlayNext}
+        onAddToQueue={handleAddToQueue}
+        onAddToPlaylist={handleOpenAddToPlaylist}
       />
 
       <AddToPlaylistMenu
         card={addToPlaylistCard}
+        anchor={addToPlaylistAnchor}
         playlists={playlistsApi.playlists}
         onAdd={playlistsApi.addTrack}
         onCreate={playlistsApi.create}
