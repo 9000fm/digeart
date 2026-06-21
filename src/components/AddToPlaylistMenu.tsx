@@ -29,7 +29,16 @@ export default function AddToPlaylistMenu({
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Mobile (<500px) → centered modal; desktop → anchored popup.
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 500);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Reset the create-form when the menu closes (card cleared) — in cleanup so the
   // setState isn't synchronous in the effect body.
@@ -73,9 +82,16 @@ export default function AddToPlaylistMenu({
   // shift (stay in viewport) and size (cap height) — no hand-rolled positioning.
   const reference = useMemo<ReferenceType | null>(() => {
     if (!anchor) return null;
-    if (anchor.el && typeof document !== "undefined" && document.contains(anchor.el)) return anchor.el;
-    const { x, y } = anchor;
-    return { getBoundingClientRect: () => ({ width: 0, height: 0, x, y, top: y, left: x, right: x, bottom: y }) as DOMRect };
+    const { x, y, el } = anchor;
+    const pointRect = { width: 0, height: 0, x, y, top: y, left: x, right: x, bottom: y } as DOMRect;
+    // Always a virtual element: reads the trigger's live rect when it's still mounted
+    // (so the player + popup follows on resize), but falls back to the frozen click
+    // point the instant the trigger is gone — e.g. a ⋮ menu item that unmounts on click
+    // (which otherwise collapses to a 0,0 rect and throws the popup to the corner).
+    return {
+      getBoundingClientRect: () =>
+        el && typeof document !== "undefined" && document.contains(el) ? el.getBoundingClientRect() : pointRect,
+    };
   }, [anchor]);
 
   const { refs, floatingStyles } = useFloating<ReferenceType>({
@@ -113,17 +129,17 @@ export default function AddToPlaylistMenu({
     <AnimatePresence>
       {card && (
         <motion.div
-          className="fixed inset-0 z-[100]"
+          className={`fixed inset-0 z-[100]${isMobile ? " flex items-center justify-center p-4 bg-black/50" : ""}`}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.12 }}
           onClick={onClose}
         >
           <motion.div
-            ref={setFloating}
+            ref={isMobile ? undefined : setFloating}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.12, ease: "easeOut" }}
-            style={{ ...floatingStyles, width: MENU_W }}
+            style={isMobile ? { width: "100%", maxWidth: 340, maxHeight: "80vh" } : { ...floatingStyles, width: MENU_W }}
             className="flex flex-col rounded-xl bg-[var(--bg-alt)] border border-[var(--border)]/60 shadow-2xl overflow-hidden"
           >
             <div className="px-4 pt-4 pb-3 flex items-center gap-3 border-b border-[var(--border)]/40">

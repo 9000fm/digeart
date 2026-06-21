@@ -163,6 +163,8 @@ function withDbTimeout<T>(query: PromiseLike<T>): Promise<T> {
 
 const POOL_MAX_AGE = 12 * 60 * 60 * 1000; // 12 hours (rebuilds ~2x/day)
 const RAW_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (deep fetch 1x/day)
+const DISCOVER_SEED_SIZE = 1111; // cold-start seed: top N cards, read fast then swapped for the full pool
+const SEED_MEM_TTL = 60 * 1000; // how long a served seed stays in memory before the full pool takes over
 
 interface PoolCacheResult<T = CardData[]> {
   data: T;
@@ -1008,23 +1010,55 @@ async function staticFallbackPool(key: "discover" | "mixes" | "samples"): Promis
   }
 }
 
+const DISCOVER_FULL_KEY = "pool-discover";      // full 42k pool (warm path)
+const DISCOVER_SEED_KEY = "pool-discover-seed"; // small seed (cold-start fast path)
+
 async function getDiscoverPool(): Promise<{ pool: CardData[]; needsRebuild: boolean }> {
-  const memoryCacheKey = "pool-discover";
+  // Layer 1: full pool in memory (instant — the warm path)
+  const memFull = cacheGet<CardData[]>(DISCOVER_FULL_KEY);
+  if (memFull && memFull.length > 0) return { pool: memFull, needsRebuild: false };
 
-  // Layer 1: in-memory cache (instant)
-  const memCached = cacheGet<CardData[]>(memoryCacheKey);
-  if (memCached && memCached.length > 0) return { pool: memCached, needsRebuild: false };
+  // Layer 2: cold start — serve the small seed FAST (~0.3s vs ~6s for the full blob).
+  // The route schedules warmDiscoverPool() after the response to load the full pool
+  // into memory, so the next request serves from it. The seed is the top 1111 cards
+  // (starred-weighted); rotate still shuffles WHICH show, so it's fresh, not frozen.
+  const memSeed = cacheGet<CardData[]>(DISCOVER_SEED_KEY);
+  if (memSeed && memSeed.length > 0) return { pool: memSeed, needsRebuild: false };
 
-  // Layer 2: Supabase persistent cache (survives cold starts)
+  const seedCached = await getPoolFromSupabase("discover_seed");
+  if (seedCached && seedCached.data.length > 0) {
+    const seed = seedCached.data.map((c) => hydrateCardDefaults(c));
+    cacheSet(DISCOVER_SEED_KEY, seed, SEED_MEM_TTL);
+    return { pool: seed, needsRebuild: false };
+  }
+
+  // Layer 3: no seed yet (first deploy before the cron runs) — read the full pool.
   const sbCached = await getPoolFromSupabase("discover");
   if (sbCached && sbCached.data.length > 0) {
     const hydrated = sbCached.data.map((c) => hydrateCardDefaults(c));
-    cacheSet(memoryCacheKey, hydrated, POOL_MAX_AGE);
+    cacheSet(DISCOVER_FULL_KEY, hydrated, POOL_MAX_AGE);
     return { pool: hydrated, needsRebuild: sbCached.isStale };
   }
 
-  // Layer 3: DB unreachable/empty — serve the baked snapshot so the feed is never blank.
+  // Layer 4: DB unreachable/empty — serve the baked snapshot so the feed is never blank.
   return { pool: await staticFallbackPool("discover"), needsRebuild: true };
+}
+
+// Idempotent background warm: load the full pool into memory if it isn't already, so the
+// next discover request serves the full 42k instead of the seed. Also writes the seed row
+// if it's missing (self-bootstrap before the first cron rebuild). Safe to call after every
+// request — a no-op (one cacheGet) once the full pool is warm. The route runs it via after().
+export async function warmDiscoverPool(): Promise<void> {
+  if (cacheGet<CardData[]>(DISCOVER_FULL_KEY)) return; // already warm
+  try {
+    const full = await getPoolFromSupabase("discover");
+    if (!full || full.data.length === 0) return;
+    cacheSet(DISCOVER_FULL_KEY, full.data.map((c) => hydrateCardDefaults(c)), POOL_MAX_AGE);
+    const seed = await getPoolFromSupabase("discover_seed");
+    if (!seed || seed.data.length === 0) {
+      await savePoolToSupabase("discover_seed", full.data.slice(0, DISCOVER_SEED_SIZE));
+    }
+  } catch { /* next request retries */ }
 }
 
 async function buildDiscoverPool(): Promise<CardData[]> {
@@ -1034,6 +1068,10 @@ async function buildDiscoverPool(): Promise<CardData[]> {
   if (pool.length > 0) {
     cacheSet("pool-discover", pool, POOL_MAX_AGE);
     await savePoolToSupabase("discover", pool.map(stripCardForStorage));
+    // Small seed = top of the (already starred-weighted, ordered) pool. Served on a
+    // cold start so the first paint reads ~1k cards (~0.3s) instead of the full 42k
+    // blob (~6s). Refreshed here on every rebuild. See getDiscoverPool L2.
+    await savePoolToSupabase("discover_seed", pool.slice(0, DISCOVER_SEED_SIZE).map(stripCardForStorage));
   }
 
   return pool;

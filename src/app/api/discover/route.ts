@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { discoverFromYouTube, isValidTag } from "@/lib/youtube";
+import { NextRequest, NextResponse, after } from "next/server";
+import { discoverFromYouTube, isValidTag, warmDiscoverPool } from "@/lib/youtube";
 import type { Tag } from "@/lib/youtube";
 
 export async function GET(req: NextRequest) {
@@ -16,6 +16,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const { cards, totalFiltered } = await discoverFromYouTube(limit, offset, tag, genre, rotate);
+
+    // After responding, ensure the full pool is warm in memory so the next request
+    // serves the full 42k instead of the cold-start seed. No-op once warm.
+    after(warmDiscoverPool());
 
     return NextResponse.json({
       cards,
