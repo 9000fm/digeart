@@ -29,7 +29,6 @@ interface NowPlayingBannerProps {
   isPlaying: boolean;
   isUnavailable?: boolean;
   onTogglePlay: () => void;
-  onClose: () => void;
   onPrevTrack?: () => void;
   onNextTrack?: () => void;
   hasPrev?: boolean;
@@ -65,7 +64,6 @@ export default function NowPlayingBanner({
   isPlaying,
   isUnavailable = false,
   onTogglePlay,
-  onClose,
   onPrevTrack,
   onNextTrack,
   hasPrev = false,
@@ -113,16 +111,6 @@ export default function NowPlayingBanner({
     setCopied(true);
     setTimeout(() => { setCopied(false); setCopyPos(null); }, 2000);
   }, [card.name, card.artist]);
-
-  // Delayed close button reveal
-  // Derived: true only once the 1.2s reveal timer for the CURRENT track has fired,
-  // so it resets to false on track change with no synchronous setState in-effect.
-  const [closeReadyId, setCloseReadyId] = useState<string | null>(null);
-  const showClose = closeReadyId === card.id;
-  useEffect(() => {
-    const timer = setTimeout(() => setCloseReadyId(card.id), 1200);
-    return () => clearTimeout(timer);
-  }, [card.id]);
 
   // EQ collapse
   const [eqActive, setEqActive] = useState(isPlaying);
@@ -1094,44 +1082,6 @@ export default function NowPlayingBanner({
     </button>
   );
 
-  // Close button — corner tab that pokes above the player top border
-  const [closeDismissing, setCloseDismissing] = useState(false);
-
-  const handleCloseClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCloseDismissing(true);
-    setTimeout(() => {
-      onClose();
-      setCloseDismissing(false);
-    }, 200);
-  }, [onClose]);
-
-  const closeButton = (
-    <div
-      className="absolute -top-[34px] right-2 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-out group-hover:[transition-delay:0ms]"
-      style={{ transitionDelay: "800ms", pointerEvents: showClose ? "auto" : "none", visibility: showClose ? "visible" : "hidden" }}
-    >
-      {/* Hit area: bigger than visible button */}
-      <button
-        onClick={handleCloseClick}
-        className="w-8 h-8 flex items-center justify-center cursor-pointer"
-        aria-label={t("player.closePlayer")}
-      >
-        {/* Visible button: smaller, centered inside hit area */}
-        <span
-          className={`w-5 h-5 flex items-center justify-center rounded-[9px] bg-[var(--bg-alt)] border border-[var(--border)]/40 text-[var(--text)]/70 shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-all duration-150 ${
-            closeDismissing ? "scale-[0.3] opacity-0" : "active:scale-[0.92] active:translate-y-[0.5px]"
-          }`}
-        >
-          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </span>
-      </button>
-    </div>
-  );
-
   return (
     <motion.div
       initial={{ y: "100%", opacity: 0.5 }}
@@ -1141,8 +1091,6 @@ export default function NowPlayingBanner({
       className={`group player-banner fixed left-0 right-0 min-[1152px]:left-[var(--sidebar-width)] bg-[var(--bg-alt)]/85 backdrop-blur-2xl backdrop-saturate-150 border-t border-[var(--border)]/50 overflow-visible`}
       style={{ bottom: 0, height: "var(--player-height)" }}
     >
-      {/* Corner tab close — desktop only */}
-      {closeButton}
 
       {/* ===== DESKTOP layout (sm+): single row, 96px ===== */}
       <div className="h-full hidden min-[1152px]:grid items-center pl-2.5 pr-1.5 gap-1.5 max-w-[2560px] mx-auto w-full" style={{ gridTemplateColumns: "1fr min(100%, 50%) 1fr" }}>
@@ -1264,6 +1212,7 @@ export default function NowPlayingBanner({
             {nextButton(30)}
             {autoPlayButton}
             {addToPlaylistButton()}
+            <ShareButton trackId={card.id} trackName={card.name} channel={card.artist} youtubeUrl={card.youtubeUrl} size="sm" />
             {queueButton}
             {volumeControl(volTrackTabletRef, "hidden", tabletVolFaderRef)}
           </div>

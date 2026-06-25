@@ -1080,24 +1080,6 @@ export default function Home() {
     }
   }, [likedIds, softDeletedIds, session?.user?.email, commitPendingUnlike, savedCards]);
 
-  const handleClosePlayer = useCallback(() => {
-    stopYTProgressPoller();
-    if (ytPlayerRef.current) {
-      try { ytPlayerRef.current.stopVideo(); } catch { /* ignore */ }
-    }
-    setPlayingId(null);
-    setIsPlaying(false);
-    setNowPlayingCard(null);
-    updatePlayback({ progress: 0, duration: 0 });
-    shuffleQueue.current = [];
-    queueIndex.current = -1;
-    queueView.current = null;
-    setCanGoPrev(false);
-    setShowQueue(false);
-  }, [stopYTProgressPoller]);
-
-  const handleClosePlayerRef = useRef(handleClosePlayer);
-  handleClosePlayerRef.current = handleClosePlayer;
 
   const handleViewChange = useCallback((view: ViewType) => {
     scrollPositions.current[activeView] = window.scrollY;
@@ -1476,7 +1458,6 @@ export default function Home() {
             isPlaying={isPlaying}
             isUnavailable={skippingUnavailable}
             onTogglePlay={handleTogglePlay}
-            onClose={handleClosePlayer}
             onPrevTrack={handlePrevTrack}
             onNextTrack={handleNextTrack}
             hasPrev={canGoPrev}

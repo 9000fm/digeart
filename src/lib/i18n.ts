@@ -9,7 +9,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Para ti",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Guardados",
+    "nav.saved": "Colección",
 
     // Settings
     "settings.title": "AJUSTES",
@@ -193,7 +193,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "For You",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Saved",
+    "nav.saved": "Collection",
 
     // Settings
     "settings.title": "SETTINGS",
@@ -377,7 +377,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Pour toi",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Enregistrés",
+    "nav.saved": "Collection",
 
     // Settings
     "settings.title": "RÉGLAGES",
@@ -561,7 +561,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "おすすめ",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "保存済み",
+    "nav.saved": "コレクション",
 
     // Settings
     "settings.title": "設定",
@@ -745,7 +745,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     "nav.forYou": "Для тебя",
     "nav.mixes": "Mixes",
     "nav.samples": "Samples",
-    "nav.saved": "Сохранённые",
+    "nav.saved": "Коллекция",
 
     // Settings
     "settings.title": "НАСТРОЙКИ",

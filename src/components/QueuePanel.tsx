@@ -70,21 +70,21 @@ function QueueRow({ card, isCurrent, dimmed, onClick, onRemove, isLiked, onToggl
           {card.artist}
         </p>
       </div>
-      {isCurrent && (
-        <div className={`shrink-0 flex flex-col items-center ${isMobile ? "ml-4" : ""}`}>
-          <div className="flex items-end gap-[2px] h-3">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <span key={n} className={`eq-bar-base w-[1.5px] bg-[var(--bg)] rounded-full eq-bar-${n}`} />
-            ))}
-          </div>
-          <div className="flex items-start gap-[2px] h-1.5 opacity-25 overflow-hidden">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <span key={n} className={`eq-bar-base w-[1.5px] bg-[var(--bg)] rounded-full eq-bar-${n}`} style={{ transformOrigin: "top" }} />
-            ))}
-          </div>
-        </div>
-      )}
       <div className="ml-auto shrink-0 flex items-center gap-0.5">
+        {isCurrent && (
+          <div className="shrink-0 flex flex-col items-center mr-2">
+            <div className="flex items-end gap-[2px] h-3">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} className={`eq-bar-base w-[1.5px] bg-[var(--bg)] rounded-full eq-bar-${n}`} />
+              ))}
+            </div>
+            <div className="flex items-start gap-[2px] h-1.5 opacity-25 overflow-hidden">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <span key={n} className={`eq-bar-base w-[1.5px] bg-[var(--bg)] rounded-full eq-bar-${n}`} style={{ transformOrigin: "top" }} />
+              ))}
+            </div>
+          </div>
+        )}
         <QueueHeart isLiked={isLiked} trackId={card.id} onToggleLike={onToggleLike} isCurrent={isCurrent} />
         {(onPlayNext || onAddToQueue || onAddToPlaylist || onRemove) && (
           <span onClick={(e) => e.stopPropagation()}>
@@ -460,7 +460,7 @@ export default function QueuePanel({
           transition={{ duration: 0.18, ease: "easeOut" }}
           className="fixed w-[400px] z-[60] flex flex-col bg-[var(--bg-alt)]/97 rounded-xl shadow-2xl overflow-hidden"
           style={{
-            top: "calc(var(--banner-height) + var(--header-height) + 8px)",
+            top: "var(--queue-dock-top)",
             bottom: "calc(var(--player-height) + 8px)",
             right: "16px",
           }}

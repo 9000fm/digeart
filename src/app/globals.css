@@ -32,6 +32,8 @@ html {
   --header-height-mobile: 64px;
   --nav-height-mobile: 52px;
   --player-height: 148px;
+  /* Docked queue panel top — tablet stack (banner + mobile header + nav row); desktop overrides at ≥1152 */
+  --queue-dock-top: calc(var(--banner-height) + var(--header-height-mobile) + var(--nav-height-mobile) + 8px);
   transition: --player-height 220ms ease;
 
   /* Light theme (default) */
@@ -607,6 +609,10 @@ body {
 }
 /* At lg breakpoint the sidebar + player switch to desktop layout */
 @media (min-width: 1152px) {
+  :root {
+    /* Desktop: tabs live in the left sidebar, so the top stack has no nav row */
+    --queue-dock-top: calc(var(--banner-height) + var(--header-height) + 8px);
+  }
   .layout-shift {
     padding-top: calc(var(--banner-height) + var(--header-height));
   }
