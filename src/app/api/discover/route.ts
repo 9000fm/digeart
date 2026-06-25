@@ -21,10 +21,21 @@ export async function GET(req: NextRequest) {
     // serves the full 42k instead of the cold-start seed. No-op once warm.
     after(warmDiscoverPool());
 
-    return NextResponse.json({
-      cards,
-      hasMore: offset + cards.length < totalFiltered,
-    });
+    return NextResponse.json(
+      {
+        cards,
+        hasMore: offset + cards.length < totalFiltered,
+      },
+      {
+        // Edge-cache the feed: a burst of visitors is served from Vercel's CDN
+        // instead of each cold instance re-reading the pool from the DB. The feed
+        // is identical per (tag, offset, rotate-bucket, genre) — all in the URL —
+        // so the CDN shares one copy; rotate-bucket keeps it feeling fresh.
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (err) {
     console.error("Discover API error:", err);
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });

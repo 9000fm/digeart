@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { dbCircuitOpen, tripDbCircuit, withDbTimeout } from "@/lib/dbGuard";
 
 // All likes access goes through here so the browser never touches the `likes`
 // table directly. The user's email is ALWAYS taken from the authenticated
@@ -13,16 +14,25 @@ export async function GET() {
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  const { data, error } = await supabaseAdmin()
-    .from("likes")
-    .select("video_id, card_data, deleted_at")
-    .eq("user_email", email)
-    .or("deleted_at.is.null,deleted_at.gte." + sevenDaysAgo)
-    .order("created_at", { ascending: false });
+  // DB wedged — fail fast so the saved view degrades instead of hanging.
+  if (dbCircuitOpen()) return NextResponse.json({ rows: [], degraded: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ rows: data ?? [] });
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  try {
+    const { data, error } = await withDbTimeout(
+      supabaseAdmin()
+        .from("likes")
+        .select("video_id, card_data, deleted_at")
+        .eq("user_email", email)
+        .or("deleted_at.is.null,deleted_at.gte." + sevenDaysAgo)
+        .order("created_at", { ascending: false })
+    );
+    if (error) return NextResponse.json({ rows: [], degraded: true });
+    return NextResponse.json({ rows: data ?? [] });
+  } catch {
+    tripDbCircuit(); // timeout → cool off before hitting the DB again
+    return NextResponse.json({ rows: [], degraded: true });
+  }
 }
 
 export async function POST(req: NextRequest) {

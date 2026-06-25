@@ -1104,8 +1104,12 @@ export async function discoverFromYouTube(
   const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;
+  // `rotate` arrives as a small bucket (0..ROTATE_BUCKETS-1, see DiscoverGrid) so
+  // the response stays edge-cacheable; spread the bucket evenly across the full feed
+  // so each bucket is a genuinely different starting slice, not a 1-card shift.
   if (rotate && feed.length > 1) {
-    const r = ((rotate % feed.length) + feed.length) % feed.length;
+    const ROTATE_BUCKETS = 24; // keep in sync with DiscoverGrid rotateRef
+    const r = Math.floor(((rotate % ROTATE_BUCKETS) / ROTATE_BUCKETS) * feed.length);
     feed = [...feed.slice(r), ...feed.slice(0, r)];
   }
   // Default homepage feed only — space gems to ~2-3 per 20 (rotate still varies WHICH

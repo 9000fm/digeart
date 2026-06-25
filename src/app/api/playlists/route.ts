@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { dbCircuitOpen, tripDbCircuit, withDbTimeout } from "@/lib/dbGuard";
 import type { CardData, Playlist, PlaylistTrack } from "@/lib/types";
 
 // All playlist access goes through here so the browser never touches the
@@ -35,73 +36,93 @@ export async function GET(req: NextRequest) {
   const db = supabaseAdmin();
   const id = req.nextUrl.searchParams.get("id");
 
-  // Single playlist + its ordered tracks
-  if (id) {
-    const { data: pl, error: plErr } = await db
-      .from("playlists")
-      .select("id, name, description, is_public, created_at, updated_at")
-      .eq("user_email", email).eq("id", id).single();
-    if (plErr || !pl) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const { data: trackRows, error: tErr } = await db
-      .from("playlist_tracks")
-      .select("id, position, card_data")
-      .eq("playlist_id", id)
-      .order("position", { ascending: true });
-    if (tErr) return NextResponse.json({ error: tErr.message }, { status: 500 });
-
-    const tracks: PlaylistTrack[] = (trackRows ?? []).map((r) => ({
-      id: r.id as string,
-      position: r.position as number,
-      card: r.card_data as CardData,
-    }));
-    const row = pl as PlaylistRow;
-    const playlist: Playlist = {
-      id: row.id, name: row.name, description: row.description, isPublic: row.is_public,
-      createdAt: row.created_at, updatedAt: row.updated_at,
-      trackCount: tracks.length,
-      coverCards: tracks.slice(0, 4).map((t) => ({ id: t.card.id, image: t.card.image, imageSmall: t.card.imageSmall })),
-    };
-    return NextResponse.json({ playlist, tracks });
+  // DB wedged — fail fast so the saved view degrades instead of hanging.
+  if (dbCircuitOpen()) {
+    return NextResponse.json(id ? { tracks: [], degraded: true } : { playlists: [], degraded: true });
   }
 
-  // List all of the user's playlists (with count + 2×2 cover snapshots)
-  const { data: rows, error } = await db
-    .from("playlists")
-    .select("id, name, description, is_public, created_at, updated_at")
-    .eq("user_email", email)
-    .order("updated_at", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    // Single playlist + its ordered tracks
+    if (id) {
+      const { data: pl, error: plErr } = await withDbTimeout(
+        db
+          .from("playlists")
+          .select("id, name, description, is_public, created_at, updated_at")
+          .eq("user_email", email).eq("id", id).single()
+      );
+      if (plErr || !pl) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const playlists = (rows ?? []) as PlaylistRow[];
-  const ids = playlists.map((p) => p.id);
+      const { data: trackRows, error: tErr } = await withDbTimeout(
+        db
+          .from("playlist_tracks")
+          .select("id, position, card_data")
+          .eq("playlist_id", id)
+          .order("position", { ascending: true })
+          .limit(2000)
+      );
+      if (tErr) return NextResponse.json({ error: tErr.message }, { status: 500 });
 
-  // Fetch tracks for all playlists at once; group in JS for count + cover.
-  // Fine for personal-scale playlists; revisit with an RPC/view if lists grow huge.
-  const byPlaylist = new Map<string, TrackRow[]>();
-  if (ids.length > 0) {
-    const { data: trackRows } = await db
-      .from("playlist_tracks")
-      .select("id, playlist_id, position, video_id, card_data")
-      .in("playlist_id", ids)
-      .order("position", { ascending: true });
-    for (const r of (trackRows ?? []) as TrackRow[]) {
-      const list = byPlaylist.get(r.playlist_id) ?? [];
-      list.push(r);
-      byPlaylist.set(r.playlist_id, list);
+      const tracks: PlaylistTrack[] = (trackRows ?? []).map((r) => ({
+        id: r.id as string,
+        position: r.position as number,
+        card: r.card_data as CardData,
+      }));
+      const row = pl as PlaylistRow;
+      const playlist: Playlist = {
+        id: row.id, name: row.name, description: row.description, isPublic: row.is_public,
+        createdAt: row.created_at, updatedAt: row.updated_at,
+        trackCount: tracks.length,
+        coverCards: tracks.slice(0, 4).map((t) => ({ id: t.card.id, image: t.card.image, imageSmall: t.card.imageSmall })),
+      };
+      return NextResponse.json({ playlist, tracks });
     }
-  }
 
-  const result: Playlist[] = playlists.map((p) => {
-    const tracks = byPlaylist.get(p.id) ?? [];
-    return {
-      id: p.id, name: p.name, description: p.description, isPublic: p.is_public,
-      createdAt: p.created_at, updatedAt: p.updated_at,
-      trackCount: tracks.length,
-      coverCards: tracks.slice(0, 4).map((t) => ({ id: t.card_data.id, image: t.card_data.image, imageSmall: t.card_data.imageSmall })),
-    };
-  });
-  return NextResponse.json({ playlists: result });
+    // List all of the user's playlists (with count + 2×2 cover snapshots)
+    const { data: rows, error } = await withDbTimeout(
+      db
+        .from("playlists")
+        .select("id, name, description, is_public, created_at, updated_at")
+        .eq("user_email", email)
+        .order("updated_at", { ascending: false })
+    );
+    if (error) return NextResponse.json({ playlists: [], degraded: true });
+
+    const playlists = (rows ?? []) as PlaylistRow[];
+    const ids = playlists.map((p) => p.id);
+
+    // Fetch tracks for all playlists at once; group in JS for count + cover.
+    // Fine for personal-scale playlists; revisit with an RPC/view if lists grow huge.
+    const byPlaylist = new Map<string, TrackRow[]>();
+    if (ids.length > 0) {
+      const { data: trackRows } = await withDbTimeout(
+        db
+          .from("playlist_tracks")
+          .select("id, playlist_id, position, video_id, card_data")
+          .in("playlist_id", ids)
+          .order("position", { ascending: true })
+          .limit(5000)
+      );
+      for (const r of (trackRows ?? []) as TrackRow[]) {
+        const list = byPlaylist.get(r.playlist_id) ?? [];
+        list.push(r);
+        byPlaylist.set(r.playlist_id, list);
+      }
+    }
+
+    const result: Playlist[] = playlists.map((p) => {
+      const tracks = byPlaylist.get(p.id) ?? [];
+      return {
+        id: p.id, name: p.name, description: p.description, isPublic: p.is_public,
+        createdAt: p.created_at, updatedAt: p.updated_at,
+        trackCount: tracks.length,
+        coverCards: tracks.slice(0, 4).map((t) => ({ id: t.card_data.id, image: t.card_data.image, imageSmall: t.card_data.imageSmall })),
+      };
+    });
+    return NextResponse.json({ playlists: result });
+  } catch {
+    tripDbCircuit(); // timeout → cool off before hitting the DB again
+    return NextResponse.json(id ? { tracks: [], degraded: true } : { playlists: [], degraded: true });
+  }
 }
 
 export async function POST(req: NextRequest) {

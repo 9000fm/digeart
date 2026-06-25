@@ -4,17 +4,30 @@
 
 import type { CardData, Playlist, PlaylistTrack } from "@/lib/types";
 
+// Abort if a read route hangs (e.g. DB wedged) so the UI fails fast instead of
+// freezing for the browser's default ~30s timeout.
+async function getJSON(url: string, errLabel: string): Promise<unknown> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(errLabel + ": " + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchPlaylists(): Promise<Playlist[]> {
-  const res = await fetch("/api/playlists");
-  if (!res.ok) throw new Error("Failed to load playlists: " + res.status);
-  const json = await res.json();
+  const json = (await getJSON("/api/playlists", "Failed to load playlists")) as { playlists?: Playlist[] };
   return (json.playlists ?? []) as Playlist[];
 }
 
 export async function fetchPlaylist(id: string): Promise<{ playlist: Playlist; tracks: PlaylistTrack[] }> {
-  const res = await fetch(`/api/playlists?id=${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error("Failed to load playlist: " + res.status);
-  return res.json();
+  return (await getJSON(`/api/playlists?id=${encodeURIComponent(id)}`, "Failed to load playlist")) as {
+    playlist: Playlist;
+    tracks: PlaylistTrack[];
+  };
 }
 
 type Action = "create" | "rename" | "delete" | "addTrack" | "removeTrack" | "reorder";

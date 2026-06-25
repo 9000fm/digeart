@@ -49,7 +49,11 @@ export default function DiscoverGrid({
   const observerRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef(0);
   const hasMore = useRef(true);
-  const rotateRef = useRef(Math.floor(Math.random() * 100000));
+  // Small bucket (not a huge random) so the /api/discover response is shared &
+  // edge-cacheable across sessions. The server spreads the bucket across the whole
+  // feed, so each refresh still lands on a different slice. 24 distinct feeds =
+  // fresh-feeling but cacheable. Keep in sync with ROTATE_BUCKETS in youtube.ts.
+  const rotateRef = useRef(Math.floor(Math.random() * 24));
   const lastAutoLoadRef = useRef(0); // paces auto-loads: a zoom-out keeps the sentinel in view, which would otherwise chain-fire a burst of batches
 
   // Serialize arrays to stable strings for dependency tracking
