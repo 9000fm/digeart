@@ -1,5 +1,6 @@
 import { cacheGet, cacheSet } from "./cache";
 import { supabaseAdmin } from "./supabaseAdmin";
+import { readPool, writePool } from "./blobStore";
 import { MIX_MIN_SECONDS } from "./durations";
 import type { CardData } from "./types";
 
@@ -159,9 +160,13 @@ function withDbTimeout<T>(query: PromiseLike<T>): Promise<T> {
   ]);
 }
 
-/* ── Persistent pool cache (Supabase) ────────────────────────────────── */
+/* ── Persistent pool cache (Vercel Blob) ─────────────────────────────────
+ * The feed lives on Vercel Blob, not Supabase, so it survives a wedged NANO.
+ * See blobStore.ts. The two functions below keep their old names + shapes so
+ * every call site is unchanged; only the storage backend moved.
+ * ──────────────────────────────────────────────────────────────────────── */
 
-const POOL_MAX_AGE = 12 * 60 * 60 * 1000; // 12 hours (rebuilds ~2x/day)
+const POOL_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (rebuilds 1x/day via cron)
 const RAW_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (deep fetch 1x/day)
 const DISCOVER_SEED_SIZE = 1111; // cold-start seed: top N cards, read fast then swapped for the full pool
 const SEED_MEM_TTL = 60 * 1000; // how long a served seed stays in memory before the full pool takes over
@@ -171,23 +176,12 @@ interface PoolCacheResult<T = CardData[]> {
   isStale: boolean;
 }
 
+// Reads from Blob (kept its old name to avoid churn at the call sites).
 async function getPoolFromSupabase<T = CardData[]>(key: string, maxAge = POOL_MAX_AGE): Promise<PoolCacheResult<T> | null> {
-  if (dbCircuitOpen()) return null; // DB is struggling — don't pile on
-  try {
-    const { data } = await withDbTimeout(
-      supabaseAdmin()
-        .from("pool_cache")
-        .select("data, updated_at")
-        .eq("key", key)
-        .single()
-    );
-    if (!data) return null;
-    const age = Date.now() - new Date(data.updated_at).getTime();
-    return { data: data.data as T, isStale: age > maxAge };
-  } catch {
-    tripDbCircuit(); // timeout or error → cool off before hitting the DB again
-    return null;
-  }
+  const blob = await readPool<T>(key);
+  if (!blob) return null;
+  const age = Date.now() - new Date(blob.updatedAt).getTime();
+  return { data: blob.data, isStale: age > maxAge };
 }
 
 /* ── Rebuild lock (Supabase-backed, works across Vercel instances) ─── */
@@ -221,11 +215,10 @@ async function releaseRebuildLock(poolKey: string): Promise<void> {
   } catch { /* non-critical */ }
 }
 
+// Writes to Blob (kept its old name to avoid churn at the call sites).
 async function savePoolToSupabase(key: string, pool: unknown): Promise<void> {
   try {
-    await supabaseAdmin()
-      .from("pool_cache")
-      .upsert({ key, data: pool, updated_at: new Date().toISOString() });
+    await writePool(key, pool);
   } catch {
     // Non-critical — in-memory cache still works
   }
