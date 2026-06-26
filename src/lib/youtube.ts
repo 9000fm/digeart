@@ -663,8 +663,7 @@ export async function getOldestUploadDate(channelId: string): Promise<string | n
 }
 
 export function parseVideoTitle(
-  title: string,
-  channelName: string
+  title: string
 ): { name: string; artist: string } {
   const cleaned = title
     .replace(/\b(?:premiere|premier)\s*[:：]\s*/gi, "")
@@ -685,7 +684,29 @@ export function parseVideoTitle(
     }
   }
 
-  return { name: stripPremiere(cleaned) || title, artist: channelName };
+  // No dash separator. Try a couple of safe patterns before giving up — but NEVER
+  // fall back to the channel name (a YouTube channel is not the artist).
+  const QUOTE = "[\"'“”‘’]";
+
+  // 1) Artist "Track"  — text before a quoted title.
+  const quoted = cleaned.match(new RegExp(`^(.{1,40}?)\\s*${QUOTE}([^"'“”‘’]{2,})${QUOTE}\\s*$`));
+  if (quoted && quoted[1].trim()) {
+    return { artist: stripPremiere(quoted[1].trim()), name: stripPremiere(quoted[2].trim()) };
+  }
+
+  // 2) "Track by Artist"  — only when the tail looks like a real name (starts
+  //    capitalized, short), so we don't split titles that merely contain "by"
+  //    (e.g. "Possessed by the Rhythm" stays intact).
+  const byMatch = cleaned.match(/^(.+?)\s+by\s+([^,]{2,40})$/i);
+  if (byMatch) {
+    const cand = byMatch[2].trim();
+    if (cand.split(/\s+/).length <= 4 && /^[A-Z]/.test(cand)) {
+      return { artist: stripPremiere(cand), name: stripPremiere(byMatch[1].trim()) };
+    }
+  }
+
+  // Nothing matched — leave the artist blank rather than mislabel it as the channel.
+  return { name: stripPremiere(cleaned) || title, artist: "" };
 }
 
 function videoThumbnail(videoId: string): string {
@@ -693,7 +714,7 @@ function videoThumbnail(videoId: string): string {
 }
 
 function videoToCard(v: YouTubeVideo, starred = false, genres?: string[]): CardData {
-  const { name, artist } = parseVideoTitle(v.title, v.channelTitle);
+  const { name, artist } = parseVideoTitle(v.title);
   return {
     id: `yt-${v.id}`,
     name,
