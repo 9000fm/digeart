@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo, useCallback, Fragment, type React
 import { motion, AnimatePresence } from "framer-motion";
 import SettingsPanel from "./SettingsPanel";
 import AuthButton from "./AuthButton";
-import { GENRE_LABELS } from "@/app/curator/types";
 import { useTranslation } from "./LanguageProvider";
 import { TAGS, type TagId } from "@/lib/tags";
 
@@ -141,6 +140,7 @@ interface SidebarProps {
   onTagFiltersChange: (tags: string[]) => void;
   activeGenreLabels: string[];
   onGenreLabelsChange: (labels: string[]) => void;
+  onSearchChange?: (q: string) => void;
   showAbout?: boolean;
   onSetAbout?: (show: boolean) => void;
   onRunTutorial?: () => void;
@@ -174,20 +174,11 @@ const GearIcon = ({ className, active = false }: { className?: string; active?: 
   </svg>
 );
 
-const TAG_OPTIONS: { value: TagFilter; label: string; dotColor?: string }[] = [
-  { value: "all", label: "All" },
-  ...TAGS.map((t) => ({ value: t.id, label: t.label, dotColor: t.color })),
-];
-
 export default function Sidebar({
   activeView,
   onViewChange,
-  activeGenre,
-  onGenreChange,
-  activeTagFilters,
   onTagFiltersChange,
-  activeGenreLabels,
-  onGenreLabelsChange,
+  onSearchChange,
   showAbout: showAboutProp,
   onSetAbout,
   onRunTutorial,
@@ -203,14 +194,9 @@ export default function Sidebar({
   const [aboutSource, setAboutSource] = useState<"dropdown" | "gear">("dropdown");
   const [gearAnchor, setGearAnchor] = useState<{ left: number; bottom: string } | null>(null);
   const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-  const searchDropdownRef = useRef<HTMLDivElement>(null);
-  const mobileSearchDropdownRef = useRef<HTMLDivElement>(null);
-  const tagDropdownRef = useRef<HTMLDivElement>(null);
   const gearRef = useRef<HTMLButtonElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
   const aboutIconRef = useRef<HTMLButtonElement>(null);
@@ -323,13 +309,6 @@ export default function Sidebar({
     tickerRampRafRef.current = requestAnimationFrame(step);
   }, []);
   useEffect(() => () => { if (tickerRampRafRef.current) cancelAnimationFrame(tickerRampRafRef.current); }, []);
-
-  // Fuzzy-match genre labels against search query
-  const genreMatches = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return GENRE_LABELS.filter((label) => label.toLowerCase().includes(q));
-  }, [searchQuery]);
 
   // Lock body scroll when mobile about sheet is open
   useEffect(() => {
@@ -472,28 +451,6 @@ export default function Sidebar({
     };
   }, [showAbout]);
 
-  // Close tag dropdown on outside click or Escape
-  useEffect(() => {
-    if (!showTagDropdown) return;
-    const handleClick = (e: MouseEvent) => {
-      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
-        setShowTagDropdown(false);
-      }
-    };
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowTagDropdown(false);
-    };
-    const timer = setTimeout(() => {
-      window.addEventListener("mousedown", handleClick);
-      window.addEventListener("keydown", handleKey);
-    }, 10);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("mousedown", handleClick);
-      window.removeEventListener("keydown", handleKey);
-    };
-  }, [showTagDropdown]);
-
   useEffect(() => {
     const tick = () => {
       if (typingPaused.current) {
@@ -556,120 +513,28 @@ export default function Sidebar({
           </span>
         </div>
 
-        <div className="flex-1">
-          <div data-genre-filter className="relative" ref={tagDropdownRef}>
-            {/* Genre pills (left) + input + tag pills (right) layered inside */}
-            <div className="flex items-center absolute left-12 top-1/2 -translate-y-1/2 z-10 gap-1">
-              {activeGenreLabels.map((label) => (
-                <span key={label} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase tracking-wider shrink-0">
-                  {label}
-                  <button
-                    onClick={() => { onGenreLabelsChange(activeGenreLabels.filter((l) => l !== label)); setSearchQuery(""); }}
-                    className="w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                  >
-                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </span>
-              ))}
+        <div className="flex-1 min-w-0">
+          {/* Search the pool by track name or artist */}
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
             </div>
-            {/* Tag pills (right, before filter icon) */}
-            <div className="flex items-center absolute right-10 top-1/2 -translate-y-1/2 z-10 gap-1">
-              {activeTagFilters.map((tag) => {
-                const opt = TAG_OPTIONS.find((o) => o.value === tag);
-                return opt ? (
-                  <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase tracking-wider shrink-0">
-                    {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor}`} />}
-                    {opt.label}
-                    <button
-                      onClick={() => onTagFiltersChange(activeTagFilters.filter((t) => t !== tag))}
-                      className="w-3.5 h-3.5 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                    >
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </span>
-                ) : null;
-              })}
-            </div>
-            <div className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none">
-              {t("search.comingSoon")}<span className="dots-animated" />
-            </div>
-            {/* Genre search dropdown — hide already-selected genres */}
-            {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length > 0 && (
-              <div ref={searchDropdownRef} className="absolute left-0 right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 max-h-60 overflow-y-auto">
-                {genreMatches.filter((l) => !activeGenreLabels.includes(l)).map((label) => (
-                  <button
-                    key={label}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onGenreLabelsChange([...activeGenreLabels, label]);
-                      setSearchQuery("");
-                      searchInputRef.current?.blur();
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length === 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-3 px-3">
-                <p className="font-mono text-xs text-[var(--text-muted)] uppercase text-center">{t("misc.noMatchingGenres")}</p>
-              </div>
-            )}
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="21" x2="4" y2="14" />
-                <line x1="4" y1="10" x2="4" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12" y2="3" />
-                <line x1="20" y1="21" x2="20" y2="16" />
-                <line x1="20" y1="12" x2="20" y2="3" />
-                <line x1="1" y1="14" x2="7" y2="14" />
-                <line x1="9" y1="8" x2="15" y2="8" />
-                <line x1="17" y1="16" x2="23" y2="16" />
-              </svg>
-            </div>
-            {showTagDropdown && (
-              <div className="absolute right-0 top-full mt-2 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 min-w-[120px]">
-                {TAG_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => {
-                  const isActive = activeTagFilters.includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        if (isActive) {
-                          onTagFiltersChange(activeTagFilters.filter((t) => t !== opt.value));
-                        } else {
-                          onTagFiltersChange([...activeTagFilters, opt.value]);
-                        }
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase transition-colors duration-150 ${
-                        isActive
-                          ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
-                          : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
-                      }`}
-                    >
-                      {opt.dotColor && <span className={`w-2 h-2 rounded-full ${opt.dotColor} shrink-0`} />}
-                      {opt.label}
-                    </button>
-                  );
-                })}
-                {activeTagFilters.length > 0 && (
-                  <button
-                    onClick={() => { onTagFiltersChange([]); setShowTagDropdown(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-t border-[var(--border)]/50 mt-1 pt-2"
-                  >
-                    {t("misc.clearAll")}
-                  </button>
-                )}
-              </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); onSearchChange?.(e.target.value); }}
+              placeholder={t("search.placeholder")}
+              className="w-full pl-9 pr-9 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--text-muted)]"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); onSearchChange?.(""); searchInputRef.current?.focus(); }}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
             )}
           </div>
         </div>
@@ -873,120 +738,30 @@ export default function Sidebar({
         >
           digeart
         </span>
-        <div data-genre-filter className="flex-1 min-w-0 relative overflow-hidden">
-          {/* Mobile genre pills */}
-          <div className="flex items-center absolute left-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
-            {activeGenreLabels.map((label) => (
-              <span key={label} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase shrink-0">
-                {label}
-                <button
-                  onClick={() => { onGenreLabelsChange(activeGenreLabels.filter((l) => l !== label)); setSearchQuery(""); }}
-                  className="w-3 h-3 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                >
-                  <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </span>
-            ))}
-          </div>
-          {/* Mobile tag pills */}
-          <div className="flex items-center absolute right-8 top-1/2 -translate-y-1/2 z-10 gap-0.5">
-            {activeTagFilters.map((tag) => {
-              const opt = TAG_OPTIONS.find((o) => o.value === tag);
-              return opt ? (
-                <span key={tag} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[var(--border)] rounded-md font-mono text-[10px] text-[var(--text)] uppercase shrink-0">
-                  {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor}`} />}
-                  {opt.label}
-                  <button
-                    onClick={() => onTagFiltersChange(activeTagFilters.filter((t) => t !== tag))}
-                    className="w-3 h-3 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                  >
-                    <svg className="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </span>
-              ) : null;
-            })}
-          </div>
-          <div className="w-full pl-8 pr-4 py-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-xs text-[var(--text-secondary)] cursor-not-allowed opacity-70 select-none whitespace-nowrap overflow-hidden">
-            {t("search.comingSoon")}<span className="dots-animated" />
-          </div>
-          {/* Mobile genre search dropdown */}
-          {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length > 0 && (
-            <div ref={mobileSearchDropdownRef} className="absolute left-0 right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
-              {genreMatches.filter((l) => !activeGenreLabels.includes(l)).map((label) => (
-                <button
-                  key={label}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onGenreLabelsChange([...activeGenreLabels, label]);
-                    setSearchQuery("");
-                    mobileSearchInputRef.current?.blur();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30"
-                >
-                  {label}
-                </button>
-              ))}
+        <div className="flex-1 min-w-0">
+          {/* Search the pool by track name or artist */}
+          <div className="relative">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
             </div>
-          )}
-          {searchFocused && searchQuery.trim() && genreMatches.filter((l) => !activeGenreLabels.includes(l)).length === 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-2 px-3">
-              <p className="font-mono text-[10px] text-[var(--text-muted)] uppercase text-center">{t("misc.noMatchingGenres")}</p>
-            </div>
-          )}
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]/30 cursor-not-allowed">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="21" x2="4" y2="14" />
-              <line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" />
-              <line x1="20" y1="12" x2="20" y2="3" />
-              <line x1="1" y1="14" x2="7" y2="14" />
-              <line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
+            <input
+              ref={mobileSearchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); onSearchChange?.(e.target.value); }}
+              placeholder={t("search.placeholder")}
+              className="w-full pl-8 pr-8 py-2.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-xl font-mono text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--text-muted)]"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); onSearchChange?.(""); mobileSearchInputRef.current?.focus(); }}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            )}
           </div>
-          {showTagDropdown && (
-            <div className="absolute right-0 top-full mt-1.5 bg-[var(--bg-alt)] border border-[var(--border)] rounded-lg shadow-lg z-50 py-1 min-w-[110px]">
-              {TAG_OPTIONS.filter((opt) => opt.value !== "all").map((opt) => {
-                const isActive = activeTagFilters.includes(opt.value);
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => {
-                      if (isActive) {
-                        onTagFiltersChange(activeTagFilters.filter((t) => t !== opt.value));
-                      } else {
-                        onTagFiltersChange([...activeTagFilters, opt.value]);
-                      }
-                    }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 ${
-                      isActive
-                        ? "text-[var(--text)] bg-[var(--border)]/50 font-bold border-l-2 border-l-current"
-                        : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-l-2 border-l-transparent"
-                    }`}
-                  >
-                    {opt.dotColor && <span className={`w-1.5 h-1.5 rounded-full ${opt.dotColor} shrink-0`} />}
-                    {opt.label}
-                  </button>
-                );
-              })}
-              {activeTagFilters.length > 0 && (
-                <button
-                  onClick={() => { onTagFiltersChange([]); setShowTagDropdown(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 font-mono text-[11px] uppercase transition-colors duration-150 text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--border)]/30 border-t border-[var(--border)]/50 mt-1 pt-2"
-                >
-                  {t("misc.clearAll")}
-                </button>
-              )}
-            </div>
-          )}
         </div>
         <div data-auth-button className="shrink-0">
           <AuthButton onGoToSaved={() => onViewChange("saved")} onOpenSettings={() => { const el = document.querySelector('[data-auth-button]'); setSettingsAnchor(el?.getBoundingClientRect() ?? null); setSettingsOpen(true); setShowAbout(false); }} onOpenInfo={() => { setShowAbout(!showAbout); setSettingsOpen(false); }} onRunTutorial={onRunTutorial} />

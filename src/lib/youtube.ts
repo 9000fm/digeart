@@ -1108,13 +1108,29 @@ export async function discoverFromYouTube(
   offset = 0,
   tag: Tag | Tag[] = "all",
   genre?: string,
-  rotate?: number
+  rotate?: number,
+  q?: string
 ): Promise<PoolResult> {
   const { pool, needsRebuild } = await getDiscoverPool();
   if (pool.length === 0) return { cards: [], totalFiltered: 0, needsRebuild };
 
   const gemIds = await getCuratorGemIds();
   const hotThreshold = computeHotThreshold(pool);
+
+  // Search the full pool by track name OR artist (case-insensitive substring).
+  // When searching we skip genre/tag/rotate/gem-spacing and return matches in pool
+  // order (already starred-weighted) so results are stable and relevant.
+  const query = q?.trim().toLowerCase();
+  if (query) {
+    const matches = pool.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        (!!c.artist && c.artist.toLowerCase().includes(query))
+    );
+    const stamped = stampTags(matches, gemIds, hotThreshold);
+    return { cards: stamped.slice(offset, offset + limit), totalFiltered: stamped.length, needsRebuild };
+  }
+
   const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;

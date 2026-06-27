@@ -72,6 +72,7 @@ export default function Home() {
   const [activeGenre, setActiveGenre] = useState(0);
   const [activeTagFilters, setActiveTagFilters] = useState<string[]>([]);
   const [activeGenreLabels, setActiveGenreLabels] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [nowPlayingCard, setNowPlayingCard] = useState<CardData | null>(null);
@@ -1083,6 +1084,9 @@ export default function Home() {
 
   const handleViewChange = useCallback((view: ViewType) => {
     scrollPositions.current[activeView] = window.scrollY;
+    // Genre filter is a Tracks-only "browse by vibe" — clear it when leaving Home
+    // so Mixes/Samples are never silently filtered by a home genre.
+    if (view !== "home") setActiveGenreLabels([]);
     setActiveView(view);
     setMountedTabs((prev) => {
       if (prev.has(view)) return prev;
@@ -1346,6 +1350,7 @@ export default function Home() {
         onTagFiltersChange={setActiveTagFilters}
         activeGenreLabels={activeGenreLabels}
         onGenreLabelsChange={setActiveGenreLabels}
+        onSearchChange={(q) => { setSearchQuery(q); if (q.trim()) handleViewChange("home"); }}
         showAbout={showAbout}
         onSetAbout={setShowAbout}
         onRunTutorial={() => { setShowAbout(false); setShowQueue(false); setShowOnboarding(true); }}
@@ -1368,6 +1373,7 @@ export default function Home() {
           activeGenre={activeGenre}
           activeTagFilters={activeTagFilters}
           activeGenreLabels={activeGenreLabels}
+          searchQuery={searchQuery}
           onCardsLoaded={registerHomeCards}
           isAuthenticated={isAuthenticated}
         />

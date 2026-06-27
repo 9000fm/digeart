@@ -13,9 +13,10 @@ export async function GET(req: NextRequest) {
   const tag: Tag | Tag[] = tags.length <= 1 ? (tags[0] || "all") : tags;
   const genre = req.nextUrl.searchParams.get("genre") || undefined;
   const rotate = parseInt(req.nextUrl.searchParams.get("rotate") || "0", 10) || undefined;
+  const q = req.nextUrl.searchParams.get("q") || undefined;
 
   try {
-    const { cards, totalFiltered } = await discoverFromYouTube(limit, offset, tag, genre, rotate);
+    const { cards, totalFiltered } = await discoverFromYouTube(limit, offset, tag, genre, rotate, q);
 
     // After responding, ensure the full pool is warm in memory so the next request
     // serves the full 42k instead of the cold-start seed. No-op once warm.

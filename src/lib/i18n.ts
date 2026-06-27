@@ -180,6 +180,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Search
     "search.comingSoon": "Próximamente",
+    "search.placeholder": "Buscar pista o artista...",
 
     // Maintenance
     "maintenance.backSoon": "Volvemos pronto",
@@ -364,6 +365,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Search
     "search.comingSoon": "Coming soon",
+    "search.placeholder": "Search track or artist...",
 
     // Maintenance
     "maintenance.backSoon": "We'll be right back",
@@ -548,6 +550,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Search
     "search.comingSoon": "Bientôt disponible",
+    "search.placeholder": "Rechercher titre ou artiste...",
 
     // Maintenance
     "maintenance.backSoon": "On revient vite",
@@ -732,6 +735,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Search
     "search.comingSoon": "近日公開",
+    "search.placeholder": "曲・アーティストを検索...",
 
     // Maintenance
     "maintenance.backSoon": "すぐ戻ります",
@@ -916,6 +920,7 @@ export const translations: Record<Locale, Record<string, string>> = {
 
     // Search
     "search.comingSoon": "Скоро",
+    "search.placeholder": "Поиск трека или артиста...",
 
     // Maintenance
     "maintenance.backSoon": "Скоро вернёмся",

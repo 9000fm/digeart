@@ -29,7 +29,7 @@ html {
   --sidebar-width: 68px;
   --banner-height: 28px;
   --header-height: 60px;
-  --header-height-mobile: 64px;
+  --header-height-mobile: 60px;
   --nav-height-mobile: 52px;
   --player-height: 148px;
   /* Docked queue panel top — tablet stack (banner + mobile header + nav row); desktop overrides at ≥1152 */

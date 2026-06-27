@@ -21,6 +21,7 @@ interface DiscoverGridProps {
   activeGenre: number;
   activeTagFilters?: string[];
   activeGenreLabels?: string[];
+  searchQuery?: string;
   onCardsLoaded?: (cards: CardData[]) => void;
   isAuthenticated?: boolean;
 }
@@ -39,6 +40,7 @@ export default function DiscoverGrid({
   onToggleLike,
   activeTagFilters = [],
   activeGenreLabels = [],
+  searchQuery = "",
   onCardsLoaded,
   isAuthenticated = true,
 }: DiscoverGridProps) {
@@ -55,6 +57,10 @@ export default function DiscoverGrid({
   // fresh-feeling but cacheable. Keep in sync with ROTATE_BUCKETS in youtube.ts.
   const rotateRef = useRef(Math.floor(Math.random() * 24));
   const lastAutoLoadRef = useRef(0); // paces auto-loads: a zoom-out keeps the sentinel in view, which would otherwise chain-fire a burst of batches
+  // Current search query, read inside fetchCards (incl. append/auto-load) without
+  // re-creating the callback, so every fetch picks up the active search.
+  const searchRef = useRef(searchQuery);
+  searchRef.current = searchQuery;
 
   // Serialize arrays to stable strings for dependency tracking
   const tagKey = activeTagFilters.length > 0 ? [...activeTagFilters].sort().join(",") : "all";
@@ -71,6 +77,8 @@ export default function DiscoverGrid({
         const offset = append ? pageRef.current * limit : 0;
         let url = `/api/discover?limit=${limit}&offset=${offset}&tag=${tagParam}&rotate=${rotateRef.current}`;
         if (genreParam) url += `&genre=${encodeURIComponent(genreParam)}`;
+        const q = searchRef.current.trim();
+        if (q) url += `&q=${encodeURIComponent(q)}`;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000);
         const res = await fetch(url, { signal: controller.signal });
@@ -120,6 +128,15 @@ export default function DiscoverGrid({
   useEffect(() => {
     fetchCards(tagKey, genreKey);
   }, [fetchCards]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced refetch on search change — searchRef is already current, so this just
+  // re-runs the query 250ms after the user stops typing (skips the initial mount).
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    const id = setTimeout(() => fetchCards(tagKey, genreKey), 250);
+    return () => clearTimeout(id);
+  }, [searchQuery, fetchCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const observer = new IntersectionObserver(
