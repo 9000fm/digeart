@@ -171,6 +171,22 @@ const RAW_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours (deep fetch 1x/day)
 const DISCOVER_SEED_SIZE = 1111; // cold-start seed: top N cards, read fast then swapped for the full pool
 const SEED_MEM_TTL = 60 * 1000; // how long a served seed stays in memory before the full pool takes over
 
+// Accumulating raw pool: each rebuild MERGES new uploads into the kept set (dedup
+// by id), refreshes view counts + prunes dead videos via videos.list, then caps
+// the total so the single blob stays comfortable to load. Oldest-added are evicted
+// first when over the cap; starred (curator) videos are never evicted.
+const MAX_RAW_POOL: Record<"discover" | "mixes" | "samples", number> = {
+  discover: 100_000,
+  mixes: 40_000,
+  samples: 60_000,
+};
+
+// Daily rotation: the master raw pool keeps everything, but the SERVED discover
+// feed is a fresh random slice each day (smartSample already daily-shuffles, so the
+// front of the pool is a deterministic daily-random order — we just take the top N).
+// Tomorrow's rebuild reshuffles → a different slice. Nothing is deleted from the master.
+const DISCOVER_SERVE_SIZE = 10_000;
+
 interface PoolCacheResult<T = CardData[]> {
   data: T;
   isStale: boolean;
@@ -446,9 +462,16 @@ export function applyTagFilter(pool: CardData[], tag: Tag | Tag[]): CardData[] {
 
 /* ── YouTube helpers ─────────────────────────────────────────────────── */
 
-/** Batch-fetch durations + view counts + embed status via videos.list */
+/**
+ * Batch-fetch durations + view counts + embed status via videos.list.
+ * If `answered` is passed, every id from a SUCCESSFULLY-fetched chunk is added to
+ * it — so callers can tell "YouTube replied, video is gone" (id in `answered`,
+ * absent from the map) apart from "the request failed" (id NOT in `answered`).
+ * Never prune on the latter.
+ */
 async function fetchVideoDetails(
-  videoIds: string[]
+  videoIds: string[],
+  answered?: Set<string>
 ): Promise<Map<string, { duration: number; viewCount: number; embeddable: boolean }>> {
   const details = new Map<string, { duration: number; viewCount: number; embeddable: boolean }>();
   if (videoIds.length === 0) return details;
@@ -477,9 +500,11 @@ async function fetchVideoDetails(
           const embeddable = item.status?.embeddable !== false;
           details.set(item.id, { duration: dur, viewCount: views, embeddable });
         }
+        // Whole chunk was answered: ids present = alive, ids absent = truly gone.
+        if (answered) for (const id of chunk) answered.add(id);
       }
     } catch {
-      // silently skip fetch failures
+      // silently skip fetch failures — leave these ids "unanswered" so they're kept
     }
   }
 
@@ -814,6 +839,7 @@ interface RawVideo {
   labels?: string[];
   activityTier?: ActivityTier | null;
   boostState?: BoostState | null;
+  addedAt?: number; // epoch ms first added to the pool — drives oldest-first eviction at the cap
 }
 
 async function getRawVideos(
@@ -882,11 +908,74 @@ async function getRawVideos(
     }
   }
 
-  if (allRaw.length > 0) {
-    await savePoolToSupabase(rawKey, allRaw.map(stripRawForStorage));
+  // === Accumulate: merge the new fetch into the kept pool (dedup by video id) ===
+  // The pool grows over time instead of being replaced, so the back-catalog is
+  // retained. Freshly-fetched videos win on metadata/views; their original
+  // addedAt is preserved so eviction stays fair.
+  const existing = cached?.data ?? [];
+  if (allRaw.length === 0 && existing.length === 0) {
+    return { raw: [], isStale: false };
+  }
+  const now = Date.now();
+  const existingIds = new Set(existing.map((rv) => rv.video.id));
+  const byId = new Map<string, RawVideo>();
+  for (const rv of existing) byId.set(rv.video.id, rv);
+  const newIds = new Set<string>();
+  for (const rv of allRaw) {
+    newIds.add(rv.video.id);
+    const prev = byId.get(rv.video.id);
+    byId.set(rv.video.id, { ...rv, addedAt: prev?.addedAt ?? now });
+  }
+  const addedCount = [...newIds].filter((id) => !existingIds.has(id)).length;
+  for (const rv of byId.values()) if (rv.addedAt == null) rv.addedAt = now; // legacy stamp
+
+  let merged = [...byId.values()];
+
+  // === Refresh views + prune dead — only the long tail (freshly fetched videos
+  // already carry current view counts). One cheap videos.list pass (1 unit/50). ===
+  const staleIds = merged.filter((rv) => !newIds.has(rv.video.id)).map((rv) => rv.video.id);
+  let prunedCount = 0;
+  let refreshedCount = 0;
+  if (staleIds.length > 0) {
+    const answered = new Set<string>();
+    const details = await fetchVideoDetails(staleIds, answered);
+    merged = merged.filter((rv) => {
+      if (newIds.has(rv.video.id)) return true; // just fetched → alive
+      if (!answered.has(rv.video.id)) return true; // request failed for it → keep, never prune
+      const d = details.get(rv.video.id);
+      if (!d || !d.embeddable) { prunedCount++; return false; } // YouTube answered: gone → prune
+      rv.video.viewCount = d.viewCount; // refresh stale view count (keeps HOT real)
+      if (d.duration) rv.video.duration = d.duration;
+      refreshedCount++;
+      return true;
+    });
   }
 
-  return { raw: allRaw, isStale: cached?.isStale ?? false };
+  // === Cap: keep the blob comfortable to load. Evict oldest-added first; never
+  // evict starred (curator) videos. ===
+  const cap = MAX_RAW_POOL[poolType];
+  const beforeCap = merged.length;
+  if (merged.length > cap) {
+    const starred = merged.filter((rv) => rv.starred);
+    const rest = merged
+      .filter((rv) => !rv.starred)
+      .sort((a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0)); // newest-added first
+    merged = [...starred, ...rest].slice(0, cap);
+  }
+  const evictedCount = beforeCap - merged.length;
+
+  // Rebuild receipt — one line per pool so the real churn is visible in logs.
+  console.log(
+    `[pool:${poolType}] existing=${existing.length} fetched=${allRaw.length} ` +
+      `added=${addedCount} refreshed=${refreshedCount} pruned=${prunedCount} ` +
+      `evicted=${evictedCount} total=${merged.length}/${cap}`
+  );
+
+  if (merged.length > 0) {
+    await savePoolToSupabase(rawKey, merged.map(stripRawForStorage));
+  }
+
+  return { raw: merged, isStale: false };
 }
 
 /* ── Smart sampling (recientes + populares + random) ────────────────── */
@@ -1077,6 +1166,8 @@ export async function warmDiscoverPool(): Promise<void> {
 
 async function buildDiscoverPool(): Promise<CardData[]> {
   const { raw } = await getRawVideos("discover");
+  // Store the FULL sampled pool so search can reach the whole library. The daily
+  // 10k rotation is applied at serve time (discoverFromYouTube), not here.
   const pool = smartSample(raw, isValidHomepageVideo);
 
   if (pool.length > 0) {
@@ -1131,7 +1222,14 @@ export async function discoverFromYouTube(
     return { cards: stamped.slice(offset, offset + limit), totalFiltered: stamped.length, needsRebuild };
   }
 
-  const genreFiltered = stampTags(filterCardsByGenre(pool, genre), gemIds, hotThreshold);
+  // Daily rotation: the browse feed is a fresh random slice of the full library each
+  // day. The pool is already daily-shuffled at build time, so the top N is today's
+  // random slice; tomorrow's rebuild reshuffles → a different slice. Search above
+  // intentionally runs on the FULL pool, not this slice.
+  const daily =
+    pool.length > DISCOVER_SERVE_SIZE ? pool.slice(0, DISCOVER_SERVE_SIZE) : pool;
+
+  const genreFiltered = stampTags(filterCardsByGenre(daily, genre), gemIds, hotThreshold);
   const filtered = applyTagFilter(genreFiltered, tag);
   let feed = filtered;
   // `rotate` arrives as a small bucket (0..ROTATE_BUCKETS-1, see DiscoverGrid) so
